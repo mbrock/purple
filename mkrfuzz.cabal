@@ -1,0 +1,13 @@
+name: mkrfuzz
+version: 1.0.0
+cabal-version: >= 1.18
+license: GPL-3
+build-type: Simple
+executable mkrfuzz
+  default-language: Haskell2010
+  build-depends:
+    base < 5, containers, exact-real, random,
+    tasty, tasty-hunit, tasty-quickcheck,
+    QuickCheck, HUnit,
+    ghci-pretty
+  main-is: Maker.hs
