@@ -1,6 +1,7 @@
 {-# Language DataKinds #-}
 {-# Language DuplicateRecordFields #-}
 {-# Language FlexibleInstances #-}
+{-# Language FlexibleContexts #-}
 {-# Language FunctionalDependencies #-}
 {-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
@@ -85,6 +86,8 @@ newtype Nat = Nat Int
 data Id a = Id String
   deriving (Show, Eq, Ord)
 
+type IdMap a = Map (Id a) a
+
 data Lad = Lad deriving (Eq, Show)
 
 data Gem = Gem {
@@ -133,16 +136,16 @@ data Urn = Urn {
 makeFields ''Urn
 
 data Vat = Vat {
-  vatTau  :: Nat,                -- Last poked
-  vatFix  :: Wad,                -- Market price
-  vatPar  :: Wad,                -- Target price
-  vatHow  :: Ray,                -- Sensitivity
-  vatWay  :: Ray,                -- Target rate
-  vatPie  :: Wad,                -- Unprocessed fees
-  vatSin  :: Wad,                -- Bad debt
-  vatJars  :: Map (Id Jar) Jar,  -- ERC20 tokens
-  vatIlks  :: Map (Id Ilk) Ilk,  -- CDP types
-  vatUrns  :: Map (Id Urn) Urn   -- CDPs
+  vatTau  :: Nat,         -- Last poked
+  vatFix  :: Wad,         -- Market price
+  vatPar  :: Wad,         -- Target price
+  vatHow  :: Ray,         -- Sensitivity
+  vatWay  :: Ray,         -- Target rate
+  vatPie  :: Wad,         -- Unprocessed fees
+  vatSin  :: Wad,         -- Bad debt
+  vatJars  :: IdMap Jar,  -- ERC20 tokens
+  vatIlks  :: IdMap Ilk,  -- CDP types
+  vatUrns  :: IdMap Urn   -- CDPs
 } deriving (Eq, Show)
 
 makeFields ''Vat
@@ -150,7 +153,7 @@ makeFields ''Vat
 data System = System {
   systemVat   :: Vat,
   systemEra   :: Int,
-  systemLads  :: Map (Id Lad) Lad   -- System users
+  systemLads  :: IdMap Lad   -- System users
 } deriving (Eq, Show)
 
 makeFields ''System
@@ -209,7 +212,7 @@ data Action =
      NewLad   (Id Lad)
   |  NewJar   (Id Jar)  Jar
   |  FormIlk  (Id Ilk)  (Id Jar)
-  |  OpenUrn  (Id Urn)  (Id Ilk)  (Id Lad)
+  |  OpenUrn  (Id Urn)  (Id Ilk)
   deriving (Eq, Show)
 
 data Env = Env
@@ -218,18 +221,36 @@ data Env = Env
 
 makeFields ''Env
 
-type Maker a = ReaderT Env (StateT System Identity) a
+type Maker e s a = ReaderT e (StateT s Identity) a
 
-perform :: Action -> Maker ()
+newLad :: HasLads s (IdMap Lad)
+       => Id Lad -> Maker e s ()
+newLad id =
+  lads . at id ?= Lad
+
+newJar :: (HasVat s vat, HasJars vat (IdMap Jar))
+       => Id Jar -> Jar -> Maker e s ()
+newJar id jar =
+  vat . jars . at id ?= jar 
+
+formIlk :: (HasVat s vat, HasIlks vat (IdMap Ilk))
+        => Id Ilk -> Id Jar -> Maker e s ()
+formIlk id jar =
+  vat . ilks . at id ?= defaultIlk jar
+
+openUrn
+  :: (HasVat s vat, HasUrns vat (IdMap Urn), HasLad e (Id Lad))
+  => Id Urn -> Id Ilk -> Maker e s ()
+openUrn id ilk = do
+  theLad <- view lad
+  vat . urns . at id ?= defaultUrn ilk theLad
+
+perform :: Action -> Maker Env System ()
 perform = \case
-  NewLad id          ->
-    lads . at id ?= Lad
-  NewJar id jar      ->
-    vat . jars . at id ?= jar
-  FormIlk id jar     ->
-    vat . ilks . at id ?= defaultIlk jar
-  OpenUrn id ilk lad ->
-    vat . urns . at id ?= defaultUrn ilk lad
+  NewLad id      -> newLad id
+  NewJar id jar  -> newJar id jar
+  FormIlk id jar -> formIlk id jar
+  OpenUrn id ilk -> openUrn id ilk
 
 transferFrom  ::  Id Lad -> Id Lad -> Wad
               ->  Gem -> Maybe Gem
@@ -275,36 +296,36 @@ instance Arbitrary GemWithCouple where
           insert eve eveWad (gemBalanceOf gem)
    }
 
-marginalAction :: System -> Gen Action
+marginalAction :: System -> Gen (Id Lad, Action)
 marginalAction sys =
   if       size (sys ^. lads) ==  0        then newLad
   else if  size (sys ^. vat . jars) <   2  then newJar
   else if  size (sys ^. vat . ilks) <   1  then formIlk
   else oneof [newLad, newJar, formIlk, openUrn]
   where
-    newLad = NewLad <$> arbitrary
+    newLad = (,) <$> pure (Id "God") <*> (NewLad <$> arbitrary)
     newJar = do
       (id, tag, zzz) <- arbitrary
       lad  <- elements (keys (sys ^. lads))
       gem  <- monopolizedGem <$> arbitrary <*> pure lad
-      return (NewJar id (Jar gem tag zzz))
+      return (Id "God", NewJar id (Jar gem tag zzz))
     formIlk = do
       id   <- arbitrary
       jar  <- elements (keys (sys ^. vat . jars))
-      return (FormIlk id jar)
+      return (Id "God", FormIlk id jar)
     openUrn = do
       id   <- arbitrary
       ilk  <- elements (keys (sys ^. vat . ilks))
       lad  <- elements (keys (sys ^. lads))
-      return (OpenUrn id ilk lad)
+      return (lad, OpenUrn id ilk)
 
 instance Arbitrary System where
   arbitrary = sized (\n -> f n initialSystem)
     where
       f 0 sys = return sys
       f n sys = do
-        a <- marginalAction sys
-        f (n - 1) (execState (runReaderT (perform a) Env { envLad = Id "" }) sys)
+        (ladId, a) <- marginalAction sys
+        f (n - 1) (execState (runReaderT (perform a) Env { envLad = ladId }) sys)
 
 decimalFixedPointProperties =
   testGroup "Decimal fixed points" [
