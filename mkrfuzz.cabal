@@ -9,5 +9,6 @@ executable mkrfuzz
     base < 5, containers, exact-real, random,
     tasty, tasty-hunit, tasty-quickcheck,
     QuickCheck, HUnit,
-    ghci-pretty
+    ghci-pretty,
+    lens, mtl
   main-is: Maker.hs

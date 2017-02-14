@@ -1,18 +1,26 @@
 {-# Language DataKinds #-}
 {-# Language DuplicateRecordFields #-}
 {-# Language FlexibleInstances #-}
+{-# Language FunctionalDependencies #-}
 {-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language LambdaCase #-}
+{-# Language MultiParamTypeClasses #-}
 {-# Language RecordWildCards #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
+{-# Language TemplateHaskell #-}
 {-# Language TypeFamilies #-}
 
 module Maker (
   Precise, E18, E36, Wad, Ray, cast, wad, ray,
   main
 ) where
+
+import Control.Lens hiding (elements)
+
+import Control.Monad.State
+import Control.Monad.Reader
 
 import Prelude hiding (lookup)
 import Control.Applicative (pure)
@@ -74,130 +82,127 @@ epsilon = 1 / fromIntegral (resolution (undefined :: Fixed a))
 newtype Nat = Nat Int
   deriving (Show, Eq, Ord, Enum, Num, Real, Integral)
 
-class HasId a where
-  data Id a
-  mkId :: String -> Id a
-
-data Gem = Gem {
-  totalSupply  :: Wad,
-  balanceOf    :: Map (Id Lad)          Wad,
-  allowance    :: Map (Id Lad, Id Lad)  Wad
-} deriving (Eq, Show)
-
-monopolizedGem :: Wad -> Id Lad -> Gem
-monopolizedGem totalSupply croesus =
-  let  balanceOf  = singleton croesus totalSupply
-       allowance  = empty
-  in Gem {..}
-
-data Jar = Jar {
-  gem  :: Gem,          -- ERC20 token
-  tag  :: Wad,          -- Market price
-  zzz  :: Nat           -- Price expiration
-} deriving (Eq, Show)
-
-data Urn = Urn {
-  ilk  :: Id Ilk,       -- CDP type
-  lad  :: Id Lad,       -- Issuer
-  pro  :: Wad,          -- Collateral amount
-  con  :: Wad,          -- Outstanding dai debt
-  age  :: Nat           -- Last poked
-} deriving (Eq, Show)
-
-data Ilk = Ilk {
-  jar  :: Id Jar,       -- Collateral vault
-  axe  :: Ray,          -- Liquidation penalty
-  mat  :: Ray,          -- Liquidation ratio
-  tax  :: Ray,          -- Stability fee
-  hat  :: Wad,          -- Debt ceiling
-  lag  :: Nat,          -- Limbo duration
-  bag  :: Map Nat Ray,  -- Accumulator
-  age  :: Nat           -- Last poked
-} deriving (Eq, Show)
-
-data Dao = Dao {
-  age  :: Nat,                -- Last poked
-  fix  :: Wad,                -- Market price
-  par  :: Wad,                -- Target price
-  how  :: Ray,                -- Sensitivity
-  way  :: Ray,                -- Target rate
-  pie  :: Wad,                -- Unprocessed fees
-  sin  :: Wad,                -- Bad debt
-  ilks  :: Map (Id Ilk) Ilk,  -- CDP types
-  urns  :: Map (Id Urn) Urn,  -- CDPs
-  jars  :: Map (Id Jar) Jar,  -- ERC20 tokens
-  lads  :: Map (Id Lad) Lad   -- System users
-} deriving (Eq, Show)
+data Id a = Id String
+  deriving (Show, Eq, Ord)
 
 data Lad = Lad deriving (Eq, Show)
 
-instance HasId Urn where
-  data Id Urn = UrnId String
-    deriving (Show, Eq, Ord)
-  mkId = UrnId
+data Gem = Gem {
+  gemTotalSupply  :: Wad,
+  gemBalanceOf    :: Map (Id Lad)          Wad,
+  gemAllowance    :: Map (Id Lad, Id Lad)  Wad
+} deriving (Eq, Show)
 
-instance HasId Ilk where
-  data Id Ilk = IlkId String
-    deriving (Show, Eq, Ord)
-  mkId = IlkId
+makeFields ''Gem
 
-instance HasId Gem where
-  data Id Gem = GemId String
-    deriving (Show, Eq, Ord)
-  mkId = GemId
+monopolizedGem :: Wad -> Id Lad -> Gem
+monopolizedGem gemTotalSupply croesus =
+  let  gemBalanceOf  = singleton croesus gemTotalSupply
+       gemAllowance  = empty
+  in Gem {..}
 
-instance HasId Jar where
-  data Id Jar = JarId String
-    deriving (Show, Eq, Ord)
-  mkId = JarId
+data Jar = Jar {
+  jarGem  :: Gem,          -- ERC20 token
+  jarTag  :: Wad,          -- Market price
+  jarZzz  :: Nat           -- Price expiration
+} deriving (Eq, Show)
 
-instance HasId Lad where
-  data Id Lad = LadId String
-    deriving (Show, Eq, Ord)
-  mkId = LadId
+makeFields ''Jar
+
+data Ilk = Ilk {
+  ilkJar  :: Id Jar,       -- Collateral vault
+  ilkAxe  :: Ray,          -- Liquidation penalty
+  ilkMat  :: Ray,          -- Liquidation ratio
+  ilkTax  :: Ray,          -- Stability fee
+  ilkHat  :: Wad,          -- Debt ceiling
+  ilkLag  :: Nat,          -- Limbo duration
+  ilkBag  :: Map Nat Ray,  -- Accumulator
+  ilkRho  :: Nat           -- Last poked
+} deriving (Eq, Show)
+
+makeFields ''Ilk
+
+data Urn = Urn {
+  urnIlk  :: Id Ilk,       -- CDP type
+  urnLad  :: Id Lad,       -- Issuer
+  urnPro  :: Wad,          -- Collateral amount
+  urnCon  :: Wad,          -- Outstanding dai debt
+  urnPhi  :: Nat           -- Last poked
+} deriving (Eq, Show)
+
+makeFields ''Urn
+
+data Vat = Vat {
+  vatTau  :: Nat,                -- Last poked
+  vatFix  :: Wad,                -- Market price
+  vatPar  :: Wad,                -- Target price
+  vatHow  :: Ray,                -- Sensitivity
+  vatWay  :: Ray,                -- Target rate
+  vatPie  :: Wad,                -- Unprocessed fees
+  vatSin  :: Wad,                -- Bad debt
+  vatJars  :: Map (Id Jar) Jar,  -- ERC20 tokens
+  vatIlks  :: Map (Id Ilk) Ilk,  -- CDP types
+  vatUrns  :: Map (Id Urn) Urn   -- CDPs
+} deriving (Eq, Show)
+
+makeFields ''Vat
+
+data System = System {
+  systemVat   :: Vat,
+  systemEra   :: Int,
+  systemLads  :: Map (Id Lad) Lad   -- System users
+} deriving (Eq, Show)
+
+makeFields ''System
 
 defaultIlk :: Id Jar -> Ilk
 defaultIlk jarId = Ilk {
-  jar  = jarId,
-  axe  = Ray 1,
-  mat  = Ray 1,
-  tax  = Ray 1,
-  hat  = Wad 0,
-  lag  = Nat 0,
-  bag  = empty,
-  age  = Nat 0
+  ilkJar  = jarId,
+  ilkAxe  = Ray 1,
+  ilkMat  = Ray 1,
+  ilkTax  = Ray 1,
+  ilkHat  = Wad 0,
+  ilkLag  = Nat 0,
+  ilkBag  = empty,
+  ilkRho  = Nat 0
 }
 
 defaultUrn :: Id Ilk -> Id Lad -> Urn
 defaultUrn ilk lad = Urn {
-  ilk  = ilk,
-  lad  = lad,
-  pro  = Wad 0,
-  con  = Wad 0,
-  age  = Nat 0
+  urnIlk  = ilk,
+  urnLad  = lad,
+  urnPro  = Wad 0,
+  urnCon  = Wad 0,
+  urnPhi  = Nat 0
 }
 
-initialDao :: Dao
-initialDao = Dao {
-  age   = 0,
-  fix   = Wad 0,
-  par   = Wad 0,
-  how   = Ray 0,
-  way   = Ray 1,
-  pie   = Wad 0,
-  sin   = Wad 0,
-  ilks  = empty,
-  urns  = empty,
-  lads  = empty,
-  jars  = singleton (JarId "DAI") Jar {
-    gem  = Gem {
-      totalSupply  = 0,
-      balanceOf    = empty,
-      allowance    = empty
+initialVat :: Vat
+initialVat = Vat {
+  vatTau   = 0,
+  vatFix   = Wad 0,
+  vatPar   = Wad 0,
+  vatHow   = Ray 0,
+  vatWay   = Ray 1,
+  vatPie   = Wad 0,
+  vatSin   = Wad 0,
+  vatIlks  = empty,
+  vatUrns  = empty,
+  vatJars  = singleton (Id "DAI") Jar {
+    jarGem  = Gem {
+      gemTotalSupply  = 0,
+      gemBalanceOf    = empty,
+      gemAllowance    = empty
     },
-    tag  = Wad 0,
-    zzz  = 0
+    jarTag  = Wad 0,
+    jarZzz  = 0
   }
+}
+
+initialSystem :: System
+initialSystem = System {
+  systemVat   = initialVat,
+  systemLads  = empty,
+  systemEra   = 0
 }
 
 data Action =
@@ -207,36 +212,35 @@ data Action =
   |  OpenUrn  (Id Urn)  (Id Ilk)  (Id Lad)
   deriving (Eq, Show)
 
-perform :: Dao -> Action -> Dao
-perform dao = \case
-  NewLad id           -> dao {
-    lads = insert id Lad (lads dao)
-  }
-  NewJar id jar       -> dao {
-    jars = insert id jar (jars dao)
-  }
-  FormIlk id jar      -> dao {
-    ilks = insert id (defaultIlk jar) (ilks dao)
-  }
-  OpenUrn id ilk lad  -> dao {
-    urns = insert id (defaultUrn ilk lad) (urns dao)
-  }
+data Env = Env
+  { envLad :: Id Lad }
+  deriving (Eq, Show)
 
-decrease, increase :: Ord k =>
-  Wad -> k -> Map k Wad -> Map k Wad
-decrease  d = adjust (\x -> x - d)
-increase  d = adjust (\x -> x + d)
+makeFields ''Env
+
+type Maker a = ReaderT Env (StateT System Identity) a
+
+perform :: Action -> Maker ()
+perform = \case
+  NewLad id          ->
+    lads . at id ?= Lad
+  NewJar id jar      ->
+    vat . jars . at id ?= jar
+  FormIlk id jar     ->
+    vat . ilks . at id ?= defaultIlk jar
+  OpenUrn id ilk lad ->
+    vat . urns . at id ?= defaultUrn ilk lad
 
 transferFrom  ::  Id Lad -> Id Lad -> Wad
               ->  Gem -> Maybe Gem
 transferFrom src dst wad gem =
-  do  balance <- lookup src (balanceOf gem)
+  do  balance <- gem ^. balanceOf . at src
       guard (balance >= wad)
-      return gem {
-        balanceOf =
-          decrease wad src $
-            increase wad dst (balanceOf gem)
-      }
+      return $
+        gem & balanceOf . at src . _Just -~ wad
+            & balanceOf . at dst %~
+                (\case Nothing -> Just wad
+                       Just x -> Just (wad + x))
 
 instance Arbitrary Wad where
   arbitrary = wad <$> choose (0, 10000 :: Precise)
@@ -244,17 +248,17 @@ instance Arbitrary Wad where
 instance Arbitrary Ray where
   arbitrary = ray <$> choose (0, 2 :: Precise)
 
-instance HasId a => Arbitrary (Id a) where
-  arbitrary = mkId <$> shuffle ['a'..'m']
+instance Arbitrary (Id a) where
+  arbitrary = Id <$> shuffle ['a'..'m']
 
 instance Arbitrary Nat where
   arbitrary = Nat <$> choose (0, 1000)
 
 instance Arbitrary Gem where
   arbitrary = do
-    balanceOf <- arbitrary
-    let  totalSupply  = sum (elems balanceOf)
-         allowance    = mempty
+    gemBalanceOf <- arbitrary
+    let  gemTotalSupply  = sum (elems gemBalanceOf)
+         gemAllowance    = mempty
     return Gem { .. }
 
 data GemWithCouple =
@@ -266,42 +270,41 @@ instance Arbitrary GemWithCouple where
     gem                             <- arbitrary
     ((bob, bobWad), (eve, eveWad))  <- arbitrary
     return $ GemWithCouple bob eve gem {
-      balanceOf =
+      gemBalanceOf =
         insert bob bobWad $
-          insert eve eveWad (balanceOf gem)
+          insert eve eveWad (gemBalanceOf gem)
    }
 
-
-marginalAction :: Dao -> Gen Action
-marginalAction dao =
-  if       size (lads dao) ==  0  then newLad
-  else if  size (jars dao) <   2  then newJar
-  else if  size (ilks dao) <   1  then formIlk
+marginalAction :: System -> Gen Action
+marginalAction sys =
+  if       size (sys ^. lads) ==  0        then newLad
+  else if  size (sys ^. vat . jars) <   2  then newJar
+  else if  size (sys ^. vat . ilks) <   1  then formIlk
   else oneof [newLad, newJar, formIlk, openUrn]
   where
     newLad = NewLad <$> arbitrary
     newJar = do
       (id, tag, zzz) <- arbitrary
-      lad  <- elements (keys (lads dao))
+      lad  <- elements (keys (sys ^. lads))
       gem  <- monopolizedGem <$> arbitrary <*> pure lad
       return (NewJar id (Jar gem tag zzz))
     formIlk = do
       id   <- arbitrary
-      jar  <- elements (keys (jars dao))
+      jar  <- elements (keys (sys ^. vat . jars))
       return (FormIlk id jar)
     openUrn = do
       id   <- arbitrary
-      ilk  <- elements (keys (ilks dao))
-      lad  <- elements (keys (lads dao))
+      ilk  <- elements (keys (sys ^. vat . ilks))
+      lad  <- elements (keys (sys ^. lads))
       return (OpenUrn id ilk lad)
 
-instance Arbitrary Dao where
-  arbitrary = sized (\n -> f n initialDao)
+instance Arbitrary System where
+  arbitrary = sized (\n -> f n initialSystem)
     where
-      f 0 dao = return dao
-      f n dao = do
-        a <- marginalAction dao
-        f (n - 1) (perform dao a)
+      f 0 sys = return sys
+      f n sys = do
+        a <- marginalAction sys
+        f (n - 1) (execState (runReaderT (perform a) Env { envLad = Id "" }) sys)
 
 decimalFixedPointProperties =
   testGroup "Decimal fixed points" [
@@ -327,26 +330,26 @@ gemProperties = testGroup "Gems" [
 
   testProperty "supply invariant" $
     \(GemWithCouple src dst gem) ->
-      let  Just wad   = lookup src (balanceOf gem)
+      let  Just wad   = lookup src (gemBalanceOf gem)
            Just gem'  = transferFrom src dst wad gem
-      in totalSupply gem' == totalSupply gem,
+      in gemTotalSupply gem' == gemTotalSupply gem,
 
   testProperty "no overdrawing" $
     \(GemWithCouple src dst gem) ->
-      let  wad   = Wad epsilon + balanceOf gem ! src
+      let  wad   = Wad epsilon + gemBalanceOf gem ! src
            gem'  = transferFrom src dst wad gem
       in gem' == Nothing,
 
   testProperty "no overtransfer" $
     \(GemWithCouple src dst gem) ->
-      let  wad   = Wad epsilon + balanceOf gem ! src
+      let  wad   = Wad epsilon + gemBalanceOf gem ! src
            gem'  = transferFrom src dst wad gem
       in gem' == Nothing
  ]
 
 main :: IO ()
 main = defaultMain $
-  testGroup "MakerDao900" [
+  testGroup "Maker" [
     decimalFixedPointProperties,
     gemProperties
   ]
