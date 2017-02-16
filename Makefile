@@ -15,5 +15,7 @@ nix-ghci: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal repl'
 nix-run: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal run'
-
+nix-sim: default.nix
+	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal run mkrsim'
+        
 default.nix: mkrfuzz.cabal; cabal2nix . > default.nix
