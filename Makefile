@@ -19,3 +19,8 @@ nix-sim: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal run mkrsim'
         
 default.nix: mkrfuzz.cabal; cabal2nix . > default.nix
+
+docker:
+	docker build -t makerdao/faker .
+	docker run -it --rm makerdao/faker
+        
