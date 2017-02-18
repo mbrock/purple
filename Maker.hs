@@ -1,7 +1,8 @@
+{-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
 {-# Language DuplicateRecordFields #-}
-{-# Language FlexibleInstances #-}
 {-# Language FlexibleContexts #-}
+{-# Language FlexibleInstances #-}
 {-# Language FunctionalDependencies #-}
 {-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
@@ -13,10 +14,7 @@
 {-# Language TemplateHaskell #-}
 {-# Language TypeFamilies #-}
 
-module Maker (
-  Precise, E18, E36, Wad, Ray, Id (..), cast, wad, ray,
-  Action, perform, exec, initialSystem, report
-) where
+module Maker where
 
 import Control.Lens hiding (elements)
 
@@ -176,7 +174,8 @@ makeFields ''Vat
 data System = System {
   systemVat   :: Vat,
   systemEra   :: Nat,
-  systemLads  :: IdMap Lad   -- System users
+  systemLads  :: IdMap Lad,   -- System users
+  systemLad   :: Id Lad
 } deriving (Eq, Show)
 
 makeFields ''System
@@ -228,7 +227,8 @@ initialSystem :: System
 initialSystem = System {
   systemVat   = initialVat,
   systemLads  = empty,
-  systemEra   = 0
+  systemEra   = 0,
+  systemLad   = Id "God"
 }
 
 data Action =
@@ -242,77 +242,88 @@ data Action =
   |  Warp     Nat
   deriving (Eq, Show, Read)
 
-data Env = Env
-  { envLad :: Id Lad
-  , envSys :: System }
-  deriving (Eq, Show)
+newtype Maker a = Maker { runMaker :: State System a }
+  deriving (Functor, Applicative, Monad, MonadState System)
 
-makeFields ''Env
+instance MonadReader System Maker where
+  ask = Maker get
+  local f (Maker m) = Maker $ do
+    s <- get
+    put (f s)
+    x <- m
+    put s
+    return x
 
-type Maker e s a = ReaderT e (StateT s Identity) a
+type ReadWrite r w m = (MonadReader r m, MonadState w m)
 
 newLad
-  :: HasLads s (IdMap Lad)
-  => Id Lad -> Maker e s ()
+  :: (HasLads w (IdMap Lad),
+      ReadWrite r w m)
+  => Id Lad -> m ()
 newLad id =
   lads.at id ?= Lad
 
 newJar
-  :: (HasVat s vat,
-      HasJars vat (IdMap Jar))
-  => Id Jar -> Jar -> Maker e s ()
+  :: (HasVat w vat,
+      HasJars vat (IdMap Jar),
+      ReadWrite r w m)
+  => Id Jar -> Jar -> m ()
 newJar id jar =
   vat.jars.at id ?= jar 
 
 formIlk
-  :: (HasVat s vat,
-      HasIlks vat (IdMap Ilk))
-  => Id Ilk -> Id Jar -> Maker e s ()
+  :: (HasVat w vat,
+      HasIlks vat (IdMap Ilk),
+      ReadWrite r w m)
+  => Id Ilk -> Id Jar -> m ()
 formIlk id jar =
   vat.ilks.at id ?= defaultIlk jar
 
 openUrn
-  :: (HasVat s vat,
+  :: (HasVat w vat,
       HasUrns vat (IdMap Urn),
-      HasLad e (Id Lad))
-  => Id Urn -> Id Ilk -> Maker e s ()
+      HasLad r (Id Lad),
+      ReadWrite r w m)
+  => Id Urn -> Id Ilk -> m ()
 openUrn id ilk = do
   theLad <- view lad
   vat.urns.at id ?= defaultUrn ilk theLad
 
 tell
-  :: (HasVat write vat',
-      HasFix vat' Wad)
-  => Wad -> Maker e write ()
+  :: (HasVat w vat',
+      HasFix vat' Wad,
+      ReadWrite r w m)
+  => Wad -> m ()
 tell x =
   vat.fix .= x
 
 frob
-  :: (HasVat write vat',
-      HasHow vat' Ray)
-  => Ray -> Maker e write ()
+  :: (HasVat w vat',
+      HasHow vat' Ray,
+      ReadWrite r w m)
+  => Ray -> m ()
 frob x =
   vat.how .= x
 
 poke
-  :: (HasSys read sys,
-      HasVat sys vat,
-      HasEra sys Nat,
+  :: (HasVat r vat,
+      HasEra r Nat,
       HasTau vat Nat,
       HasHow vat Ray,
       HasWay vat Ray,
       HasFix vat Wad,
-      HasVat write vat',
+      HasVat w vat',
       HasPar vat' Wad,
       HasWay vat' Ray,
-      HasTau vat' Nat)
-  => Maker read write ()
+      HasTau vat' Nat,
+      ReadWrite r w m)
+  => m ()
 poke = do
-  theEra <- view $ sys.era
-  theFix <- view $ sys.vat.fix
-  theHow <- view $ sys.vat.how
-  oldTau <- view $ sys.vat.tau
-  oldWay <- view $ sys.vat.way
+  theEra <- view $ era
+  theFix <- view $ vat.fix
+  theHow <- view $ vat.how
+  oldTau <- view $ vat.tau
+  oldWay <- view $ vat.way
   oldPar <- use  $ vat.par
   
   let fan = theEra - oldTau
@@ -333,10 +344,11 @@ poke = do
     inj x = if x >= 0 then x + 1 else 1 / (1 - x)
 
 warp
-  :: (HasEra write Nat)
-  => Nat -> Maker e write ()
+  :: (HasEra w Nat,
+      ReadWrite r w m)
+  => Nat -> m ()
 warp t =
-  era .= t
+  era += t
 
 say = putStrLn
 
@@ -349,7 +361,7 @@ report sys = do
   say $ "fix\t" ++ show (sys^.vat.fix)
   say $ "par\t" ++ show (sys^.vat.par)
 
-perform :: Action -> Maker Env System ()
+perform :: Action -> Maker ()
 perform x = case x of
   NewLad id      -> newLad id
   NewJar id jar  -> newJar id jar
@@ -361,7 +373,7 @@ perform x = case x of
   Warp t         -> warp t
 
 scenario :: System -> [Action] -> System
-scenario s xs = foldl' (exec (Id "God")) s (map perform xs)
+scenario s xs = foldl' exec s (map perform xs)
 
 transferFrom  ::  Id Lad -> Id Lad -> Wad
               ->  Gem -> Maybe Gem
@@ -449,13 +461,11 @@ marginalAction sys =
       return (Id "God", Frob (x))
     genWarp = do
       dt <- choose (1, 100000)
-      return (Id "God", Warp (sys ^. era + Nat dt))
+      return (Id "God", Warp (Nat dt))
     genPoke = do
       return (Id "God", Poke)
 
-exec ladId system m =
-  flip execState system
-    (runReaderT m Env { envLad = ladId, envSys = system })
+exec sys (Maker m) = execState m sys
 
 instance Arbitrary System where
   arbitrary = sized (\n -> f (n) initialSystem)
@@ -463,7 +473,7 @@ instance Arbitrary System where
       f 0 sys = return sys
       f n sys = do
         (ladId, a) <- marginalAction sys
-        f (n - 1) $ exec ladId sys (perform a)
+        f (n - 1) $ exec sys (perform a)
 
   shrink sys = wipeAccounts
     where
@@ -522,9 +532,9 @@ someLad = Id "someone"
 pokeProperties = testGroup "Poke"
   [ testProperty "era idempotence" $
       \sys0 ->
-        let sys1 = exec someLad sys0 $ do
+        let sys1 = exec sys0 $ do
                      perform Poke
-            sys2 = exec someLad sys1 $ do
+            sys2 = exec sys1 $ do
                      perform Poke
                      perform Poke
         in sys1 == sys2
@@ -534,16 +544,16 @@ pokeProperties = testGroup "Poke"
         (sys0 ^. vat.fix /= sys0 ^. vat.par)
         ==>
         let sys1 = sys0 & era +~ 1
-            sys2 = exec someLad sys1 (perform Poke)
+            sys2 = exec sys1 (perform Poke)
         in changed (vat.way) sys1 sys2
         
   , testProperty "par changes in the direction of way" $
       \(sys0, dt) ->
-        let sys1 = exec someLad (sys0 & era +~ dt) (perform Poke)
+        let sys1 = exec (sys0 & era +~ dt) (perform Poke)
         in (sys1 ^. vat.way /= 1)
            ==>
            let sys2 = sys1 & era +~ dt
-               sys3 = exec someLad sys2 (perform Poke)
+               sys3 = exec sys2 (perform Poke)
            in collect (compare (sys1 ^. vat.way) 1) $
              if sys1 ^. vat.way > 1
              then increased (vat.par) sys2 sys3
@@ -551,11 +561,11 @@ pokeProperties = testGroup "Poke"
              
   , testProperty "par changes at how rate" $
       \sys0 ->
-        let sys1 = exec someLad (sys0 & era +~ 1) (perform Poke)
+        let sys1 = exec (sys0 & era +~ 1) (perform Poke)
         in (sys1 ^. vat.way /= 1)
            ==>
            let sys2 = sys1 & era +~ 1
-               sys3 = exec someLad sys2 (perform Poke)
+               sys3 = exec sys2 (perform Poke)
            in collect (sys2 ^. vat.par) $ -- (compare (sys1 ^. vat.way) 1) $
              if sys1 ^. vat.way >= 1
              then
@@ -594,8 +604,8 @@ decreased x a b =
       bx = b ^. x
   in counterexample (show ax ++ " >= " ++ show bx) (bx < ax)
 
-main :: IO ()
-main = defaultMain $
+tests :: IO ()
+tests = defaultMain $
   testGroup "Maker" [
     decimalFixedPointProperties,
     gemProperties,
