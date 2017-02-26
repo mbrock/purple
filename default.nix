@@ -1,6 +1,6 @@
 { mkDerivation, base, containers, exact-real, ghci-pretty, HUnit
 , lens, mtl, QuickCheck, random, readline, stdenv, tasty
-, tasty-hunit, tasty-quickcheck
+, tasty-hunit, tasty-quickcheck, text
 }:
 mkDerivation {
   pname = "mkrfuzz";
@@ -10,7 +10,7 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     base containers exact-real ghci-pretty HUnit lens mtl QuickCheck
-    random tasty tasty-hunit tasty-quickcheck
+    random tasty tasty-hunit tasty-quickcheck text
   ];
   executableHaskellDepends = [
     base containers exact-real ghci-pretty HUnit lens mtl QuickCheck

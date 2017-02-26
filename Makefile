@@ -1,22 +1,15 @@
-all: doc/MakerDao900.pdf
-Fuzz.gen.feature: Mkrfuzz.hs MakerDao900.lhs
-	docker build -t makerdao/mkrfuzz .
-	docker run -it --rm makerdao/mkrfuzz >$@
-
-test: default.nix MakerDao900.lhs
-	nix-shell -A mkrfuzz.env mkrfuzz.nix \
-	  --command 'runghc MakerDao900.lhs'
-
-doc/MakerDao900.pdf: MakerDao900.lhs
+doc/maker.pdf: Maker.lhs
 	docker build -t makerdao/lhs2tex doc
 	docker run -it --rm -v `pwd`:/src:ro -v `pwd`/doc:/doc makerdao/lhs2tex
 
 nix-ghci: default.nix
-	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal repl'
+	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal repl --ghc-options="-fobject-code -O2 -Wall -fno-warn-name-shadowing"'
 nix-run: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal run'
 nix-sim: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal run mkrsim'
+nix-plot: default.nix
+	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal run mkrplot'
         
 default.nix: mkrfuzz.cabal; cabal2nix . > default.nix
 
