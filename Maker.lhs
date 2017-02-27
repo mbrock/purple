@@ -146,6 +146,8 @@
 
 %format mint = "\texttt{mint}"
 %format Mint = "\texttt{Mint}"
+%format burn = "\texttt{burn}"
+%format Burn = "\texttt{Burn}"
 %format bite = "\texttt{bite}"
 %format Bite = "\texttt{Bite}"
 %format pull = "\texttt{pull}"
@@ -373,7 +375,7 @@ and logging.
 >   (MonadWriter, WriterT, runWriterT)
 
 Some less interesting imports are omitted from this document.
- 
+
 %if 0
 
 > import Data.Monoid (First)
@@ -382,7 +384,7 @@ Some less interesting imports are omitted from this document.
 > import Data.Map (Map, empty, singleton)
 > import Data.Sequence (Seq)
 > import Prelude hiding (lookup, log, sin)
-> 
+>
 > import qualified Control.Monad.Writer as Writer
 > import qualified Data.Sequence as Sequence
 
@@ -408,7 +410,7 @@ very precisely aimed ray of light).
 > -- Specify $10^{-18}$ as the precision of |E18|.
 > instance HasResolution E18 where
 >   resolution _ = 10^(18 :: Integer)
-> 
+>
 > -- Specify $10^{-36}$ as the precision of |E36|.
 > instance HasResolution E36 where
 >   resolution _ = 10^(36 :: Integer)
@@ -420,7 +422,7 @@ very precisely aimed ray of light).
 > -- Create the distinct |ray| type for precise rate quantities.
 > newtype Ray = Ray (Fixed E36)
 >   deriving (  Ord, Eq, Num, Real, Fractional)
-> 
+>
 
 %if 0
 
@@ -460,11 +462,11 @@ The fixed point number types have well-defined smallest increments
 (denoted |epsilon|).  This becomes useful when verifying equivalences.
 
 > class Epsilon t where epsilon :: t
-> 
+>
 > instance HasResolution a => Epsilon (Fixed a) where
 >   -- The use of |undefined| is safe since |resolution| ignores the value.
 >   epsilon = 1 / fromIntegral (resolution (undefined :: Fixed a))
-> 
+>
 > instance Epsilon Wad  where epsilon = Wad epsilon
 > instance Epsilon Ray  where epsilon = Ray epsilon
 
@@ -475,7 +477,7 @@ use Haskell's type system to distinguish them.
 
 > -- The type parameter is only used to create distinct types.
 > -- For example, |Id Foo| and |Id Bar| are incompatible.
-> 
+>
 > data Id a = Id String
 >   deriving (Show, Eq, Ord)
 
@@ -487,10 +489,10 @@ for such mapping types.
 
 We also have three predefined entities:
 
-> -- The DAI token address
+> -- The |dai| token address
 > id_dai = Id "Dai"
 >
-> -- The CDP engine address
+> -- The |cdp| engine address
 > id_vat = Id "Vat"
 >
 > -- The account with ultimate authority
@@ -516,7 +518,7 @@ We also have three predefined entities:
 >     gemTotalSupply  :: !Wad,
 >     gemBalanceOf    :: !(Map (Id Lad)          Wad),
 >     gemAllowance    :: !(Map (Id Lad, Id Lad)  Wad)
-> 
+>
 >   } deriving (Eq, Read, Show)
 >
 > makeFields ''Gem
@@ -524,59 +526,59 @@ We also have three predefined entities:
 \subsection{|Jar| --- Collateral token}
 
 > data Jar = Jar {
-> 
+>
 >   -- Collateral token
 >     jarGem  :: !Gem,
-> 
+>
 >   -- Market price
 >     jarTag  :: !Wad,
-> 
+>
 >   -- Price expiration
 >     jarZzz  :: !Nat
-> 
+>
 >   } deriving (Eq, Show, Read)
-> 
+>
 > makeFields ''Jar
 
-\subsection{|Ilk| --- CDP type}
+\subsection{|Ilk| --- |cdp| type}
 
 > data Ilk = Ilk {
-> 
+>
 >   -- Collateral vault
 >     ilkJar  :: !(Id Jar),
-> 
+>
 >   -- Liquidation penalty
 >     ilkAxe  :: !Ray,
-> 
+>
 >   -- Debt ceiling
 >     ilkHat  :: !Wad,
-> 
+>
 >   -- Liquidation ratio
 >     ilkMat  :: !Ray,
-> 
+>
 >   -- Stability fee
 >     ilkTax  :: !Ray,
-> 
+>
 >   -- Limbo duration
 >     ilkLag  :: !Nat,
-> 
+>
 >   -- Last dripped
 >     ilkRho  :: !Nat,
-> 
+>
 >   -- ???
 >     ilkCow  :: !Ray,
-> 
+>
 >   -- Stability fee accumulator
 >     ilkBag  :: !(Map Nat Ray)
-> 
+>
 >   } deriving (Eq, Show)
-> 
+>
 > makeFields ''Ilk
 
-\subsection{|Urn| --- CDP}
+\subsection{|Urn| --- collateralized debt position (|cdp|)}
 
 > data Urn = Urn {
-> 
+>
 >   -- Address of biting cat
 >     urnCat  :: !(Maybe (Id Lad)),
 >
@@ -586,7 +588,7 @@ We also have three predefined entities:
 >   -- Issuer
 >     urnLad  :: !(Id Lad),
 >
->   -- CDP type
+>   -- |cdp| type
 >     urnIlk  :: !(Id Ilk),
 >
 >   -- Outstanding dai debt
@@ -599,13 +601,13 @@ We also have three predefined entities:
 >     urnPhi  :: !Nat
 >
 >   } deriving (Eq, Show)
-> 
+>
 > makeFields ''Urn
 
 \subsection{|Vat| --- Dai creditor}
 
 > data Vat = Vat {
-> 
+>
 >   -- Market price
 >     vatFix  :: !Wad,
 >
@@ -624,20 +626,20 @@ We also have three predefined entities:
 >   -- Unprocessed revenue from stability fees
 >     vatPie  :: !Wad,
 >
->   -- Bad debt from liquidated CDPs
+>   -- Bad debt from liquidated |cdp|s
 >     vatSin  :: !Wad,
 >
 >   -- Collateral tokens
 >     vatJars  :: !(IdMap Jar),
 >
->   -- CDP types
+>   -- |cdp| types
 >     vatIlks  :: !(IdMap Ilk),
 >
->   -- CDPs
+>   -- |cdp|s
 >     vatUrns  :: !(IdMap Urn)
-> 
+>
 >   } deriving (Eq, Show)
-> 
+>
 > makeFields ''Vat
 
 \subsection{System model}
@@ -648,9 +650,9 @@ We also have three predefined entities:
 >     systemEra      :: !Nat,
 >     systemLads     :: IdMap Lad,   -- System users
 >     systemSender   :: Id Lad
-> 
+>
 >   } deriving (Eq, Show)
-> 
+>
 > makeFields ''System
 
 \subsection{Default data}
@@ -667,7 +669,7 @@ We also have three predefined entities:
 >   ilkCow  = Ray 1,
 >   ilkRho  = Nat 0
 > }
- 
+
 > defaultUrn :: Id Ilk -> Id Lad -> Urn
 > defaultUrn id_ilk id_lad = Urn {
 >   urnVow  = Nothing,
@@ -678,7 +680,7 @@ We also have three predefined entities:
 >   urnPro  = Wad 0,
 >   urnPhi  = Nat 0
 > }
- 
+
 > initialVat :: Ray -> Vat
 > initialVat how0 = Vat {
 >   vatTau   = 0,
@@ -701,7 +703,7 @@ We also have three predefined entities:
 >       jarZzz  = 0
 >     }
 > }
- 
+
 > initialSystem :: Ray -> System
 > initialSystem how0 = System {
 >   systemVat      = initialVat how0,
@@ -753,26 +755,26 @@ failures and authentication failures.
 > data Error = AssertError | AuthError
 >   deriving (Show, Eq)
 
-Now we can define the type of a 
+Now we can define the type of a
 
 > newtype Maker a =
 >   Maker (StateT System
 >           (WriterT (Seq Log)
 >             (Except Error)) a)
-> 
+>
 >   deriving (
 >     Functor, Applicative, Monad,
 >     MonadError   Error,
 >     MonadState   System,
 >     MonadWriter  (Seq Log)
 >   )
- 
+
 > exec  ::  System
 >       ->  Maker ()
 >       ->  Either Error (System, Seq Log)
 > exec sys (Maker m) =
 >   runExcept (runWriterT (execStateT m sys))
- 
+
 > instance MonadReader System Maker where
 >   ask = Maker get
 >   local f (Maker m) = Maker $ do
@@ -786,7 +788,7 @@ Now we can define the type of a
 > type Writes  w  m = MonadState w m
 > type Logs       m = MonadWriter (Seq Log) m
 > type Fails      m = MonadError Error m
-> 
+>
 > type IsAct    = ?act :: Act
 > type Notes      m = (IsAct, Logs m)
 
@@ -802,12 +804,12 @@ Now we can define the type of a
 >   ( HasIlks vat (Map (Id Ilk) ilk)
 >   , HasVat s vat
 >   ) => Id Ilk -> Traversal' s ilk
-> 
+>
 > urnAt ::
 >   ( HasUrns vat (Map (Id Urn) urn)
 >   , HasVat s vat
 >   ) => Id Urn -> Traversal' s urn
-> 
+>
 > jarAt ::
 >   ( HasJars vat (Map (Id Jar) jar)
 >   , HasVat s vat
@@ -819,10 +821,10 @@ Now we can define the type of a
 
 > log :: Logs m => Log -> m ()
 > log x = Writer.tell (Sequence.singleton x)
-> 
+>
 > sure :: Fails m => Bool -> m ()
 > sure x = unless x (throwError AssertError)
-> 
+>
 > need :: (Fails m, Reads r m)
 >      => Getting (First a) r a -> m a
 > need f = preview f >>= \case
@@ -831,7 +833,7 @@ Now we can define the type of a
 
 \section{Modifiers}
 
-\subsection{\texttt{note} --- logging actions}
+\addcontentsline{toc}{subsection}{\texttt{note} --- logging actions}
 
 > note ::
 >   (  IsAct, Logs m,
@@ -845,14 +847,14 @@ Now we can define the type of a
 >   log (LogNote s ?act)
 >   return x
 
-\subsection{\texttt{auth} --- authenticating actions}
- 
+\addcontentsline{toc}{subsection}{\texttt{auth} --- authenticating actions}
+
 > auth ::
 >   (  IsAct, Fails m,
 >      Reads r m,
 >        HasSender r (Id Lad))
 >   => m a -> m a
- 
+
 > auth continue = do
 >   s <- view sender
 >   unless (s == id_god)
@@ -865,78 +867,75 @@ Now we can define the type of a
 We call the basic operations of the Dai credit system "acts."
 
 \newpage
-\section{Acts performed by other acts}
+\section{Internal calculations}
 
-\subsection{|gaze| --- identify urn stage}
+\addcontentsline{toc}{subsection}{|gaze| --- identify urn stage}
 
 \newcommand{\yep}{$\bullet$}
 
 \begin{table}[t]
-\caption{Possible acts in the stages of an urn}\label{table:stages}
+\caption{Urn acts in the five stages of risk}\label{table:stages}
 \vspace{0.25cm}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{ r c c c c c c c c c l }
-        & |give| & |shut| & |lock| & |wipe| & |free| & |draw| & |bite| & |grab| & |plop| & \\
+&|give|&|shut|&|lock|&|wipe|&|free|&|draw|&|bite|&|grab|&|plop|& \\
 \hline
-|Pride| & \yep & \yep & \yep & \yep & \yep & \yep & & & & overcollateralized \\
+|Pride|&\yep&\yep&\yep&\yep&\yep&\yep&&&& overcollateralized \\
 \hline
-|Anger| & \yep & \yep & \yep & \yep & \yep &      & & & & debt ceiling reached \\
+|Anger|&\yep&\yep&\yep&\yep&\yep&&&&& debt ceiling reached \\
 \hline
-|Worry| & \yep & \yep & \yep & \yep &      &      & & & & price feed in limbo \\
+|Worry|&\yep&\yep&\yep&\yep&&&&&& price feed in limbo \\
 \hline
-|Panic| & \yep & \yep & \yep & \yep &      &      & \yep & & & undercollateralized \\
+|Panic|&\yep&\yep&\yep&\yep&&&\yep&&& undercollateralized \\
 \hline
-|Grief| & \yep & & & & & & & \yep & & liquidation initiated \\
+|Grief|&\yep&&&&&&&\yep&& liquidation initiated \\
 \hline
-|Dread| & \yep & & & & & & & & \yep & liquidation in progress \\
+|Dread|&\yep&&&&&&&&\yep& liquidation in progress \\
 \hline
 \end{tabular}}
 \end{table}
 
-The internal non-mutating act |gaze| identifies the |stage| of an
-|urn|.  It is used to assert that other acts are invoked correctly
-according to table \ref{table:stages}.
-
-First we define the stages.  Note that they are ordered from "bad to
-good," letting us say, for example, that |shut id_urn| is allowed
-when |gaze id_urn >= Panic|.
+We divide an urn's situation into five stages of risk.
+Table \ref{table:stages} shows which acts each stage allows.
+The stages are naturally ordered from more to less risky.
 
 > data Stage  =  Dread | Grief | Panic | Worry | Anger | Pride
+>
 >   deriving (Eq, Ord, Show)
 
-First we define the function |analyze| implementing the logic of
-urn stages.
+First we define a pure function |analyze| that determines an
+urn's stage.
 
 > analyze era0 par0 urn0 ilk0 jar0 =
-> 
 >   let
->   -- Locked collateral market price
->        pro_sdr     = view pro urn0  *  view tag jar0
-> 
+>   -- Market value of collateral
+>     pro_sdr = view pro urn0 * view tag jar0
 >   -- Debt at |dai| target price
->        con_sdr     = view con urn0  *  par0
+>     con_sdr = view con urn0 * par0
 >
->   -- Does debt-to-collateral ratio exceed liquidation ratio?
->        risky       = con_sdr        *  view mat ilk0  > pro_sdr
->
->   -- Does price feed latency exceed limbo duration?
->        laggy       = view zzz jar0  +  view lag ilk0  < era0
-> 
 >   in if
->     | view vow urn0     /= Nothing        -> Dread
->     | view cat urn0     /= Nothing        -> Grief
->     | risky || laggy                      -> Panic
->     | view zzz  jar0  < era0              -> Worry
->     | view cow  ilk0  > view hat ilk0     -> Anger
->     | otherwise                           -> Pride
+>   -- Undergoing liquidation?
+>     | view vow  urn0  /= Nothing                -> Dread
+>   -- Liquidation triggered?
+>     | view cat  urn0  /= Nothing                -> Grief
+>   -- Undercollateralized?
+>     | pro_sdr < con_sdr * view mat ilk0         -> Panic
+>   -- Price feed expired?
+>     | era0 > view zzz jar0 + view lag ilk0      -> Panic
+>   -- Price feed in limbo?
+>     | view zzz  jar0  < era0                    -> Worry
+>   -- Debt ceiling reached?
+>     | view cow  ilk0  > view hat ilk0           -> Anger
+>   -- Safely overcollateralized.
+>     | otherwise                                 -> Pride
 
-Now we define the |gaze| act which preliminarily updates the relevant
-parameters and then returns the value of |analyze|.
+Now we define the internal act |gaze| which returns the value of
+|analyze| after ensuring the system state is updated.
 
 > gaze id_urn = do
 >   prod
 >   poke id_urn
-> 
+>
 >   era0    <- view era
 >   par0    <- view (vat . par)
 >
@@ -946,7 +945,7 @@ parameters and then returns the value of |analyze|.
 >
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
-\subsection{|drip| --- update stability fee accumulator}
+\addcontentsline{toc}{subsection}{|drip| --- update stability fee accumulator}
 
 This internal act happens on every |poke|. It is also invoked when
 governance changes the |tax| of an |ilk|.
@@ -963,9 +962,9 @@ governance changes the |tax| of an |ilk|.
 > -- Previous time and stability fee thus far
 >   rho0  <- need (ilkAt id_ilk . rho)
 >   ice   <- need (ilkAt id_ilk . bag . ix rho0)
-> 
+>
 >   let
-> 
+>
 >   -- Seconds passed
 >     age   = era0 - rho0
 >
@@ -981,74 +980,32 @@ governance changes the |tax| of an |ilk|.
 >
 >   return dew
 
-We see that |drip| may fail; it reads an |ilk|'s |tax|, |cow|, |rho|,
-and |bag|; and it writes those same parameters except |tax|.
 
-> drip ::
->   (  Fails m,
->      Reads r m,
->        HasEra r Nat,
->        HasVat r vat_r,
->          HasIlks vat_r (Map (Id Ilk) ilk_r),
->            HasTax ilk_r Ray,
->            HasCow ilk_r Ray,
->            HasRho ilk_r Nat,
->            HasBag ilk_r (Map Nat Ray),
->      Writes w m,
->        HasVat w vat_w,
->          HasIlks vat_w (Map (Id Ilk) ilk_w),
->            HasCow ilk_w Ray,
->            HasRho ilk_w Nat,
->            HasBag ilk_w (Map Nat Ray))
->   => Id Ilk -> m Ray
 
- 
-\section{Acts performed by governance}
+\section{Governance}
 
-\subsection{|form| --- create a new |ilk|}
+\addcontentsline{toc}{subsection}{|form| --- create a new |ilk|}
 
 > form id_ilk id_jar =
 >   auth . note $ do
 >     vat . ilks . at id_ilk ?= defaultIlk id_jar
- 
-> form ::
-> 
->   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->      Writes w m,  HasVat w vat_w,
->                     HasIlks vat_w (IdMap Ilk))
-> 
->  => Id Ilk -> Id Jar -> m ()
 
-\subsection{|frob| --- alter the sensitivity parameter}
+\addcontentsline{toc}{subsection}{|frob| --- alter the sensitivity parameter}
 
 > frob how' =
 >   auth . note $ do
 >     vat . how .= how'
 
-> frob :: (  IsAct, Fails m, Logs m,
->            Reads r m,   HasSender r (Id Lad),
->            Writes w m,  HasVat w vat_w,
->                           HasHow vat_w ray)
->   => ray -> m ()
- 
-\section{Acts performed by account holders}
+\section{Lending}
 
-\subsection{|open| --- open CDP}
+\addcontentsline{toc}{subsection}{|open| --- open |cdp|}
 
 > open id_urn id_ilk =
 >   note $ do
 >     id_lad <- view sender
 >     vat . urns . at id_urn ?= defaultUrn id_ilk id_lad
 
-> open ::
->   (  IsAct, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->      Writes w m,  HasVat w vat_w,
->                     HasUrns vat_w (IdMap Urn))
->   => Id Urn -> Id Ilk -> m ()
-
-\subsection{|give| --- transfer CDP}
+\addcontentsline{toc}{subsection}{|give| --- transfer |cdp|}
 
 > give id_urn id_lad =
 >   note $ do
@@ -1057,25 +1014,16 @@ and |bag|; and it writes those same parameters except |tax|.
 >     sure (x == y)
 >     urnAt id_urn . lad .= id_lad
 
-> give ::
->   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->                   HasVat r vat_r,
->                     HasUrns vat_r (Map (Id Urn) urn_r),
->                       HasLad urn_r (Id Lad),
->      Writes w m,  HasVat w vat_r)
->   => Id Urn -> Id Lad -> m ()
-
-\subsection{|shut| --- repay |dai|, reclaim collateral, and delete CDP}
+\addcontentsline{toc}{subsection}{|shut| --- repay |dai|, reclaim collateral, and delete |cdp|}
 
 > shut id_urn =
 >
 >   note $ do
 >
->   -- Update the CDP's debt (prorating the stability fee).
+>   -- Update the |cdp|'s debt (prorating the stability fee).
 >     poke id_urn
 >
->   -- Attempt to repay all the CDP's outstanding |dai|.
+>   -- Attempt to repay all the |cdp|'s outstanding |dai|.
 >     con0 <- need (urnAt id_urn . con)
 >     wipe id_urn con0
 >
@@ -1083,16 +1031,16 @@ and |bag|; and it writes those same parameters except |tax|.
 >     pro0 <- need (urnAt id_urn . pro)
 >     free id_urn pro0
 >
->   -- Nullify the CDP.
+>   -- Nullify the |cdp|.
 >     vat . urns . at id_urn .= Nothing
 
-\subsection{|lock| --- insert collateral}
+\addcontentsline{toc}{subsection}{|lock| --- insert collateral}
 
 > lock id_urn x =
-> 
+>
 >   note $ do
-> 
->   -- Ensure CDP exists; identify collateral type
+>
+>   -- Ensure |cdp| exists; identify collateral type
 >     id_ilk  <- need (urnAt  id_urn  . ilk)
 >     id_jar  <- need (ilkAt  id_ilk  . jar)
 >
@@ -1103,52 +1051,34 @@ and |bag|; and it writes those same parameters except |tax|.
 >     id_lad  <- view sender
 >     pull id_jar id_lad x
 
-> lock ::
->   (  IsAct, Fails m, Logs m,
->      Reads r m,
->        HasSender r (Id Lad),
->        HasVat r vat_r,
->          HasUrns vat_r (Map (Id Urn) urn_r),
->            HasIlk urn_r (Id Ilk),
->          HasIlks vat_r (Map (Id Ilk) ilk_r),
->            HasJar ilk_r (Id Jar),
->          HasJars vat_r (Map (Id Jar) jar_r),
->            HasGem jar_r Gem,
->      Writes w m,
->        HasVat w vat_w,
->          HasJars vat_w (Map (Id Jar) jar_r),
->          HasUrns vat_w (Map (Id Urn) urn_w),
->            HasPro urn_w Wad)
->   => Id Urn -> Wad -> m ()
-
-\subsection{|wipe| --- pay back |dai| debt}
+\addcontentsline{toc}{subsection}{|wipe| --- pay back |dai| debt}
 
 > wipe id_urn wad_dai =
 >
 >   note $ do
 >
->   -- Fail if sender is not the CDP owner.
+>   -- Fail if sender is not the |cdp| owner.
 >     id_sender  <- view sender
 >     id_lad     <- need (urnAt id_urn . lad)
 >     sure (id_sender == id_lad)
 >
->   -- Fail if the CDP is not currently overcollateralized.
+>   -- Fail if the |cdp| is not currently overcollateralized.
 >     gaze id_urn >>= sure . (== Pride)
 >
->   -- Preliminarily reduce the CDP debt.
+>   -- Preliminarily reduce the |cdp| debt.
 >     urnAt id_urn . con -= wad_dai
 >
->   -- Attempt to get back |dai| from CDP owner and destroy it.
+>   -- Attempt to get back |dai| from |cdp| owner and destroy it.
 >     pull id_dai id_lad wad_dai
 >     burn id_dai wad_dai
 
-\subsection{|draw| --- issue |dai|}
+\addcontentsline{toc}{subsection}{|draw| --- issue |dai|}
 
 > draw id_urn wad_dai =
 >
 >   note $ do
 >
->   -- Fail if sender is not the CDP owner.
+>   -- Fail if sender is not the |cdp| owner.
 >     id_sender  <- view sender
 >     id_lad     <- need (urnAt id_urn . lad)
 >     sure (id_sender == id_lad)
@@ -1156,20 +1086,20 @@ and |bag|; and it writes those same parameters except |tax|.
 >   -- Tentatively record |dai| debt.
 >     urnAt id_urn . con += wad_dai
 >
->   -- Fail if CDP with new debt is not overcollateralized.
+>   -- Fail if |cdp| with new debt is not overcollateralized.
 >     gaze id_urn >>= sure . (== Pride)
 >
->   -- Mint |dai| and send it to the CDP owner.
+>   -- Mint |dai| and send it to the |cdp| owner.
 >     mint id_dai wad_dai
 >     push id_dai id_lad wad_dai
 
-\subsection{|free| --- release collateral}
+\addcontentsline{toc}{subsection}{|free| --- release collateral}
 
 > free id_urn wad_gem =
 >
 >   note $ do
 >
->   -- Fail if sender is not the CDP owner.
+>   -- Fail if sender is not the |cdp| owner.
 >     id_sender  <- view sender
 >     id_lad     <- need (urnAt id_urn . lad)
 >     sure (id_sender == id_lad)
@@ -1180,46 +1110,30 @@ and |bag|; and it writes those same parameters except |tax|.
 >   -- Fail if collateral decrease results in undercollateralization.
 >     gaze id_urn >>= sure . (== Pride)
 >
->   -- Send the collateral to the CDP owner.
+>   -- Send the collateral to the |cdp| owner.
 >     id_ilk  <- need (urnAt  id_urn  . ilk)
 >     id_jar  <- need (ilkAt  id_ilk  . jar)
 >     push id_jar id_lad wad_gem
 
-\section{Acts performed by price feeds}
+\section{Price feedback}
 
-\subsection{|mark| --- update |dai| market price}
+\addcontentsline{toc}{subsection}{|mark| --- update |dai| market price}
 
 > mark id_jar tag1 zzz1 =
 >   auth . note $ do
 >     jarAt id_jar . tag  .= tag1
 >     jarAt id_jar . zzz  .= zzz1
- 
-> mark ::
->   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->      Writes w m,  HasVat w vat_w,
->                     HasJars vat_w (Map (Id Jar) jar_w),
->                       HasTag jar_w wad,
->                       HasZzz jar_w nat)
->   => Id Jar -> wad -> nat -> m ()
- 
-\subsection{|tell| --- update collateral market price}
+
+\addcontentsline{toc}{subsection}{|tell| --- update collateral market price}
 
 > tell x =
 >   auth . note $ do
 >     vat . fix .= x
- 
-> tell ::
->   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->      Writes w m,  HasVat w vat_w,
->                     HasFix vat_w wad)
->   => wad -> m ()
 
 \clearpage
-\section{Acts performed by keepers}
+\section{Externally triggered mechanisms}
 
-\subsection{|prod| --- adjust target price}
+\addcontentsline{toc}{subsection}{|prod| --- adjust target price}
 
 > prod = note $ do
 >
@@ -1229,12 +1143,12 @@ and |bag|; and it writes those same parameters except |tax|.
 >   par0  <- view (vat . par)
 >   how0  <- view (vat . how)
 >   way0  <- view (vat . way)
-> 
+>
 >   let
-> 
+>
 >   -- Time difference in seconds
 >     fan  = era0 - tau0
-> 
+>
 >   -- Current deflation rate applied to target price
 >     par1  = par0 * cast (way0 ^^ fan)
 >
@@ -1248,33 +1162,14 @@ and |bag|; and it writes those same parameters except |tax|.
 >   vat.par  .= par1
 >   vat.way  .= way1
 >   vat.tau  .= era0
-> 
+>
 >   where
-> 
+>
 >   -- Convert between multiplicative and additive form
 >     prj x  = if x >= 1  then x - 1  else 1 - 1 / x
 >     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
 
-> prod ::
->   (  IsAct, Logs m,
->      Reads r m,
->        HasSender r (Id Lad),
->        HasEra r nat,
->        HasVat r vat_r,  (  HasPar vat_r wad,
->                            HasTau vat_r nat,
->                            HasHow vat_r ray,
->                            HasWay vat_r ray,
->                            HasFix vat_r wad),
->      Writes w m,
->        HasVat w vat_w,  (  HasPar vat_w wad,
->                            HasWay vat_w ray,
->                            HasTau vat_w nat),
->      Integral nat,
->      Ord wad, Fractional wad,
->      Fractional ray, Real ray)
->   => m ()
-
-\subsection{|poke| --- update CDP debt}
+\addcontentsline{toc}{subsection}{|poke| --- update |cdp| debt}
 
 > poke id_urn =
 >
@@ -1289,17 +1184,19 @@ and |bag|; and it writes those same parameters except |tax|.
 >     con0    <- need (urnAt id_urn  . con)
 >     dew     <- drip id_ilk
 >
->   -- Apply new stability fee to CDP debt.
+>   -- Apply new stability fee to |cdp| debt.
 >     urnAt id_urn . con *= cast (dew / ice)
 >
 >   -- Record the poke time.
 >     era0 <- view era
 >     urnAt id_urn . phi .= era0
 
-\subsection{|bite| --- trigger CDP liquidation}
+\section{Liquidation and settlement}
+
+\addcontentsline{toc}{subsection}{|bite| --- trigger |cdp| liquidation}
 
 > bite id_urn =
-> 
+>
 >   note $ do
 >
 >   -- Fail if urn is not undercollateralized.
@@ -1323,22 +1220,20 @@ and |bag|; and it writes those same parameters except |tax|.
 >     urnAt id_urn . con   .= con1
 >     sin                  += con1
 
-\section{Acts performed by settler}
-
-\subsection{|grab| --- promise to liquidate CDP}
+\addcontentsline{toc}{subsection}{|grab| --- promise to liquidate |cdp|}
 
 > grab id_urn =
 >
 >   auth . note $ do
 >
->   -- Fail if CDP liquidation is not initiated.
+>   -- Fail if |cdp| liquidation is not initiated.
 >     gaze id_urn >>= sure . (== Grief)
 >
->   -- Record the sender as the CDP's settler.
+>   -- Record the sender as the |cdp|'s settler.
 >     id_vow <- view sender
 >     urnAt id_urn . vow .= id_vow
 >
->   -- Nullify the CDP's debt and collateral.
+>   -- Nullify the |cdp|'s debt and collateral.
 >     pro0 <- need (urnAt id_urn .pro)
 >     urnAt id_urn . con  .= 0
 >     urnAt id_urn . pro  .= 0
@@ -1348,7 +1243,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >     id_jar <- need (ilkAt id_ilk  . jar)
 >     push id_jar id_vow pro0
 
-\subsection{|heal| --- process bad debt}
+\addcontentsline{toc}{subsection}{|heal| --- process bad debt}
 
 > heal wad_dai =
 >
@@ -1356,7 +1251,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >
 >     vat . sin -= wad_dai
 
-\subsection{|loot| --- process stability fee revenue}
+\addcontentsline{toc}{subsection}{|loot| --- process stability fee revenue}
 
 > loot wad_dai =
 >
@@ -1364,86 +1259,51 @@ and |bag|; and it writes those same parameters except |tax|.
 >
 >     vat . pie -= wad_dai
 
-\section{Acts performed by tests}
+\section{Test-related manipulation}
 
-\subsection{|warp| --- travel in time}
+\addcontentsline{toc}{subsection}{|warp| --- travel in time}
 
 > warp t =
 >   auth . note $ do
 >     era += t
 
-> warp ::
->   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->      Writes w m,  HasEra w nat,
->                     Num nat)
->   => nat -> m ()
- 
-\section{Acts performed by tokens}
- 
+\section{Minting, burning, and transferring}
+
+\addcontentsline{toc}{subsection}{|pull| --- get tokens into |vat|}
+
 > pull id_jar id_lad w = do
 >   g   <- need (jarAt id_jar . gem)
 >   g'  <- transferFrom id_lad id_vat w g
 >   jarAt id_jar . gem .= g'
 
-> pull ::
->   (  Fails m,
->      Reads r m,
->        HasVat r vat_r,  HasJars vat_r (Map (Id Jar) jar_r),
->                           HasGem jar_r Gem,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
->   => Id Jar -> Id Lad -> Wad -> m ()
+\addcontentsline{toc}{subsection}{|push| --- send tokens from |vat|}
 
 > push id_jar id_lad w = do
 >   g   <- need (jarAt id_jar . gem)
 >   g'  <- transferFrom id_vat id_lad w g
 >   jarAt id_jar . gem .= g'
 
-> push ::
->   (  Fails m,
->      Reads r m,
->        HasVat r vat_r,  HasJars vat_r (Map (Id Jar) jar_r),
->                           HasGem jar_r Gem,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
->   => Id Jar -> Id Lad -> Wad -> m ()
+\addcontentsline{toc}{subsection}{|mint| --- create new |dai|}
 
 > mint id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            += wad0
 >   jarAt id_jar . gem . balanceOf . ix id_vat  += wad0
 
-> mint ::
->   (  Fails m,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
->                           HasGem jar_r gem_r,
->                             HasTotalSupply  gem_r Wad,
->                             HasBalanceOf    gem_r (Map (Id Lad) Wad))
->   => Id Jar -> Wad -> m ()
+\addcontentsline{toc}{subsection}{|burn| --- destroy |dai|}
 
 > burn id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            -= wad0
 >   jarAt id_jar . gem . balanceOf . ix id_vat  -= wad0
 
-> burn ::
->   (  Fails m,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
->                           HasGem jar_r gem_r,
->                             HasTotalSupply  gem_r Wad,
->                             HasBalanceOf    gem_r (Map (Id Lad) Wad))
->   => Id Jar -> Wad -> m ()
+\section{System modelling}
 
-\section{System model actions}
- 
 > newLad id_lad = lads.at id_lad ?= Lad
- 
+
 > newLad ::
 >   ( Writes w m, HasLads w (IdMap Lad))
 >   => Id Lad -> m ()
- 
- 
+
+
 > newJar id id_jar =
 >   auth . note $ do
 >     vat . jars .at id ?= id_jar
@@ -1455,7 +1315,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >                     HasJars vat_w (IdMap Jar))
 >   =>
 >     Id Jar -> Jar -> m ()
- 
+
 \section{Other stuff}
 
 > perform :: Act -> Maker ()
@@ -1473,13 +1333,13 @@ and |bag|; and it writes those same parameters except |tax|.
 >     Give urn lad     -> give urn lad
 >     Pull jar lad wad -> pull jar lad wad
 >     Lock urn wad     -> lock urn wad
-> 
-> 
+>
+>
 > transferFrom
 >   ::  (MonadError Error m)
 >   =>  Id Lad -> Id Lad -> Wad
 >   ->  Gem -> m Gem
->   
+>
 > transferFrom src dst wad gem =
 >   case gem ^. balanceOf.(at src) of
 >     Nothing ->
@@ -1492,11 +1352,166 @@ and |bag|; and it writes those same parameters except |tax|.
 >             (\case
 >                 Nothing  -> Just wad
 >                 Just x   -> Just (wad + x))
-> 
+>
 
 
 
 \chapter{Testing}
 
-\end{document}
+\appendix
 
+\chapter{Act type signatures}
+
+We see that |drip| may fail; it reads an |ilk|'s |tax|, |cow|, |rho|,
+and |bag|; and it writes those same parameters except |tax|.
+
+> drip ::
+>   (  Fails m,
+>      Reads r m,
+>        HasEra r Nat,
+>        HasVat r vat_r,
+>          HasIlks vat_r (Map (Id Ilk) ilk_r),
+>            HasTax ilk_r Ray,
+>            HasCow ilk_r Ray,
+>            HasRho ilk_r Nat,
+>            HasBag ilk_r (Map Nat Ray),
+>      Writes w m,
+>        HasVat w vat_w,
+>          HasIlks vat_w (Map (Id Ilk) ilk_w),
+>            HasCow ilk_w Ray,
+>            HasRho ilk_w Nat,
+>            HasBag ilk_w (Map Nat Ray))
+>   => Id Ilk -> m Ray
+
+
+> form ::
+>
+>   (  IsAct, Fails m, Logs m,
+>      Reads r m,   HasSender r (Id Lad),
+>      Writes w m,  HasVat w vat_w,
+>                     HasIlks vat_w (IdMap Ilk))
+>
+>  => Id Ilk -> Id Jar -> m ()
+
+> frob :: (  IsAct, Fails m, Logs m,
+>            Reads r m,   HasSender r (Id Lad),
+>            Writes w m,  HasVat w vat_w,
+>                           HasHow vat_w ray)
+>   => ray -> m ()
+
+> open ::
+>   (  IsAct, Logs m,
+>      Reads r m,   HasSender r (Id Lad),
+>      Writes w m,  HasVat w vat_w,
+>                     HasUrns vat_w (IdMap Urn))
+>   => Id Urn -> Id Ilk -> m ()
+
+> give ::
+>   (  IsAct, Fails m, Logs m,
+>      Reads r m,   HasSender r (Id Lad),
+>                   HasVat r vat_r,
+>                     HasUrns vat_r (Map (Id Urn) urn_r),
+>                       HasLad urn_r (Id Lad),
+>      Writes w m,  HasVat w vat_r)
+>   => Id Urn -> Id Lad -> m ()
+
+> lock ::
+>   (  IsAct, Fails m, Logs m,
+>      Reads r m,
+>        HasSender r (Id Lad),
+>        HasVat r vat_r,
+>          HasUrns vat_r (Map (Id Urn) urn_r),
+>            HasIlk urn_r (Id Ilk),
+>          HasIlks vat_r (Map (Id Ilk) ilk_r),
+>            HasJar ilk_r (Id Jar),
+>          HasJars vat_r (Map (Id Jar) jar_r),
+>            HasGem jar_r Gem,
+>      Writes w m,
+>        HasVat w vat_w,
+>          HasJars vat_w (Map (Id Jar) jar_r),
+>          HasUrns vat_w (Map (Id Urn) urn_w),
+>            HasPro urn_w Wad)
+>   => Id Urn -> Wad -> m ()
+
+> mark ::
+>   (  IsAct, Fails m, Logs m,
+>      Reads r m,   HasSender r (Id Lad),
+>      Writes w m,  HasVat w vat_w,
+>                     HasJars vat_w (Map (Id Jar) jar_w),
+>                       HasTag jar_w wad,
+>                       HasZzz jar_w nat)
+>   => Id Jar -> wad -> nat -> m ()
+
+> tell ::
+>   (  IsAct, Fails m, Logs m,
+>      Reads r m,   HasSender r (Id Lad),
+>      Writes w m,  HasVat w vat_w,
+>                     HasFix vat_w wad)
+>   => wad -> m ()
+
+> prod ::
+>   (  IsAct, Logs m,
+>      Reads r m,
+>        HasSender r (Id Lad),
+>        HasEra r nat,
+>        HasVat r vat_r,  (  HasPar vat_r wad,
+>                            HasTau vat_r nat,
+>                            HasHow vat_r ray,
+>                            HasWay vat_r ray,
+>                            HasFix vat_r wad),
+>      Writes w m,
+>        HasVat w vat_w,  (  HasPar vat_w wad,
+>                            HasWay vat_w ray,
+>                            HasTau vat_w nat),
+>      Integral nat,
+>      Ord wad, Fractional wad,
+>      Fractional ray, Real ray)
+>   => m ()
+
+> warp ::
+>   (  IsAct, Fails m, Logs m,
+>      Reads r m,   HasSender r (Id Lad),
+>      Writes w m,  HasEra w nat,
+>                     Num nat)
+>   => nat -> m ()
+
+
+> pull ::
+>   (  Fails m,
+>      Reads r m,
+>        HasVat r vat_r,  HasJars vat_r (Map (Id Jar) jar_r),
+>                           HasGem jar_r Gem,
+>      Writes w m,
+>        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
+>   => Id Jar -> Id Lad -> Wad -> m ()
+
+> push ::
+>   (  Fails m,
+>      Reads r m,
+>        HasVat r vat_r,  HasJars vat_r (Map (Id Jar) jar_r),
+>                           HasGem jar_r Gem,
+>      Writes w m,
+>        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
+>   => Id Jar -> Id Lad -> Wad -> m ()
+
+> mint ::
+>   (  Fails m,
+>      Writes w m,
+>        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
+>                           HasGem jar_r gem_r,
+>                             HasTotalSupply  gem_r Wad,
+>                             HasBalanceOf    gem_r (Map (Id Lad) Wad))
+>   => Id Jar -> Wad -> m ()
+
+> burn ::
+>   (  Fails m,
+>      Writes w m,
+>        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
+>                           HasGem jar_r gem_r,
+>                             HasTotalSupply  gem_r Wad,
+>                             HasBalanceOf    gem_r (Map (Id Lad) Wad))
+>   => Id Jar -> Wad -> m ()
+
+
+
+\end{document}
