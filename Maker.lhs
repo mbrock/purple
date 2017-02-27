@@ -1,9 +1,15 @@
 \documentclass[twoside,12pt]{book}
+
 \usepackage[a4paper]{geometry}
+
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\hypersetup{colorlinks, linkcolor={blue!45!black}}
+
 %include polycode.fmt
 %include forall.fmt
 
@@ -833,7 +839,10 @@ Now we can define the type of a
 
 \section{Modifiers}
 
-\addcontentsline{toc}{subsection}{\texttt{note} --- logging actions}
+\newcommand{\actentry}[2]
+  {\addcontentsline{toc}{subsection}{#1 --- #2}}
+
+\actentry{|note|}{logging actions}
 
 > note ::
 >   (  IsAct, Logs m,
@@ -847,7 +856,7 @@ Now we can define the type of a
 >   log (LogNote s ?act)
 >   return x
 
-\addcontentsline{toc}{subsection}{\texttt{auth} --- authenticating actions}
+\actentry{|auth|}{authenticating actions}
 
 > auth ::
 >   (  IsAct, Fails m,
@@ -867,9 +876,9 @@ Now we can define the type of a
 We call the basic operations of the Dai credit system "acts."
 
 \newpage
-\section{Internal calculations}
+\section{Risk assessment}
 
-\addcontentsline{toc}{subsection}{|gaze| --- identify urn stage}
+\actentry{|gaze|}{|urn|: identify |cdp| risk stage}
 
 \newcommand{\yep}{$\bullet$}
 
@@ -945,7 +954,165 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
-\addcontentsline{toc}{subsection}{|drip| --- update stability fee accumulator}
+\section{Lending}
+
+\actentry{|open|}{|vat|: create |cdp| account}
+
+> open id_urn id_ilk =
+>   note $ do
+>     id_lad <- view sender
+>     vat . urns . at id_urn ?= defaultUrn id_ilk id_lad
+
+\actentry{|lock|}{|urn|: deposit collateral}
+
+> lock id_urn x =
+>
+>   note $ do
+>
+>   -- Ensure |cdp| exists; identify collateral type
+>     id_ilk  <- need (urnAt  id_urn  . ilk)
+>     id_jar  <- need (ilkAt  id_ilk  . jar)
+>
+>   -- Record an increase in collateral
+>     urnAt id_urn . pro += x
+>
+>   -- Take sender's tokens
+>     id_lad  <- view sender
+>     pull id_jar id_lad x
+
+\actentry{|free|}{|urn|: withdraw collateral}
+
+> free id_urn wad_gem =
+>
+>   note $ do
+>
+>   -- Fail if sender is not the |cdp| owner.
+>     id_sender  <- view sender
+>     id_lad     <- need (urnAt id_urn . lad)
+>     sure (id_sender == id_lad)
+>
+>   -- Tentatively record the decreased collateral.
+>     urnAt id_urn . pro  -=  wad_gem
+>
+>   -- Fail if collateral decrease results in undercollateralization.
+>     gaze id_urn >>= sure . (== Pride)
+>
+>   -- Send the collateral to the |cdp| owner.
+>     id_ilk  <- need (urnAt  id_urn  . ilk)
+>     id_jar  <- need (ilkAt  id_ilk  . jar)
+>     push id_jar id_lad wad_gem
+
+\actentry{|draw|}{|urn|: issue |dai| as debt}
+
+> draw id_urn wad_dai =
+>
+>   note $ do
+>
+>   -- Fail if sender is not the |cdp| owner.
+>     id_sender  <- view sender
+>     id_lad     <- need (urnAt id_urn . lad)
+>     sure (id_sender == id_lad)
+>
+>   -- Tentatively record |dai| debt.
+>     urnAt id_urn . con += wad_dai
+>
+>   -- Fail if |cdp| with new debt is not overcollateralized.
+>     gaze id_urn >>= sure . (== Pride)
+>
+>   -- Mint |dai| and send it to the |cdp| owner.
+>     mint id_dai wad_dai
+>     push id_dai id_lad wad_dai
+
+\actentry{|wipe|}{|urn|: repay debt and burn |dai|}
+
+> wipe id_urn wad_dai =
+>
+>   note $ do
+>
+>   -- Fail if sender is not the |cdp| owner.
+>     id_sender  <- view sender
+>     id_lad     <- need (urnAt id_urn . lad)
+>     sure (id_sender == id_lad)
+>
+>   -- Fail if the |cdp| is not currently overcollateralized.
+>     gaze id_urn >>= sure . (== Pride)
+>
+>   -- Preliminarily reduce the |cdp| debt.
+>     urnAt id_urn . con -= wad_dai
+>
+>   -- Attempt to get back |dai| from |cdp| owner and destroy it.
+>     pull id_dai id_lad wad_dai
+>     burn id_dai wad_dai
+
+\actentry{|give|}{|urn|: transfer |cdp| account}
+
+> give id_urn id_lad =
+>   note $ do
+>     x <- need (urnAt id_urn . lad)
+>     y <- view sender
+>     sure (x == y)
+>     urnAt id_urn . lad .= id_lad
+
+\actentry{|shut|}{|urn|: wipe, free, and delete |cdp|}
+
+> shut id_urn =
+>
+>   note $ do
+>
+>   -- Update the |cdp|'s debt (prorating the stability fee).
+>     poke id_urn
+>
+>   -- Attempt to repay all the |cdp|'s outstanding |dai|.
+>     con0 <- need (urnAt id_urn . con)
+>     wipe id_urn con0
+>
+>   -- Reclaim all the collateral.
+>     pro0 <- need (urnAt id_urn . pro)
+>     free id_urn pro0
+>
+>   -- Nullify the |cdp|.
+>     vat . urns . at id_urn .= Nothing
+
+\clearpage
+\section{Frequent adjustments}
+
+\actentry{|prod|}{|vat|: perform revaluation and rate adjustment}
+
+> prod = note $ do
+>
+>   era0  <- view era
+>   tau0  <- view (vat . tau)
+>   fix0  <- view (vat . fix)
+>   par0  <- view (vat . par)
+>   how0  <- view (vat . how)
+>   way0  <- view (vat . way)
+>
+>   let
+>
+>   -- Time difference in seconds
+>     fan  = era0 - tau0
+>
+>   -- Current deflation rate applied to target price
+>     par1  = par0 * cast (way0 ^^ fan)
+>
+>   -- Sensitivity parameter applied over time
+>     wag  = how0 * fromIntegral fan
+>
+>   -- Deflation rate scaled up or down
+>     way1  = inj (  prj way0 +
+>                    if fix0 < par0 then wag else -wag)
+>
+>   vat.par  .= par1
+>   vat.way  .= way1
+>   vat.tau  .= era0
+>
+>   where
+>
+>   -- Convert between multiplicative and additive form
+>     prj x  = if x >= 1  then x - 1  else 1 - 1 / x
+>     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
+
+\actentry{|drip|}{|ilk|: update stability fee accumulator}
 
 This internal act happens on every |poke|. It is also invoked when
 governance changes the |tax| of an |ilk|.
@@ -980,196 +1147,7 @@ governance changes the |tax| of an |ilk|.
 >
 >   return dew
 
-
-
-\section{Governance}
-
-\addcontentsline{toc}{subsection}{|form| --- create a new |ilk|}
-
-> form id_ilk id_jar =
->   auth . note $ do
->     vat . ilks . at id_ilk ?= defaultIlk id_jar
-
-\addcontentsline{toc}{subsection}{|frob| --- alter the sensitivity parameter}
-
-> frob how' =
->   auth . note $ do
->     vat . how .= how'
-
-\section{Lending}
-
-\addcontentsline{toc}{subsection}{|open| --- open |cdp|}
-
-> open id_urn id_ilk =
->   note $ do
->     id_lad <- view sender
->     vat . urns . at id_urn ?= defaultUrn id_ilk id_lad
-
-\addcontentsline{toc}{subsection}{|give| --- transfer |cdp|}
-
-> give id_urn id_lad =
->   note $ do
->     x <- need (urnAt id_urn . lad)
->     y <- view sender
->     sure (x == y)
->     urnAt id_urn . lad .= id_lad
-
-\addcontentsline{toc}{subsection}{|shut| --- repay |dai|, reclaim collateral, and delete |cdp|}
-
-> shut id_urn =
->
->   note $ do
->
->   -- Update the |cdp|'s debt (prorating the stability fee).
->     poke id_urn
->
->   -- Attempt to repay all the |cdp|'s outstanding |dai|.
->     con0 <- need (urnAt id_urn . con)
->     wipe id_urn con0
->
->   -- Reclaim all the collateral.
->     pro0 <- need (urnAt id_urn . pro)
->     free id_urn pro0
->
->   -- Nullify the |cdp|.
->     vat . urns . at id_urn .= Nothing
-
-\addcontentsline{toc}{subsection}{|lock| --- insert collateral}
-
-> lock id_urn x =
->
->   note $ do
->
->   -- Ensure |cdp| exists; identify collateral type
->     id_ilk  <- need (urnAt  id_urn  . ilk)
->     id_jar  <- need (ilkAt  id_ilk  . jar)
->
->   -- Record an increase in collateral
->     urnAt id_urn . pro += x
->
->   -- Take sender's tokens
->     id_lad  <- view sender
->     pull id_jar id_lad x
-
-\addcontentsline{toc}{subsection}{|wipe| --- pay back |dai| debt}
-
-> wipe id_urn wad_dai =
->
->   note $ do
->
->   -- Fail if sender is not the |cdp| owner.
->     id_sender  <- view sender
->     id_lad     <- need (urnAt id_urn . lad)
->     sure (id_sender == id_lad)
->
->   -- Fail if the |cdp| is not currently overcollateralized.
->     gaze id_urn >>= sure . (== Pride)
->
->   -- Preliminarily reduce the |cdp| debt.
->     urnAt id_urn . con -= wad_dai
->
->   -- Attempt to get back |dai| from |cdp| owner and destroy it.
->     pull id_dai id_lad wad_dai
->     burn id_dai wad_dai
-
-\addcontentsline{toc}{subsection}{|draw| --- issue |dai|}
-
-> draw id_urn wad_dai =
->
->   note $ do
->
->   -- Fail if sender is not the |cdp| owner.
->     id_sender  <- view sender
->     id_lad     <- need (urnAt id_urn . lad)
->     sure (id_sender == id_lad)
->
->   -- Tentatively record |dai| debt.
->     urnAt id_urn . con += wad_dai
->
->   -- Fail if |cdp| with new debt is not overcollateralized.
->     gaze id_urn >>= sure . (== Pride)
->
->   -- Mint |dai| and send it to the |cdp| owner.
->     mint id_dai wad_dai
->     push id_dai id_lad wad_dai
-
-\addcontentsline{toc}{subsection}{|free| --- release collateral}
-
-> free id_urn wad_gem =
->
->   note $ do
->
->   -- Fail if sender is not the |cdp| owner.
->     id_sender  <- view sender
->     id_lad     <- need (urnAt id_urn . lad)
->     sure (id_sender == id_lad)
->
->   -- Tentatively record the decreased collateral.
->     urnAt id_urn . pro  -=  wad_gem
->
->   -- Fail if collateral decrease results in undercollateralization.
->     gaze id_urn >>= sure . (== Pride)
->
->   -- Send the collateral to the |cdp| owner.
->     id_ilk  <- need (urnAt  id_urn  . ilk)
->     id_jar  <- need (ilkAt  id_ilk  . jar)
->     push id_jar id_lad wad_gem
-
-\section{Price feedback}
-
-\addcontentsline{toc}{subsection}{|mark| --- update |dai| market price}
-
-> mark id_jar tag1 zzz1 =
->   auth . note $ do
->     jarAt id_jar . tag  .= tag1
->     jarAt id_jar . zzz  .= zzz1
-
-\addcontentsline{toc}{subsection}{|tell| --- update collateral market price}
-
-> tell x =
->   auth . note $ do
->     vat . fix .= x
-
-\clearpage
-\section{Externally triggered mechanisms}
-
-\addcontentsline{toc}{subsection}{|prod| --- adjust target price}
-
-> prod = note $ do
->
->   era0  <- view era
->   tau0  <- view (vat . tau)
->   fix0  <- view (vat . fix)
->   par0  <- view (vat . par)
->   how0  <- view (vat . how)
->   way0  <- view (vat . way)
->
->   let
->
->   -- Time difference in seconds
->     fan  = era0 - tau0
->
->   -- Current deflation rate applied to target price
->     par1  = par0 * cast (way0 ^^ fan)
->
->   -- Sensitivity applied over time difference
->     wag  = how0 * fromIntegral fan
->
->   -- Deflation rate scaled up or down
->     way1  = inj (  prj way0 +
->                    if fix0 < par0 then wag else -wag)
->
->   vat.par  .= par1
->   vat.way  .= way1
->   vat.tau  .= era0
->
->   where
->
->   -- Convert between multiplicative and additive form
->     prj x  = if x >= 1  then x - 1  else 1 - 1 / x
->     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
-
-\addcontentsline{toc}{subsection}{|poke| --- update |cdp| debt}
+\actentry{|poke|}{|urn|: add stability fee to |cdp| debt}
 
 > poke id_urn =
 >
@@ -1191,9 +1169,38 @@ governance changes the |tax| of an |ilk|.
 >     era0 <- view era
 >     urnAt id_urn . phi .= era0
 
+\section{Governance}
+
+\actentry{|form|}{|vat|: create a new |cdp| type}
+
+> form id_ilk id_jar =
+>   auth . note $ do
+>     vat . ilks . at id_ilk ?= defaultIlk id_jar
+
+\actentry{|frob|}{|vat|: set the sensitivity parameter}
+
+> frob how' =
+>   auth . note $ do
+>     vat . how .= how'
+
+\section{Price feedback}
+
+\actentry{|mark|}{|vat|: update market price of |dai|}
+
+> mark id_jar tag1 zzz1 =
+>   auth . note $ do
+>     jarAt id_jar . tag  .= tag1
+>     jarAt id_jar . zzz  .= zzz1
+
+\actentry{|tell|}{|gem|: update market price of collateral token}
+
+> tell x =
+>   auth . note $ do
+>     vat . fix .= x
+
 \section{Liquidation and settlement}
 
-\addcontentsline{toc}{subsection}{|bite| --- trigger |cdp| liquidation}
+\actentry{|bite|}{|urn|: trigger |cdp| liquidation}
 
 > bite id_urn =
 >
@@ -1220,7 +1227,7 @@ governance changes the |tax| of an |ilk|.
 >     urnAt id_urn . con   .= con1
 >     sin                  += con1
 
-\addcontentsline{toc}{subsection}{|grab| --- promise to liquidate |cdp|}
+\actentry{|grab|}{|urn|: promise that liquidation is in process}
 
 > grab id_urn =
 >
@@ -1243,7 +1250,7 @@ governance changes the |tax| of an |ilk|.
 >     id_jar <- need (ilkAt id_ilk  . jar)
 >     push id_jar id_vow pro0
 
-\addcontentsline{toc}{subsection}{|heal| --- process bad debt}
+\actentry{|heal|}{|vat|: process bad debt}
 
 > heal wad_dai =
 >
@@ -1251,7 +1258,7 @@ governance changes the |tax| of an |ilk|.
 >
 >     vat . sin -= wad_dai
 
-\addcontentsline{toc}{subsection}{|loot| --- process stability fee revenue}
+\actentry{|loot|}{|vat|: process stability fee revenue}
 
 > loot wad_dai =
 >
@@ -1259,41 +1266,40 @@ governance changes the |tax| of an |ilk|.
 >
 >     vat . pie -= wad_dai
 
-\section{Test-related manipulation}
-
-\addcontentsline{toc}{subsection}{|warp| --- travel in time}
-
-> warp t =
->   auth . note $ do
->     era += t
-
 \section{Minting, burning, and transferring}
 
-\addcontentsline{toc}{subsection}{|pull| --- get tokens into |vat|}
+\actentry{|pull|}{|gem|: receive tokens to |vat|}
 
 > pull id_jar id_lad w = do
 >   g   <- need (jarAt id_jar . gem)
 >   g'  <- transferFrom id_lad id_vat w g
 >   jarAt id_jar . gem .= g'
 
-\addcontentsline{toc}{subsection}{|push| --- send tokens from |vat|}
+\actentry{|push|}{|gem|: send tokens from |vat|}
 
 > push id_jar id_lad w = do
 >   g   <- need (jarAt id_jar . gem)
 >   g'  <- transferFrom id_vat id_lad w g
 >   jarAt id_jar . gem .= g'
 
-\addcontentsline{toc}{subsection}{|mint| --- create new |dai|}
+\actentry{|mint|}{|dai|: increase supply}
 
 > mint id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            += wad0
 >   jarAt id_jar . gem . balanceOf . ix id_vat  += wad0
 
-\addcontentsline{toc}{subsection}{|burn| --- destroy |dai|}
+\actentry{|burn|}{|dai|: decrease supply}
 
 > burn id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            -= wad0
 >   jarAt id_jar . gem . balanceOf . ix id_vat  -= wad0
+\section{Test-related manipulation}
+
+\actentry{|warp|}{travel in time}
+
+> warp t =
+>   auth . note $ do
+>     era += t
 
 \section{System modelling}
 
