@@ -29,6 +29,8 @@
 %format <$> = "\mathbin{<\!\!\$\!\!>}"
 %format .= = "\mathrel{:=}"
 %format += = "\mathrel{+\!\!=}"
+%format *= = "\mathrel{*\!\!=}"
+%format %= = "\mathrel{\%\!\!=}"
 %format -= = "\mathrel{-\!\!=}"
 %format <$> = "\mathbin{<\!\!\$\!\!>}"
 %format <*> = "\mathbin{<\!\!\!*\!\!\!>}"
@@ -282,12 +284,13 @@ to continuously assess the risk of each |cdp|.  If the value of a
 marked for liquidation, which triggers a decentralized
 auction mechanism.
 
-Maker also controls the supply of another token, |mkr|.  This token
-acts as a ``share'' in Maker.  When a |cdp| liquidation fails to
+Another token, |mkr|, is also controlled by Maker, acting as a
+``share'' in the system itself.  When a |cdp| liquidation fails to
 recover the full value of debt, Maker mints more |mkr| and auctions it
-out.  Thus |mkr| is used to fund last resort market making.  On the
-other hand, Maker imposes a \textit{stability fee} on all dai loans,
-and revenue from these fees goes toward buying |mkr| for burning.
+out.  Thus |mkr| is used to fund last resort market making.  The value
+of the |mkr| token is based on the \textit{stability fee} imposed on
+all dai loans: stability fee revenue goes toward buying |mkr|
+for burning.
 
 This document is an executable technical specification of the exact
 workings of the Maker smart contracts.
@@ -298,7 +301,8 @@ The version of this system that will be deployed on the Ethereum
 blockchain is written in Solidity, which is a workable smart contract
 implementation language.  This reference implementation is a precise
 model of the behavior of those contracts, written as a ``literate''
-Haskell program.  The motivations include:
+Haskell program.  The motivations for such a reference implementation
+include:
 
 \begin{enumerate}
 
@@ -347,12 +351,12 @@ statistical aspects.
 \section{Prerequisite Haskell knowledge}
 
 Some parts of this document require specific knowledge about Haskell
-programming, but these parts make up a framework for expressing the
-more interesting parts in a natural way.
+programming, but these parts only make up a framework for expressing
+the more interesting parts in a natural way free of boilerplate.
 
 \xxx{Guidelines for skipping boring chapters and so on...}
 
-For a full understanding of the reference implementation's source
+For a complete understanding of the reference implementation's source
 code, the reader should grasp the following Haskell patterns:
 
 \begin{itemize}
@@ -407,37 +411,58 @@ which parts of the system are used or altered by each system action.
 
 %endif
 
+We will begin by defining the program's basic dependencies before
+going on to define the basic data types and operations.
+
 > module Maker where
 
-We import types for the decimal fixed-point arithmetic which we use
-for amounts and rates.
+We use a typical stack of monad transformers from the \texttt{mtl}
+library to structure stateful actions; see
+section~\ref{section:maker-monad} (\textit{The Maker monad}).
 
-> import Data.Fixed
-
-We rely on the \texttt{lens} library for defining and using accessors
-which otherwise tend to become long-winded in Haskell.  Since our
-program has several nested records, this makes the code much clearer.
-There is no need to understand the theory behind lenses to understand
-this program.  All the reader needs to know is that |a . b . c|
-denotes a nested accessor much like \texttt{a.b.c} in C-style
-languages.  The rest should be obvious from context.
-
-> import Control.Lens
-
-We use a typical stack of monad transformers from the |mtl| library to
-structure state-modifying actions.  Again, the reader does not need
-any abstract understanding of monads.  They make our code clear and
-simple by enabling |do| blocks to express exceptions, state,
-and logging.
-
-> import Control.Monad.Except
->   (MonadError, Except, throwError, runExcept)
-> import Control.Monad.Reader
->   (MonadReader (..))
 > import Control.Monad.State
 >   (MonadState, StateT, execStateT, get, put)
+>
+> import Control.Monad.Reader
+>   (MonadReader (..))
+> 
 > import Control.Monad.Writer
 >   (MonadWriter, WriterT, runWriterT)
+> 
+> import Control.Monad.Except
+>   (MonadError, Except, throwError, runExcept)
+
+We use decimal fixed-point arithmetic.
+
+> import Data.Fixed (Fixed, HasResolution (..))
+
+We rely on the \texttt{lens} library for accessing nested values.
+There is no need to understand the theory behind lenses to understand
+this program.  The notation |a . b . c| denotes a nested accessor much
+like \texttt{a.b.c} in C-style languages; for more details, consult
+the lens manual.
+
+%if 0
+
+> -- Hidden from document because the type signatures
+> -- that use these names are also hidden.
+> import Control.Lens (Traversal', Getting)
+
+%endif
+
+> import Control.Lens (
+> 
+>   makeFields,        -- Defines lenses for record fields
+>   view, preview,     -- Reads a lens in a |do| block
+>   (&~),              -- Lets us use a |do| block with setters \xxx{Get rid of this.}
+>   ix,                -- Lens for map retrieval and updating
+>   at,                -- Lens for map insertion
+> 
+> -- Mutating operators for |do| blocks:
+>   (.=),              -- Replace
+>   (-=), (+=), (*=),  -- Update arithmetically
+>   (%=),              -- Update according to function
+>   (?=))              -- Insert into map
 
 Some less interesting imports are omitted from this document.
 
@@ -820,7 +845,16 @@ failures and authentication failures.
 > data Error = AssertError | AuthError
 >   deriving (Show, Eq)
 
-Now we can define the type of a
+\newcommand{\actentry}[2]
+  {\addcontentsline{toc}{subsection}{#1 --- #2}}
+
+\section{The |Maker| monad}
+\label{section:maker-monad}
+
+The reader does not need any abstract understanding of monads to
+understand the code.  What they give us is a nice syntax---the |do|
+notation---for expressing exceptions, state, and logging in a way that
+is still purely functional.
 
 > newtype Maker a =
 >   Maker (StateT System
@@ -897,9 +931,6 @@ Now we can define the type of a
 >   Just x  -> return x
 
 \section{Modifiers}
-
-\newcommand{\actentry}[2]
-  {\addcontentsline{toc}{subsection}{#1 --- #2}}
 
 \actentry{|note|}{logging actions}
 
@@ -1407,17 +1438,17 @@ governance changes the |tax| of an |ilk|.
 >   ->  Gem -> m Gem
 >
 > transferFrom src dst wad gem =
->   case gem ^. balanceOf.(at src) of
+>   case view (balanceOf . at src) gem of
 >     Nothing ->
 >       throwError AssertError
 >     Just balance -> do
 >       sure (balance >= wad)
->       return $ gem
->         & balanceOf . ix src -~ wad
->         & balanceOf . at dst %~
->             (\case
->                 Nothing  -> Just wad
->                 Just x   -> Just (wad + x))
+>       return $ gem &~ do
+>         balanceOf . ix src -= wad
+>         balanceOf . at dst %=
+>           (\case
+>               Nothing  -> Just wad
+>               Just x   -> Just (wad + x))
 >
 
 
