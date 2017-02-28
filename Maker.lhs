@@ -248,8 +248,6 @@
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
-\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
-
 \tableofcontents
 
 \clearpage
@@ -257,6 +255,8 @@
 \chapter{Introduction}
 
 \newcommand{\MakerDAO}{\textsc{dai maker}}
+
+\newcommand{\xxx}[1]{\textsl{\small $\Diamond$ #1}}
 
 The \textsc{dai credit system}, henceforth also ``Maker,'' is a
 network of Ethereum contracts designed to issue the |dai| currency
@@ -343,6 +343,43 @@ simulations of the system's economic, game-theoretic, or
 statistical aspects.
 
 \end{enumerate}
+
+\section{Prerequisite Haskell knowledge}
+
+Some parts of this document require specific knowledge about Haskell
+programming, but these parts make up a framework for expressing the
+more interesting parts in a natural way.
+
+\xxx{Guidelines for skipping boring chapters and so on...}
+
+For a full understanding of the reference implementation's source
+code, the reader should grasp the following Haskell patterns:
+
+\begin{itemize}
+
+\item The use of |newtype| wrappers to distinguish different types of
+values which have the same underlying type.
+
+\item The use of |do| notation with the standard monad transformers:
+
+\begin{itemize}
+\item \texttt{StateT} for updating state,
+\item \texttt{ReaderT} for the read-only environment,
+\item \texttt{WriterT} for ``write-only state'' (namely logs), and
+\item \texttt{ExceptT} for failures which roll back state changes.
+\end{itemize}
+
+\item The basic use of ``lenses'' (via the \texttt{lens} library) for
+convenient reading and writing of specific parts of nested values.
+
+\item The use of ``parametricity'' to express type-level guarantees
+about how function parameters are used, especially for understanding
+Appendix~\ref{appendix:types} which uses type signatures to specify
+which parts of the system are used or altered by each system action.
+
+\item \xxx{Some more stuff here...}
+
+\end{itemize}
 
 \part{Implementation}
 
@@ -1390,6 +1427,7 @@ governance changes the |tax| of an |ilk|.
 \appendix
 
 \chapter{Act type signatures}
+\label{appendix:types}
 
 We see that |drip| may fail; it reads an |ilk|'s |tax|, |cow|, |rho|,
 and |bag|; and it writes those same parameters except |tax|.
