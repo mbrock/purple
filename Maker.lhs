@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
+\usepackage{parskip}
 
 \hypersetup{colorlinks, linkcolor={blue!45!black}}
 
@@ -41,6 +42,9 @@
 %format dai = "\textsc{dai}"
 %format eth = "\textsc{eth}"
 %format mkr = "\textsc{mkr}"
+%format sdr = "\textsc{sdr}"
+%format xdr = "\textsc{xdr}"
+%format imf = "\textsc{imf}"
 
 %format cow = "\textsc{cow}"
 %format tau = "\textsc{tau}"
@@ -244,6 +248,8 @@
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
 \tableofcontents
 
 \clearpage
@@ -252,31 +258,47 @@
 
 \newcommand{\MakerDAO}{\textsc{dai maker}}
 
-The ``Dai credit system'' is the smart contract system used by the
-\MakerDAO{} to control the price stability and deflation of the |dai|
-stablecoin by automatic modification of market incentives (via
-deflation adjustment), and to provide trustless credit services to
-Ethereum blockchain users.
+The \textsc{dai credit system}, henceforth also ``Maker,'' is a
+network of Ethereum contracts designed to issue the |dai| currency
+token and automatically adjust incentives in order to keep dai market
+value stable relative to |sdr|\footnote{``Special Drawing Rights''
+(ticker symbol |xdr|), the international reserve asset created by the
+International Monetary Fund, whose value is derives from a weighted
+basket of world currencies.  In the long term, the value of dai may
+diverge from the value of |sdr|; whether in an inflationary or
+deflationary way will depend on market forces.} in the short and
+medium term.
 
-New dai enter the money supply when a dai borrower posts an excess
-of collateral to a ``collateralized debt position'' (|cdp|) and takes
-out a loan.  The debt and collateral amounts are recorded in the
-|cdp|, and (as time passes) the stability fees incurred by the |cdp|
-owner are also recorded.  The collateral itself is held in a token
-vault controlled by the \MakerDAO{}.
+New dai enters the money supply when a borrower takes out a loan
+backed by an excess of collateral locked in Maker's token vault.
+The debt and collateral amounts are recorded in a
+\textit{collateralized debt position}, or |cdp|.  Thus all outstanding
+dai represents some |cdp| owner's claim on their collateral.
 
-Any Ethereum account can borrow dai without any requirements beyond
-posting and maintaining adequate collateral.  There are no term limits
-on dai loans and borrowers are free to open or close |cdp|s at any
-time.  The collateral held in |cdp|s collectively backs the value of
-the dai in a fully transparent manner that anyone can verify.
+Maker's knowledge of the market values of dai and the various tokens
+used as collateral comes from \textit{price feeds}.  Prices are used
+to continuously assess the risk of each |cdp|.  If the value of a
+|cdp|'s collateral drops below a certain multiple of its debt, it is
+marked for liquidation, which triggers a decentralized
+auction mechanism.
 
-\section{Motivation}
+Maker also controls the supply of another token, |mkr|.  This token
+acts as a ``share'' in Maker.  When a |cdp| liquidation fails to
+recover the full value of debt, Maker mints more |mkr| and auctions it
+out.  Thus |mkr| is used to fund last resort market making.  On the
+other hand, Maker imposes a \textit{stability fee} on all dai loans,
+and revenue from these fees goes toward buying |mkr| for burning.
+
+This document is an executable technical specification of the exact
+workings of the Maker smart contracts.
+
+\section{Reference implementation}
 
 The version of this system that will be deployed on the Ethereum
 blockchain is written in Solidity, which is a workable smart contract
-implementation language.  The reasons for maintaining this ``reference
-implementation'' in Haskell are, roughly:
+implementation language.  This reference implementation is a precise
+model of the behavior of those contracts, written as a ``literate''
+Haskell program.  The motivations include:
 
 \begin{enumerate}
 
@@ -1293,6 +1315,7 @@ governance changes the |tax| of an |ilk|.
 > burn id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            -= wad0
 >   jarAt id_jar . gem . balanceOf . ix id_vat  -= wad0
+
 \section{Test-related manipulation}
 
 \actentry{|warp|}{travel in time}
