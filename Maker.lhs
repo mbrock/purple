@@ -3,6 +3,7 @@
 \usepackage[a4paper]{geometry}
 
 \usepackage{amsmath}
+\usepackage{scalefnt}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage[hidelinks]{hyperref}
@@ -47,44 +48,45 @@
 %format sdr = "\textsc{sdr}"
 %format xdr = "\textsc{xdr}"
 %format imf = "\textsc{imf}"
+%format erc20 = "\textsc{erc\scalefont{0.79}{20}}"
 
-%format cow = "\textsc{cow}"
-%format tau = "\textsc{tau}"
-%format era = "\textsc{era}"
-%format rho = "\textsc{rho}"
-%format phi = "\textsc{phi}"
-%format axe = "\textsc{axe}"
-%format bag = "\textsc{bag}"
-%format con = "\textsc{con}"
-%format dai = "\textsc{dai}"
-%format sdr = "\textsc{sdr}"
-%format vat = "\textsc{vat}"
-%format fix = "\textsc{fix}"
-%format gem = "\textsc{gem}"
-%format hat = "\textsc{hat}"
-%format how = "\textsc{how}"
-%format ilk = "\textsc{ilk}"
-%format ilks = "\textsc{ilk}s"
-%format jar = "\textsc{jar}"
-%format jars = "\textsc{jar}s"
-%format lad = "\textsc{lad}"
-%format lag = "\textsc{lag}"
-%format mat = "\textsc{mat}"
-%format par = "\textsc{par}"
-%format pie = "\textsc{pie}"
-%format pro = "\textsc{pro}"
-%format sin = "\textsc{sin}"
-%format tag = "\textsc{tag}"
-%format tax = "\textsc{tax}"
-%format urn = "\textsc{urn}"
-%format urns = "\textsc{urn}s"
-%format way = "\textsc{way}"
-%format zzz = "\textsc{zzz}"
-%format wad = "\textsc{wad}"
-%format ray = "\textsc{ray}"
-%format nat = "\textsc{nat}"
-%format vow = "\textsc{vow}"
-%format cat = "\textsc{cat}"
+%format cow = "\texttt{cow}"
+%format tau = "\texttt{tau}"
+%format era = "\texttt{era}"
+%format rho = "\texttt{rho}"
+%format phi = "\texttt{phi}"
+%format axe = "\texttt{axe}"
+%format bag = "\texttt{bag}"
+%format con = "\texttt{con}"
+%format dai = "\texttt{dai}"
+%format sdr = "\texttt{sdr}"
+%format vat = "\texttt{vat}"
+%format fix = "\texttt{fix}"
+%format gem = "\texttt{gem}"
+%format hat = "\texttt{hat}"
+%format how = "\texttt{how}"
+%format ilk = "\texttt{ilk}"
+%format ilks = "\texttt{ilk}s"
+%format jar = "\texttt{jar}"
+%format jars = "\texttt{jar}s"
+%format lad = "\texttt{lad}"
+%format lag = "\texttt{lag}"
+%format mat = "\texttt{mat}"
+%format par = "\texttt{par}"
+%format pie = "\texttt{pie}"
+%format pro = "\texttt{pro}"
+%format sin = "\texttt{sin}"
+%format tag = "\texttt{tag}"
+%format tax = "\texttt{tax}"
+%format urn = "\texttt{urn}"
+%format urns = "\texttt{urn}s"
+%format way = "\texttt{way}"
+%format zzz = "\texttt{zzz}"
+%format wad = "\texttt{wad}"
+%format ray = "\texttt{ray}"
+%format nat = "\texttt{nat}"
+%format vow = "\texttt{vow}"
+%format cat = "\texttt{cat}"
 
 %format wad0
 %format wad_dai
@@ -120,17 +122,17 @@
 %format ilk0
 %format jar0
 
-%format Gem = "\textsc{Gem}"
-%format Lad = "\textsc{Lad}"
-%format Ilk = "\textsc{Ilk}"
-%format Ray = "\textsc{Ray}"
-%format Urn = "\textsc{Urn}"
-%format Wad = "\textsc{Wad}"
-%format Jar = "\textsc{Jar}"
-%format Vat = "\textsc{Vat}"
-%format Wad = "\textsc{Wad}"
-%format Ray = "\textsc{Ray}"
-%format Nat = "\textsc{Nat}"
+%format Gem = "\texttt{Gem}"
+%format Lad = "\texttt{Lad}"
+%format Ilk = "\texttt{Ilk}"
+%format Ray = "\texttt{Ray}"
+%format Urn = "\texttt{Urn}"
+%format Wad = "\texttt{Wad}"
+%format Jar = "\texttt{Jar}"
+%format Vat = "\texttt{Vat}"
+%format Wad = "\texttt{Wad}"
+%format Ray = "\texttt{Ray}"
+%format Nat = "\texttt{Nat}"
 
 %format vat_r
 %format vat_w
@@ -257,8 +259,9 @@
 \chapter{Introduction}
 
 \newcommand{\MakerDAO}{\textsc{dai maker}}
-
-\newcommand{\xxx}[1]{\textsl{\small $\Diamond$ #1}}
+\newcommand{\actentry}[2]
+  {\addcontentsline{toc}{subsection}{#1 --- #2}}
+\newcommand{\xxx}[1]{\textsl{\footnotesize $\Diamond$ #1}}
 
 The \textsc{dai credit system}, henceforth also ``Maker,'' is a
 network of Ethereum contracts designed to issue the |dai| currency
@@ -411,36 +414,54 @@ which parts of the system are used or altered by each system action.
 
 %endif
 
-We will begin by defining the program's basic dependencies before
-going on to define the basic data types and operations.
+We declare the program's dependencies up front.  The reader should
+probably skim this section and consult it later if unfamiliar with
+some type or function.
 
 > module Maker where
 
-We use a typical stack of monad transformers from the \texttt{mtl}
-library to structure stateful actions; see
-section~\ref{section:maker-monad} (\textit{The Maker monad}).
+We use a typical composition of monad transformers from the
+\texttt{mtl} library to structure stateful actions.  This becomes
+relevant in section~\ref{section:maker-monad} (\textit{The Maker
+monad}).
 
-> import Control.Monad.State
->   (MonadState, StateT, execStateT, get, put)
+> import Control.Monad.State (
+>   MonadState,          -- Type class of monads with state
+>   StateT,              -- Type constructor that adds state to a monad type
+>   execStateT,          -- Runs a state monad with given initial state
+>   get,                 -- Gets the state in a |do| block
+>   put)                 -- Sets the state in a |do| block
 >
-> import Control.Monad.Reader
->   (MonadReader (..))
+> import Control.Monad.Reader (
+>   MonadReader,         -- Type class of monads with ``environments''
+>   ask,                 -- Reads the environment in a |do| block
+>   local)               -- Runs a sub-computation with a modified environment
+>
+> import Control.Monad.Writer (
+>   MonadWriter,         -- Type class of monads that emit logs
+>   WriterT,             -- Type constructor that adds logging to a monad type
+>   runWriterT)          -- Runs a writer monad
 > 
-> import Control.Monad.Writer
->   (MonadWriter, WriterT, runWriterT)
-> 
-> import Control.Monad.Except
->   (MonadError, Except, throwError, runExcept)
+> import Control.Monad.Except (
+>   MonadError,          -- Type class of monads that fail
+>   Except,              -- Type constructor of failing monads
+>   throwError,          -- Short-circuits the monadic computation
+>   runExcept)           -- Runs a failing monad
 
-We use decimal fixed-point arithmetic.
+Our numeric types use decimal fixed-point arithmetic.
 
-> import Data.Fixed (Fixed, HasResolution (..))
+> import Data.Fixed (
+>   Fixed,                -- Type constructor for fixed-point numbers of given precision
+>   HasResolution (..))   -- Type class for specifying precisions
 
 We rely on the \texttt{lens} library for accessing nested values.
 There is no need to understand the theory behind lenses to understand
 this program.  The notation |a . b . c| denotes a nested accessor much
 like \texttt{a.b.c} in C-style languages; for more details, consult
-the lens manual.
+lens documentation\footnote{Gabriel Gonzalez's 2013 article
+\textsl{\href{
+http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
+}{Program imperatively using Haskell}} is a good introduction.}.
 
 %if 0
 
@@ -458,11 +479,26 @@ the lens manual.
 >   ix,                -- Lens for map retrieval and updating
 >   at,                -- Lens for map insertion
 > 
-> -- Mutating operators for |do| blocks:
+> -- Operators for partial state updates in |do| blocks:
 >   (.=),              -- Replace
 >   (-=), (+=), (*=),  -- Update arithmetically
 >   (%=),              -- Update according to function
 >   (?=))              -- Insert into map
+
+Where the Solidity code uses \texttt{mapping}, we use Haskell's
+regular tree-based map type\footnote{We assume the axiom that Keccak
+hash collisions are impossible.}.
+
+> import Data.Map (
+>   Map,         -- Type constructor for mappings
+>   empty,       -- Polymorphic empty mapping
+>   singleton)   -- Creates a mapping with a single key--value pair
+
+For sequences of log entries, we use a sequence structure which has better
+time complexity than regular lists.
+
+> import            Data.Sequence (Seq)
+> import qualified  Data.Sequence as Sequence
 
 Some less interesting imports are omitted from this document.
 
@@ -471,12 +507,9 @@ Some less interesting imports are omitted from this document.
 > import Data.Monoid (First)
 > import Control.Monad (unless)
 > import Control.Arrow (first)
-> import Data.Map (Map, empty, singleton)
-> import Data.Sequence (Seq)
 > import Prelude hiding (lookup, log, sin)
 >
 > import qualified Control.Monad.Writer as Writer
-> import qualified Data.Sequence as Sequence
 
 %endif
 
@@ -494,22 +527,22 @@ as much precision as possible, so we use twice the number of decimals.
 We call such quantities "rays" (mnemonic "rate," but also imagine a
 very precisely aimed ray of light).
 
->  -- Phantom types encode precision at compile time.
+>  -- Dummy types for specifying precisions
 > data E18; data E36
 >
-> -- Specify $10^{-18}$ as the precision of |E18|.
+> -- Specify $10^{-18}$ as the precision of |E18|
 > instance HasResolution E18 where
 >   resolution _ = 10^(18 :: Integer)
 >
-> -- Specify $10^{-36}$ as the precision of |E36|.
+> -- Specify $10^{-36}$ as the precision of |E36|
 > instance HasResolution E36 where
 >   resolution _ = 10^(36 :: Integer)
 >
-> -- Create the distinct |wad| type for currency quantities.
+> -- Create the distinct |wad| type for currency quantities
 > newtype Wad = Wad (Fixed E18)
 >   deriving (  Ord, Eq, Num, Real, Fractional)
 >
-> -- Create the distinct |ray| type for precise rate quantities.
+> -- Create the distinct |ray| type for precise rate quantities
 > newtype Ray = Ray (Fixed E36)
 >   deriving (  Ord, Eq, Num, Real, Fractional)
 >
@@ -529,22 +562,21 @@ very precisely aimed ray of light).
 
 %endif
 
-In calculations where a |wad| is multiplied by a |ray|, for example in
-the deflation mechanism, we have to downcast in a way that loses
-precision.  Haskell does not cast automatically, so unless you see the
-following |cast| function applied, you can assume that precision
-is unchanged.
+In calculations that combine |wad|s and |ray|s, we have to convert
+between the number types.  Haskell does not convert numbers
+automatically, so when we explicitly need it, we use a
+|cast| function.
 
-> cast :: (Real a, Fractional b) => a -> b
-> cast =
 > -- Convert via fractional $n/m$ form.
->   fromRational . toRational
+> cast :: (Real a, Fractional b) => a -> b
+> cast = fromRational . toRational
 
 We also define a type for non-negative integers.
 
 > newtype Nat = Nat Int
 >   deriving (Eq, Ord, Enum, Num, Real, Integral)
 
+%if 0
 
 \subsection{Epsilon values}
 
@@ -560,33 +592,23 @@ The fixed point number types have well-defined smallest increments
 > instance Epsilon Wad  where epsilon = Wad epsilon
 > instance Epsilon Ray  where epsilon = Ray epsilon
 
+%endif
+
 \section{Identifier type}
 
-There are several types of identifiers used in the system, and we can
-use Haskell's type system to distinguish them.
+There are several kinds of identifiers used in the system, and we can
+use types to distinguish them.
 
-> -- The type parameter is only used to create distinct types.
+> -- The type parameter |a| creates distinct types.
 > -- For example, |Id Foo| and |Id Bar| are incompatible.
 >
 > data Id a = Id String
 >   deriving (Show, Eq, Ord)
 
-It turns out that we will in several places use mappings from IDs to
-the value type corresponding to that ID type, so we define an alias
-for such mapping types.
+We will often use mappings from IDs to the value type corresponding to
+that ID type, so we define an alias for such mappings.
 
 > type IdMap a = Map (Id a) a
-
-We also have three predefined entities:
-
-> -- The |dai| token address
-> id_dai = Id "Dai"
->
-> -- The |cdp| engine address
-> id_vat = Id "Vat"
->
-> -- The account with ultimate authority
-> id_god = Id "God"
 
 %if 0
 
@@ -595,25 +617,43 @@ We also have three predefined entities:
 
 %endif
 
-\section{Structures}
+\section{Domain types}
 
-[XXX: describe structures]
+This section introduces the records stored by the Maker system.
+The order of presentation is by use; types further down refer to types
+further up, but not the other way around.
 
-> data Lad = Lad deriving (Eq, Show)
+\actentry{|Address|}{Ethereum accounts}
 
-\subsection{|Gem| --- Collateral token model}
+> data Address = Address String
+> 
+>   deriving (Ord, Eq, Show)
+
+We also have three predefined entities:
+
+> -- The |dai| token address
+> id_dai = Id "Dai"
+>
+> -- The |cdp| engine address
+> id_vat = Address "Vat"
+>
+> -- The account with ultimate authority
+> -- \xxx{Kludge until authority is modelled}
+> id_god = Address "God"
+
+\actentry{|Gem|}{|erc20| token model}
 
 > data Gem =
 >   Gem {
 >     gemTotalSupply  :: !Wad,
->     gemBalanceOf    :: !(Map (Id Lad)          Wad),
->     gemAllowance    :: !(Map (Id Lad, Id Lad)  Wad)
+>     gemBalanceOf    :: !(Map Address          Wad),
+>     gemAllowance    :: !(Map (Address, Address)  Wad)
 >
->   } deriving (Eq, Read, Show)
+>   } deriving (Eq, Show)
 >
 > makeFields ''Gem
 
-\subsection{|Jar| --- Collateral token}
+\actentry{|Jar|}{collateral type}
 
 > data Jar = Jar {
 >
@@ -626,11 +666,11 @@ We also have three predefined entities:
 >   -- Price expiration
 >     jarZzz  :: !Nat
 >
->   } deriving (Eq, Show, Read)
+>   } deriving (Eq, Show)
 >
 > makeFields ''Jar
 
-\subsection{|Ilk| --- |cdp| type}
+\actentry{|Ilk|}{|cdp| type}
 
 > data Ilk = Ilk {
 >
@@ -665,18 +705,18 @@ We also have three predefined entities:
 >
 > makeFields ''Ilk
 
-\subsection{|Urn| --- collateralized debt position (|cdp|)}
+\actentry{|Urn|}{collateralized debt position (|cdp|)}
 
 > data Urn = Urn {
 >
 >   -- Address of biting cat
->     urnCat  :: !(Maybe (Id Lad)),
+>     urnCat  :: !(Maybe Address),
 >
 >   -- Address of liquidating vow
->     urnVow  :: !(Maybe (Id Lad)),
+>     urnVow  :: !(Maybe Address),
 >
 >   -- Issuer
->     urnLad  :: !(Id Lad),
+>     urnLad  :: !Address,
 >
 >   -- |cdp| type
 >     urnIlk  :: !(Id Ilk),
@@ -694,7 +734,7 @@ We also have three predefined entities:
 >
 > makeFields ''Urn
 
-\subsection{|Vat| --- Dai creditor}
+\actentry{|Vat|}{|cdp| engine}
 
 > data Vat = Vat {
 >
@@ -732,20 +772,19 @@ We also have three predefined entities:
 >
 > makeFields ''Vat
 
-\subsection{System model}
+\addcontentsline{toc}{subsection}{System model}
 
 > data System =
 >   System {
 >     systemVat      :: Vat,
 >     systemEra      :: !Nat,
->     systemLads     :: IdMap Lad,   -- System users
->     systemSender   :: Id Lad
+>     systemSender   :: Address
 >
 >   } deriving (Eq, Show)
 >
 > makeFields ''System
 
-\subsection{Default data}
+\section{Default data}
 
 > defaultIlk :: Id Jar -> Ilk
 > defaultIlk id_jar = Ilk {
@@ -760,7 +799,7 @@ We also have three predefined entities:
 >   ilkRho  = Nat 0
 > }
 
-> defaultUrn :: Id Ilk -> Id Lad -> Urn
+> defaultUrn :: Id Ilk -> Address -> Urn
 > defaultUrn id_ilk id_lad = Urn {
 >   urnVow  = Nothing,
 >   urnCat  = Nothing,
@@ -797,7 +836,6 @@ We also have three predefined entities:
 > initialSystem :: Ray -> System
 > initialSystem how0 = System {
 >   systemVat      = initialVat how0,
->   systemLads     = empty,
 >   systemEra      = 0,
 >   systemSender   = id_god
 > }
@@ -815,7 +853,7 @@ logging and generally for representing acts.
 >   |  Form     (Id Ilk)  (Id Jar)
 >   |  Free     (Id Urn)  Wad
 >   |  Frob     Ray
->   |  Give     (Id Urn)  (Id Lad)
+>   |  Give     (Id Urn)  Address
 >   |  Grab     (Id Urn)
 >   |  Heal     Wad
 >   |  Lock     (Id Urn)  Wad
@@ -824,19 +862,17 @@ logging and generally for representing acts.
 >   |  Open     (Id Urn)  (Id Ilk)
 >   |  Prod
 >   |  Poke     (Id Urn)
->   |  Pull     (Id Jar)  (Id Lad)  Wad
+>   |  Pull     (Id Jar)  Address   Wad
 >   |  Shut     (Id Urn)
 >   |  Tell     Wad
 >   |  Warp     Nat
 >   |  Wipe     (Id Urn)  Wad
->   |  NewJar   (Id Jar)  Jar
->   |  NewLad   (Id Lad)
->   deriving (Eq, Show, Read)
+>   deriving (Eq, Show)
 
 Acts which are logged through the |note| modifier record the sender ID
 and the act descriptor.
 
-> data Log = LogNote (Id Lad) Act
+> data Log = LogNote Address Act
 >   deriving (Show, Eq)
 
 Acts can fail.  We divide the failure modes into general assertion
@@ -844,9 +880,6 @@ failures and authentication failures.
 
 > data Error = AssertError | AuthError
 >   deriving (Show, Eq)
-
-\newcommand{\actentry}[2]
-  {\addcontentsline{toc}{subsection}{#1 --- #2}}
 
 \section{The |Maker| monad}
 \label{section:maker-monad}
@@ -937,7 +970,7 @@ is still purely functional.
 > note ::
 >   (  IsAct, Logs m,
 >      Reads r m,
->        HasSender r (Id Lad))
+>        HasSender r Address)
 >   => m a -> m a
 
 > note k = do
@@ -951,7 +984,7 @@ is still purely functional.
 > auth ::
 >   (  IsAct, Fails m,
 >      Reads r m,
->        HasSender r (Id Lad))
+>        HasSender r Address)
 >   => m a -> m a
 
 > auth continue = do
@@ -1392,34 +1425,11 @@ governance changes the |tax| of an |ilk|.
 >   auth . note $ do
 >     era += t
 
-\section{System modelling}
-
-> newLad id_lad = lads.at id_lad ?= Lad
-
-> newLad ::
->   ( Writes w m, HasLads w (IdMap Lad))
->   => Id Lad -> m ()
-
-
-> newJar id id_jar =
->   auth . note $ do
->     vat . jars .at id ?= id_jar
-
-> newJar ::
->   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
->      Writes w m,  HasVat w vat_w,
->                     HasJars vat_w (IdMap Jar))
->   =>
->     Id Jar -> Jar -> m ()
-
 \section{Other stuff}
 
 > perform :: Act -> Maker ()
 > perform x =
 >   let ?act = x in case x of
->     NewLad id        -> newLad id
->     NewJar id jar    -> newJar id jar
 >     Form id jar      -> form id jar
 >     Mark jar tag zzz -> mark jar tag zzz
 >     Open id ilk      -> open id ilk
@@ -1434,7 +1444,7 @@ governance changes the |tax| of an |ilk|.
 >
 > transferFrom
 >   ::  (MonadError Error m)
->   =>  Id Lad -> Id Lad -> Wad
+>   =>  Address -> Address -> Wad
 >   ->  Gem -> m Gem
 >
 > transferFrom src dst wad gem =
@@ -1459,6 +1469,9 @@ governance changes the |tax| of an |ilk|.
 
 \chapter{Act type signatures}
 \label{appendix:types}
+
+> type Numbers wad ray nat =
+>   (wad ~ Wad, ray ~ Ray, nat ~ Nat)
 
 We see that |drip| may fail; it reads an |ilk|'s |tax|, |cow|, |rho|,
 and |bag|; and it writes those same parameters except |tax|.
@@ -1485,38 +1498,38 @@ and |bag|; and it writes those same parameters except |tax|.
 > form ::
 >
 >   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
+>      Reads r m,   HasSender r Address,
 >      Writes w m,  HasVat w vat_w,
 >                     HasIlks vat_w (IdMap Ilk))
 >
 >  => Id Ilk -> Id Jar -> m ()
 
 > frob :: (  IsAct, Fails m, Logs m,
->            Reads r m,   HasSender r (Id Lad),
+>            Reads r m,   HasSender r Address,
 >            Writes w m,  HasVat w vat_w,
 >                           HasHow vat_w ray)
 >   => ray -> m ()
 
 > open ::
 >   (  IsAct, Logs m,
->      Reads r m,   HasSender r (Id Lad),
+>      Reads r m,   HasSender r Address,
 >      Writes w m,  HasVat w vat_w,
 >                     HasUrns vat_w (IdMap Urn))
 >   => Id Urn -> Id Ilk -> m ()
 
 > give ::
 >   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
+>      Reads r m,   HasSender r Address,
 >                   HasVat r vat_r,
 >                     HasUrns vat_r (Map (Id Urn) urn_r),
->                       HasLad urn_r (Id Lad),
+>                       HasLad urn_r Address,
 >      Writes w m,  HasVat w vat_r)
->   => Id Urn -> Id Lad -> m ()
+>   => Id Urn -> Address -> m ()
 
 > lock ::
 >   (  IsAct, Fails m, Logs m,
 >      Reads r m,
->        HasSender r (Id Lad),
+>        HasSender r Address,
 >        HasVat r vat_r,
 >          HasUrns vat_r (Map (Id Urn) urn_r),
 >            HasIlk urn_r (Id Ilk),
@@ -1533,7 +1546,7 @@ and |bag|; and it writes those same parameters except |tax|.
 
 > mark ::
 >   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
+>      Reads r m,   HasSender r Address,
 >      Writes w m,  HasVat w vat_w,
 >                     HasJars vat_w (Map (Id Jar) jar_w),
 >                       HasTag jar_w wad,
@@ -1542,7 +1555,7 @@ and |bag|; and it writes those same parameters except |tax|.
 
 > tell ::
 >   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
+>      Reads r m,   HasSender r Address,
 >      Writes w m,  HasVat w vat_w,
 >                     HasFix vat_w wad)
 >   => wad -> m ()
@@ -1550,7 +1563,7 @@ and |bag|; and it writes those same parameters except |tax|.
 > prod ::
 >   (  IsAct, Logs m,
 >      Reads r m,
->        HasSender r (Id Lad),
+>        HasSender r Address,
 >        HasEra r nat,
 >        HasVat r vat_r,  (  HasPar vat_r wad,
 >                            HasTau vat_r nat,
@@ -1568,7 +1581,7 @@ and |bag|; and it writes those same parameters except |tax|.
 
 > warp ::
 >   (  IsAct, Fails m, Logs m,
->      Reads r m,   HasSender r (Id Lad),
+>      Reads r m,   HasSender r Address,
 >      Writes w m,  HasEra w nat,
 >                     Num nat)
 >   => nat -> m ()
@@ -1581,7 +1594,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >                           HasGem jar_r Gem,
 >      Writes w m,
 >        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
->   => Id Jar -> Id Lad -> Wad -> m ()
+>   => Id Jar -> Address -> Wad -> m ()
 
 > push ::
 >   (  Fails m,
@@ -1590,7 +1603,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >                           HasGem jar_r Gem,
 >      Writes w m,
 >        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
->   => Id Jar -> Id Lad -> Wad -> m ()
+>   => Id Jar -> Address -> Wad -> m ()
 
 > mint ::
 >   (  Fails m,
@@ -1598,7 +1611,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
 >                           HasGem jar_r gem_r,
 >                             HasTotalSupply  gem_r Wad,
->                             HasBalanceOf    gem_r (Map (Id Lad) Wad))
+>                             HasBalanceOf    gem_r (Map Address Wad))
 >   => Id Jar -> Wad -> m ()
 
 > burn ::
@@ -1607,8 +1620,54 @@ and |bag|; and it writes those same parameters except |tax|.
 >        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
 >                           HasGem jar_r gem_r,
 >                             HasTotalSupply  gem_r Wad,
->                             HasBalanceOf    gem_r (Map (Id Lad) Wad))
+>                             HasBalanceOf    gem_r (Map Address Wad))
 >   => Id Jar -> Wad -> m ()
+
+> grab ::
+>   (  IsAct, Fails m, Logs m,
+>      Numbers wad ray nat,
+>      Reads r m,
+>        HasSender r Address,
+>        HasEra r Nat,
+>        HasVat r vat_r,
+>          HasFix vat_r wad,
+>          HasPar vat_r wad,
+>          HasHow vat_r ray,
+>          HasWay vat_r ray,
+>          HasTau vat_r nat,
+>          HasUrns vat_r (Map (Id Urn) urn_r),
+>            HasPro urn_r wad,
+>            HasCon urn_r wad,
+>            HasCat urn_r (Maybe Address),  HasVow urn_r (Maybe Address),
+>            HasPhi urn_r nat,
+>            HasIlk urn_r (Id Ilk),
+>          HasIlks vat_r (Map (Id Ilk) ilk_r),
+>            HasHat ilk_r ray,
+>            HasMat ilk_r wad,
+>            HasTax ilk_r ray,
+>            HasCow ilk_r ray,
+>            HasLag ilk_r nat,
+>            HasBag ilk_r (Map Nat ray),  HasRho ilk_r nat,
+>            HasJar ilk_r (Id Jar),
+>          HasJars vat_r (Map (Id Jar) jar_r),
+>            HasGem jar_r Gem,
+>            HasTag jar_r wad,
+>            HasZzz jar_r nat,
+>      Writes w m,
+>        HasVat w vat_w,
+>          HasTau vat_w nat,
+>          HasWay vat_w ray,  HasPar vat_w wad,
+>          HasUrns vat_w (Map (Id Urn) urn_w),
+>            HasPro urn_w wad,  HasCon urn_w wad,
+>            HasPhi urn_w nat,
+>            HasVow urn_w Address,
+>          HasIlks vat_w (Map (Id Ilk) ilk_w),
+>            HasBag ilk_w (Map nat ray),
+>            HasCow ilk_w ray,
+>            HasRho ilk_w nat,
+>          HasJars vat_w (Map (Id Jar) jar_r)
+>   ) => Id Urn -> m ()
+>
 
 
 
