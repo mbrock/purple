@@ -49,44 +49,88 @@
 %format imf = "\textsc{imf}"
 %format erc20 = "\textsc{erc\scalefont{0.79}{20}}"
 
-%format cow = "\texttt{cow}"
-%format tau = "\texttt{tau}"
-%format era = "\texttt{era}"
-%format rho = "\texttt{rho}"
-%format phi = "\texttt{phi}"
-%format axe = "\texttt{axe}"
-%format chi = "\texttt{chi}"
-%format con = "\texttt{con}"
 %format art = "\texttt{art}"
-%format jam = "\texttt{jam}"
-%format tab = "\texttt{tab}"
-%format vat = "\texttt{vat}"
-%format fix = "\texttt{fix}"
-%format gem = "\texttt{gem}"
-%format hat = "\texttt{hat}"
-%format how = "\texttt{how}"
-%format ilk = "\texttt{ilk}"
-%format ilks = "\texttt{ilk}s"
-%format jar = "\texttt{jar}"
-%format jars = "\texttt{jar}s"
-%format lad = "\texttt{lad}"
-%format lag = "\texttt{lag}"
-%format mat = "\texttt{mat}"
-%format par = "\texttt{par}"
-%format pie = "\texttt{pie}"
-%format pro = "\texttt{pro}"
-%format sin = "\texttt{sin}"
-%format tag = "\texttt{tag}"
-%format tax = "\texttt{tax}"
-%format urn = "\texttt{urn}"
-%format urns = "\texttt{urn}s"
-%format way = "\texttt{way}"
-%format zzz = "\texttt{zzz}"
-%format wad = "\texttt{wad}"
-%format ray = "\texttt{ray}"
-%format nat = "\texttt{nat}"
-%format vow = "\texttt{vow}"
+%format Art = "\texttt{Art}"
+%format axe = "\texttt{axe}"
+%format Axe = "\texttt{Axe}"
+%format cap = "\texttt{cap}"
+%format Cap = "\texttt{Cap}"
 %format cat = "\texttt{cat}"
+%format Cat = "\texttt{Cat}"
+%format chi = "\texttt{chi}"
+%format Chi = "\texttt{Chi}"
+%format con = "\texttt{con}"
+%format Con = "\texttt{Con}"
+%format cow = "\texttt{cow}"
+%format Cow = "\texttt{Cow}"
+%format din = "\texttt{din}"
+%format Din = "\texttt{Din}"
+%format era = "\texttt{era}"
+%format Era = "\texttt{Era}"
+%format fix = "\texttt{fix}"
+%format Fix = "\texttt{Fix}"
+%format gem = "\texttt{gem}"
+%format Gem = "\texttt{Gem}"
+%format hat = "\texttt{hat}"
+%format Hat = "\texttt{Hat}"
+%format how = "\texttt{how}"
+%format How = "\texttt{How}"
+%format ilk = "\texttt{ilk}"
+%format Ilk = "\texttt{Ilk}"
+%format jam = "\texttt{jam}"
+%format Jam = "\texttt{Jam}"
+%format jar = "\texttt{jar}"
+%format Jar = "\texttt{Jar}"
+%format lad = "\texttt{lad}"
+%format Lad = "\texttt{Lad}"
+%format lag = "\texttt{lag}"
+%format Lag = "\texttt{Lag}"
+%format mat = "\texttt{mat}"
+%format Mat = "\texttt{Mat}"
+%format min = "\texttt{min}"
+%format Min = "\texttt{Min}"
+%format nat = "\texttt{nat}"
+%format Nat = "\texttt{Nat}"
+%format par = "\texttt{par}"
+%format Par = "\texttt{Par}"
+%format phi = "\texttt{phi}"
+%format Phi = "\texttt{Phi}"
+%format pie = "\texttt{pie}"
+%format Pie = "\texttt{Pie}"
+%format pro = "\texttt{pro}"
+%format Pro = "\texttt{Pro}"
+%format ray = "\texttt{ray}"
+%format Ray = "\texttt{Ray}"
+%format rho = "\texttt{rho}"
+%format Rho = "\texttt{Rho}"
+%format sin = "\texttt{sin}"
+%format Sin = "\texttt{Sin}"
+%format sys = "\texttt{sys}"
+%format Sys = "\texttt{Sys}"
+%format tab = "\texttt{tab}"
+%format Tab = "\texttt{Tab}"
+%format tag = "\texttt{tag}"
+%format Tag = "\texttt{Tag}"
+%format tau = "\texttt{tau}"
+%format Tau = "\texttt{Tau}"
+%format tax = "\texttt{tax}"
+%format Tax = "\texttt{Tax}"
+%format urn = "\texttt{urn}"
+%format Urn = "\texttt{Urn}"
+%format vat = "\texttt{vat}"
+%format Vat = "\texttt{Vat}"
+%format vow = "\texttt{vow}"
+%format Vow = "\texttt{Vow}"
+%format wad = "\texttt{wad}"
+%format Wad = "\texttt{Wad}"
+%format way = "\texttt{way}"
+%format Way = "\texttt{Way}"
+%format zzz = "\texttt{zzz}"
+%format Zzz = "\texttt{Zzz}"
+
+%format urns = "\texttt{urn}s"
+%format jars = "\texttt{jar}s"
+%format ilks = "\texttt{ilk}s"
 
 %format wad0
 %format wad_dai
@@ -124,6 +168,8 @@
 %format urn0
 %format ilk0
 %format jar0
+%format sys0
+%format sys1
 
 %format Gem = "\texttt{Gem}"
 %format Lad = "\texttt{Lad}"
@@ -263,6 +309,8 @@
 \newcommand{\MakerDAO}{\textsc{dai maker}}
 \newcommand{\actentry}[2]
   {\addcontentsline{toc}{subsection}{#1 --- #2}}
+\newcommand{\subactentry}[2]
+  {\addcontentsline{toc}{subsubsection}{#1 --- #2}}
 \newcommand{\xxx}[1]{\textsl{\footnotesize $\Diamond$ #1}}
 
 The \textsc{dai credit system}, henceforth also ``Maker,'' is a
@@ -443,7 +491,7 @@ monad}).
 >   MonadWriter,         -- Type class of monads that emit logs
 >   WriterT,             -- Type constructor that adds logging to a monad type
 >   runWriterT)          -- Runs a writer monad
-> 
+>
 > import Control.Monad.Except (
 >   MonadError,          -- Type class of monads that fail
 >   Except,              -- Type constructor of failing monads
@@ -474,13 +522,19 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 %endif
 
 > import Control.Lens (
-> 
+>
+>   Lens',
+>   lens,
+>
 >   makeFields,        -- Defines lenses for record fields
+>   set,               -- Writes a lens
 >   view, preview,     -- Reads a lens in a |do| block
 >   (&~),              -- Lets us use a |do| block with setters \xxx{Get rid of this.}
 >   ix,                -- Lens for map retrieval and updating
 >   at,                -- Lens for map insertion
-> 
+>
+>   alongside,
+>
 > -- Operators for partial state updates in |do| blocks:
 >   (.=),              -- Replace
 >   (-=), (+=), (*=),  -- Update arithmetically
@@ -628,7 +682,7 @@ further up, but not the other way around.
 \actentry{|Address|}{Ethereum accounts}
 
 > data Address = Address String
-> 
+>
 >   deriving (Ord, Eq, Show)
 
 We also have three predefined entities:
@@ -657,6 +711,10 @@ We also have three predefined entities:
 
 \actentry{|Jar|}{collateral type}
 
+\subactentry{|gem|}{collateral token}
+\subactentry{|tag|}{market price of token}
+\subactentry{|zzz|}{expiration date of token price feed}
+
 > data Jar = Jar {
 >
 >   -- Collateral token
@@ -673,6 +731,16 @@ We also have three predefined entities:
 > makeFields ''Jar
 
 \actentry{|Ilk|}{|cdp| type}
+
+\subactentry{|jar|}{collateral token vault}
+\subactentry{|mat|}{liquidation ratio}
+\subactentry{|axe|}{liquidation penalty ratio}
+\subactentry{|hat|}{debt ceiling}
+\subactentry{|tax|}{stability fee}
+\subactentry{|lag|}{price feed limbo duration}
+\subactentry{|rho|}{timestamp of last drip}
+\subactentry{|din|}{total outstanding dai}
+\subactentry{|chi|}{price of debt coin for |cdp| type}
 
 > data Ilk = Ilk {
 >
@@ -709,6 +777,13 @@ We also have three predefined entities:
 
 \actentry{|Urn|}{collateralized debt position (|cdp|)}
 
+\subactentry{|cat|}{address of liquidation requester}
+\subactentry{|vow|}{address of liquidating contract}
+\subactentry{|lad|}{|dai| issuer / |cdp| owner}
+\subactentry{|ilk|}{|cdp| type}
+\subactentry{|art|}{debt denominated in debt coins}
+\subactentry{|jam|}{collateral denominated in debt coins}
+
 > data Urn = Urn {
 >
 >   -- Address of biting cat
@@ -734,6 +809,14 @@ We also have three predefined entities:
 > makeFields ''Urn
 
 \actentry{|Vat|}{|cdp| engine}
+
+\subactentry{|fix|}{market price of |dai| denominated in |sdr|}
+\subactentry{|par|}{target price of |dai| denominated in |sdr|}
+\subactentry{|how|}{sensitivity parameter}
+\subactentry{|way|}{target rate of inflation or deflation}
+\subactentry{|tau|}{timestamp of last revaluation}
+\subactentry{|pie|}{unprocessed stability fee revenue}
+\subactentry{|sin|}{bad debt from liquidated |cdp|s}
 
 > data Vat = Vat {
 >
@@ -773,10 +856,12 @@ We also have three predefined entities:
 
 \addcontentsline{toc}{subsection}{System model}
 
+\subactentry{|era|}{Current timestamp}
+
 > data System =
 >   System {
 >     systemVat      :: Vat,
->     systemEra      :: !Nat,
+>     systemEra      :: Nat,
 >     systemSender   :: Address
 >
 >   } deriving (Eq, Show)
@@ -1001,8 +1086,51 @@ We call the basic operations of the Dai credit system "acts."
 
 \actentry{|gaze|}{identify |cdp| risk stage}
 
-\newcommand{\yep}{$\bullet$}
+We divide an urn's situation into five stages of risk.
+Table \ref{table:stages} shows which acts each stage allows.
+The stages are naturally ordered from more to less risky.
 
+> data Stage  =  Dread | Grief | Panic | Worry | Anger | Pride
+>
+>   deriving (Eq, Ord, Show)
+
+First we define a pure function |analyze| that determines an
+urn's stage.
+
+> analyze era0 par0 urn0 ilk0 jar0 =
+>   if
+>   -- Undergoing liquidation?
+>     | view vow  urn0  /= Nothing                -> Dread
+>   -- Liquidation triggered?
+>     | view cat  urn0  /= Nothing                -> Grief
+>   -- Undercollateralized?
+>     | pro < min                                 -> Panic
+>   -- Price feed expired?
+>     | era0 > view zzz jar0 + view lag ilk0      -> Panic
+>   -- Price feed in limbo?
+>     | view zzz  jar0  < era0                    -> Worry
+>   -- Debt ceiling reached?
+>     | cap  > view hat ilk0                      -> Anger
+>   -- Safely overcollateralized
+>     | otherwise                                 -> Pride
+>
+>   where
+>   -- |cdp|'s collateral value in |sdr|:
+>     pro  = view jam urn0  * view tag jar0
+>
+>   -- |cdp| type's total debt in |sdr|:
+>     cap  = view din ilk0  * cast (view chi ilk0)
+>
+>   -- |cdp|'s debt in |sdr|:
+>     con  = view art urn0  * cast (view chi ilk0) * par0
+>
+>   -- Required collateral as per liquidation ratio:
+>     min  = con * view mat ilk0
+>
+
+\clearpage
+
+\newcommand{\yep}{$\bullet$}
 \begin{table}[t]
 \caption{Urn acts in the five stages of risk}\label{table:stages}
 \vspace{0.25cm}
@@ -1025,56 +1153,25 @@ We call the basic operations of the Dai credit system "acts."
 \end{tabular}}
 \end{table}
 
-We divide an urn's situation into five stages of risk.
-Table \ref{table:stages} shows which acts each stage allows.
-The stages are naturally ordered from more to less risky.
-
-> data Stage  =  Dread | Grief | Panic | Worry | Anger | Pride
->
->   deriving (Eq, Ord, Show)
-
-First we define a pure function |analyze| that determines an
-urn's stage.
-
-> analyze era0 par0 urn0 ilk0 jar0 =
->   let
->     cap  = view din ilk0  * cast (view chi ilk0)
->     pro  = view jam urn0  * view tag jar0
->     con  = view art urn0  * cast (view chi ilk0) * par0
->     min  = con * view mat ilk0
-> 
->   in if
->   -- Undergoing liquidation?
->     | view vow  urn0  /= Nothing                -> Dread
->   -- Liquidation triggered?
->     | view cat  urn0  /= Nothing                -> Grief
->   -- Undercollateralized?
->     | pro < min                                 -> Panic
->   -- Price feed expired?
->     | era0 > view zzz jar0 + view lag ilk0      -> Panic
->   -- Price feed in limbo?
->     | view zzz  jar0  < era0                    -> Worry
->   -- Debt ceiling reached?
->     | cap  > view hat ilk0                      -> Anger
->   -- Safely overcollateralized.
->     | otherwise                                 -> Pride
-
 Now we define the internal act |gaze| which returns the value of
 |analyze| after ensuring the system state is updated.
 
 > gaze id_urn = do
+> -- Perform dai revaluation and rate adjustment
 >   prod
-> 
+>
+> -- Update price of specific debt coin
 >   id_ilk  <- need (urnAt id_urn . ilk)
 >   drip id_ilk
-> 
+>
+> -- Read parameters for risk analysis
 >   era0    <- view era
 >   par0    <- view (vat . par)
->
 >   urn0    <- need (urnAt  id_urn)
 >   ilk0    <- need (ilkAt  (view ilk urn0  ))
 >   jar0    <- need (jarAt  (view jar ilk0  ))
-> 
+>
+> -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
 \section{Lending}
@@ -1170,7 +1267,7 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   -- Denominate dai amount in debt coin
 >     let  wad_chi = wad_dai / cast chi1
-> 
+>
 >   -- Roll back if the |cdp| is not overcollateralized
 >     gaze id_urn >>= aver . (== Pride)
 >
@@ -1230,13 +1327,13 @@ Now we define the internal act |gaze| which returns the value of
 >   let
 >
 >   -- Time difference in seconds
->     fan  = era0 - tau0
+>     age  = era0 - tau0
 >
 >   -- Current deflation rate applied to target price
->     par1  = par0 * cast (way0 ^^ fan)
+>     par1  = par0 * cast (way0 ^^ age)
 >
 >   -- Sensitivity parameter applied over time
->     wag  = how0 * fromIntegral fan
+>     wag  = how0 * fromIntegral age
 >
 >   -- Deflation rate scaled up or down
 >     way1  = inj (  prj way0 +
@@ -1326,7 +1423,7 @@ governance changes the |tax| of an |ilk|.
 >
 >   -- Read current debt
 >     art0    <- need (urnAt id_urn  . art)
-> 
+>
 >   -- Update price of debt coin
 >     id_ilk     <- need (urnAt id_urn . ilk)
 >     chi1       <- drip id_ilk
@@ -1449,6 +1546,45 @@ governance changes the |tax| of an |ilk|.
 
 
 \chapter{Testing}
+
+Sketches for property stuff...
+
+> data Parameter =
+>      Fix | Par | Way
+
+> maintains :: Eq a => Lens' System a -> Maker () -> System -> Bool
+> maintains p = \ m sys0 ->
+>   case exec sys0 m of
+>   -- On success, data must be compared for equality
+>     Right (sys1, _)  -> view p sys0 == view p sys1
+>   -- On rollback, data is maintained by definition
+>     Left _           -> True
+
+> changesOnly :: Eq a => Lens' System a -> Maker () -> System -> Bool
+> changesOnly p = \m sys0 ->
+>   case exec sys0 m of
+>   -- On success, equalize |p| and compare
+>     Right (sys1, _)  -> set p (view p sys1) sys0 == sys1
+>   -- On rollback, data is maintained by definition
+>     Left _           -> True
+
+> also :: Lens' s a -> Lens' s b -> Lens' s (a, b)
+> also f g = lens getter setter
+>   where
+>   getter x = (view f x, view g x)
+>   setter x (a, b) = set f a (set g b x)
+
+> keeps :: Parameter -> Maker () -> System -> Bool
+> keeps Fix  = maintains (vat . fix)
+> keeps Par  = maintains (vat . par)
+> keeps Way  = maintains (vat . way)
+
+Thus:
+
+> foo sys0 = all (\f -> f sys0)
+>   [changesOnly (  (vat . par) `also`
+>                   (vat . way))
+>      (perform Prod)]
 
 \appendix
 
