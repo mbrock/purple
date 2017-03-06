@@ -42,7 +42,6 @@
 
 %format cdp = "\textsc{cdp}"
 %format dai = "\textsc{dai}"
-%format dai = "\textsc{dai}"
 %format eth = "\textsc{eth}"
 %format mkr = "\textsc{mkr}"
 %format sdr = "\textsc{sdr}"
@@ -56,10 +55,11 @@
 %format rho = "\texttt{rho}"
 %format phi = "\texttt{phi}"
 %format axe = "\texttt{axe}"
-%format bag = "\texttt{bag}"
+%format chi = "\texttt{chi}"
 %format con = "\texttt{con}"
-%format dai = "\texttt{dai}"
-%format sdr = "\texttt{sdr}"
+%format art = "\texttt{art}"
+%format jam = "\texttt{jam}"
+%format tab = "\texttt{tab}"
 %format vat = "\texttt{vat}"
 %format fix = "\texttt{fix}"
 %format gem = "\texttt{gem}"
@@ -92,8 +92,11 @@
 %format wad_dai
 %format wad_gem
 %format wad_mkr
+%format wad_chi
 %format era0
 %format tau0
+%format chi0
+%format chi1
 %format fix0
 %format par0
 %format how0
@@ -200,8 +203,6 @@
 %format Gaze = "\texttt{Gaze}"
 %format drip = "\texttt{drip}"
 %format Drip = "\texttt{Drip}"
-%format poke = "\texttt{poke}"
-%format Poke = "\texttt{Poke}"
 %format shut = "\texttt{shut}"
 %format Shut = "\texttt{Shut}"
 %format swap = "\texttt{swap}"
@@ -212,6 +213,7 @@
 %format Auth = "\texttt{Auth}"
 %format warp = "\texttt{warp}"
 %format Warp = "\texttt{Warp}"
+%format aver = "\texttt{aver}"
 
 %format id_urn
 %format id_ilk
@@ -695,11 +697,11 @@ We also have three predefined entities:
 >   -- Last dripped
 >     ilkRho  :: !Nat,
 >
->   -- ???
->     ilkCow  :: !Ray,
+>   -- Total debt in dai
+>     ilkDin  :: !Wad,
 >
->   -- Stability fee accumulator
->     ilkBag  :: !(Map Nat Ray)
+>   -- Price of debt coin
+>     ilkChi  :: !Ray
 >
 >   } deriving (Eq, Show)
 >
@@ -721,14 +723,11 @@ We also have three predefined entities:
 >   -- |cdp| type
 >     urnIlk  :: !(Id Ilk),
 >
->   -- Outstanding dai debt
->     urnCon  :: !Wad,
+>   -- Outstanding debt in debt coins
+>     urnArt  :: !Wad,
 >
->   -- Collateral amount
->     urnPro  :: !Wad,
->
->   -- Last poked
->     urnPhi  :: !Nat
+>   -- Collateral amount in debt coins
+>     urnJam  :: !Wad
 >
 >   } deriving (Eq, Show)
 >
@@ -794,8 +793,8 @@ We also have three predefined entities:
 >   ilkTax  = Ray 1,
 >   ilkHat  = Wad 0,
 >   ilkLag  = Nat 0,
->   ilkBag  = empty,
->   ilkCow  = Ray 1,
+>   ilkChi  = Ray 1,
+>   ilkDin  = Wad 0,
 >   ilkRho  = Nat 0
 > }
 
@@ -805,9 +804,8 @@ We also have three predefined entities:
 >   urnCat  = Nothing,
 >   urnLad  = id_lad,
 >   urnIlk  = id_ilk,
->   urnCon  = Wad 0,
->   urnPro  = Wad 0,
->   urnPhi  = Nat 0
+>   urnArt  = Wad 0,
+>   urnJam  = Wad 0
 > }
 
 > initialVat :: Ray -> Vat
@@ -954,8 +952,8 @@ is still purely functional.
 > log :: Logs m => Log -> m ()
 > log x = Writer.tell (Sequence.singleton x)
 >
-> sure :: Fails m => Bool -> m ()
-> sure x = unless x (throwError AssertError)
+> aver :: Fails m => Bool -> m ()
+> aver x = unless x (throwError AssertError)
 >
 > need :: (Fails m, Reads r m)
 >      => Getting (First a) r a -> m a
@@ -1001,7 +999,7 @@ We call the basic operations of the Dai credit system "acts."
 \newpage
 \section{Risk assessment}
 
-\actentry{|gaze|}{|urn|: identify |cdp| risk stage}
+\actentry{|gaze|}{identify |cdp| risk stage}
 
 \newcommand{\yep}{$\bullet$}
 
@@ -1040,24 +1038,24 @@ urn's stage.
 
 > analyze era0 par0 urn0 ilk0 jar0 =
 >   let
->   -- Market value of collateral
->     pro_sdr = view pro urn0 * view tag jar0
->   -- Debt at |dai| target price
->     con_sdr = view con urn0 * par0
->
+>     cap  = view din ilk0  * cast (view chi ilk0)
+>     pro  = view jam urn0  * view tag jar0
+>     con  = view art urn0  * cast (view chi ilk0) * par0
+>     min  = con * view mat ilk0
+> 
 >   in if
 >   -- Undergoing liquidation?
 >     | view vow  urn0  /= Nothing                -> Dread
 >   -- Liquidation triggered?
 >     | view cat  urn0  /= Nothing                -> Grief
 >   -- Undercollateralized?
->     | pro_sdr < con_sdr * view mat ilk0         -> Panic
+>     | pro < min                                 -> Panic
 >   -- Price feed expired?
 >     | era0 > view zzz jar0 + view lag ilk0      -> Panic
 >   -- Price feed in limbo?
 >     | view zzz  jar0  < era0                    -> Worry
 >   -- Debt ceiling reached?
->     | view cow  ilk0  > view hat ilk0           -> Anger
+>     | cap  > view hat ilk0                      -> Anger
 >   -- Safely overcollateralized.
 >     | otherwise                                 -> Pride
 
@@ -1066,27 +1064,29 @@ Now we define the internal act |gaze| which returns the value of
 
 > gaze id_urn = do
 >   prod
->   poke id_urn
->
+> 
+>   id_ilk  <- need (urnAt id_urn . ilk)
+>   drip id_ilk
+> 
 >   era0    <- view era
 >   par0    <- view (vat . par)
 >
 >   urn0    <- need (urnAt  id_urn)
 >   ilk0    <- need (ilkAt  (view ilk urn0  ))
 >   jar0    <- need (jarAt  (view jar ilk0  ))
->
+> 
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
 \section{Lending}
 
-\actentry{|open|}{|vat|: create |cdp| account}
+\actentry{|open|}{create |cdp| account}
 
 > open id_urn id_ilk =
 >   note $ do
 >     id_lad <- view sender
 >     vat . urns . at id_urn ?= defaultUrn id_ilk id_lad
 
-\actentry{|lock|}{|urn|: deposit collateral}
+\actentry{|lock|}{deposit collateral}
 
 > lock id_urn x =
 >
@@ -1097,13 +1097,13 @@ Now we define the internal act |gaze| which returns the value of
 >     id_jar  <- need (ilkAt  id_ilk  . jar)
 >
 >   -- Record an increase in collateral
->     urnAt id_urn . pro += x
+>     urnAt id_urn . jam += x
 >
 >   -- Take sender's tokens
 >     id_lad  <- view sender
 >     pull id_jar id_lad x
 
-\actentry{|free|}{|urn|: withdraw collateral}
+\actentry{|free|}{withdraw collateral}
 
 > free id_urn wad_gem =
 >
@@ -1112,94 +1112,111 @@ Now we define the internal act |gaze| which returns the value of
 >   -- Fail if sender is not the |cdp| owner.
 >     id_sender  <- view sender
 >     id_lad     <- need (urnAt id_urn . lad)
->     sure (id_sender == id_lad)
+>     aver (id_sender == id_lad)
 >
 >   -- Tentatively record the decreased collateral.
->     urnAt id_urn . pro  -=  wad_gem
+>     urnAt id_urn . jam  -=  wad_gem
 >
 >   -- Fail if collateral decrease results in undercollateralization.
->     gaze id_urn >>= sure . (== Pride)
+>     gaze id_urn >>= aver . (== Pride)
 >
 >   -- Send the collateral to the |cdp| owner.
 >     id_ilk  <- need (urnAt  id_urn  . ilk)
 >     id_jar  <- need (ilkAt  id_ilk  . jar)
 >     push id_jar id_lad wad_gem
 
-\actentry{|draw|}{|urn|: issue |dai| as debt}
+\actentry{|draw|}{issue dai as debt}
 
 > draw id_urn wad_dai =
 >
 >   note $ do
 >
->   -- Fail if sender is not the |cdp| owner.
+>   -- Fail if sender is not the |cdp| owner
 >     id_sender  <- view sender
 >     id_lad     <- need (urnAt id_urn . lad)
->     sure (id_sender == id_lad)
+>     aver (id_sender == id_lad)
 >
->   -- Tentatively record |dai| debt.
->     urnAt id_urn . con += wad_dai
+>   -- Update price of debt coin
+>     id_ilk     <- need (urnAt id_urn . ilk)
+>     chi1       <- drip id_ilk
 >
->   -- Fail if |cdp| with new debt is not overcollateralized.
->     gaze id_urn >>= sure . (== Pride)
+>   -- Denominate draw amount in debt coin
+>     let  wad_chi = wad_dai / cast chi1
 >
->   -- Mint |dai| and send it to the |cdp| owner.
+>   -- Increase debt
+>     urnAt id_urn . art += wad_chi
+>
+>   -- Roll back unless overcollateralized
+>     gaze id_urn >>= aver . (== Pride)
+>
+>   -- Mint dai and send to the |cdp| owner
 >     mint id_dai wad_dai
 >     push id_dai id_lad wad_dai
 
-\actentry{|wipe|}{|urn|: repay debt and burn |dai|}
+\actentry{|wipe|}{repay debt and burn dai}
 
 > wipe id_urn wad_dai =
 >
 >   note $ do
 >
->   -- Fail if sender is not the |cdp| owner.
+>   -- Fail if sender is not the |cdp| owner
 >     id_sender  <- view sender
 >     id_lad     <- need (urnAt id_urn . lad)
->     sure (id_sender == id_lad)
+>     aver (id_sender == id_lad)
 >
->   -- Fail if the |cdp| is not currently overcollateralized.
->     gaze id_urn >>= sure . (== Pride)
+>   -- Update price of debt coin
+>     id_ilk <- need (urnAt id_urn . ilk)
+>     chi1   <- drip id_ilk
 >
->   -- Preliminarily reduce the |cdp| debt.
->     urnAt id_urn . con -= wad_dai
+>   -- Denominate dai amount in debt coin
+>     let  wad_chi = wad_dai / cast chi1
+> 
+>   -- Roll back if the |cdp| is not overcollateralized
+>     gaze id_urn >>= aver . (== Pride)
 >
->   -- Attempt to get back |dai| from |cdp| owner and destroy it.
+>   -- Reduce debt
+>     urnAt id_urn . art -= wad_chi
+>
+>   -- Take dai from |cdp| owner, or roll back
 >     pull id_dai id_lad wad_dai
+>
+>   -- Destroy dai
 >     burn id_dai wad_dai
 
-\actentry{|give|}{|urn|: transfer |cdp| account}
+\actentry{|give|}{transfer |cdp| account}
 
 > give id_urn id_lad =
 >   note $ do
 >     x <- need (urnAt id_urn . lad)
 >     y <- view sender
->     sure (x == y)
+>     aver (x == y)
 >     urnAt id_urn . lad .= id_lad
 
-\actentry{|shut|}{|urn|: wipe, free, and delete |cdp|}
+\actentry{|shut|}{wipe, free, and delete |cdp|}
 
 > shut id_urn =
 >
 >   note $ do
 >
->   -- Update the |cdp|'s debt (prorating the stability fee).
->     poke id_urn
+>   -- Update price of debt coin
+>     id_ilk <- need (urnAt id_urn . ilk)
+>     chi1   <- drip id_ilk
 >
->   -- Attempt to repay all the |cdp|'s outstanding |dai|.
->     con0 <- need (urnAt id_urn . con)
->     wipe id_urn con0
+>   -- Attempt to repay all the |cdp|'s outstanding dai
+>     art0 <- need (urnAt id_urn . art)
+>     wipe id_urn (art0 * cast chi1)
 >
->   -- Reclaim all the collateral.
->     pro0 <- need (urnAt id_urn . pro)
->     free id_urn pro0
+>   -- Reclaim all the collateral
+>     jam0 <- need (urnAt id_urn . jam)
+>     free id_urn jam0
 >
->   -- Nullify the |cdp|.
+>   -- Nullify the |cdp|
 >     vat . urns . at id_urn .= Nothing
 
 \clearpage
 \section{Frequent adjustments}
 
-\actentry{|prod|}{|vat|: perform revaluation and rate adjustment}
+\actentry{|prod|}{perform revaluation and rate adjustment}
 
 > prod = note $ do
 >
@@ -1235,7 +1252,7 @@ Now we define the internal act |gaze| which returns the value of
 >     prj x  = if x >= 1  then x - 1  else 1 - 1 / x
 >     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
 
-\actentry{|drip|}{|ilk|: update stability fee accumulator}
+\actentry{|drip|}{update price of debt coin}
 
 This internal act happens on every |poke|. It is also invoked when
 governance changes the |tax| of an |ilk|.
@@ -1244,63 +1261,34 @@ governance changes the |tax| of an |ilk|.
 >
 > -- Current time stamp
 >   era0  <- view era
+>   rho0  <- need (ilkAt id_ilk . rho)
 >
 > -- Current stability fee
 >   tax0  <- need (ilkAt id_ilk . tax)
->   cow0  <- need (ilkAt id_ilk . cow)
 >
-> -- Previous time and stability fee thus far
->   rho0  <- need (ilkAt id_ilk . rho)
->   ice   <- need (ilkAt id_ilk . bag . ix rho0)
+> -- Current price of debt coin
+>   chi0  <- need (ilkAt id_ilk . chi)
 >
 >   let
 >
->   -- Seconds passed
 >     age   = era0 - rho0
 >
->   -- Stability fee accrued since last drip
->     dew   = ice * tax0 ^^ age
+>     chi1  = chi0 * tax0 ^^ age
 >
->   -- I don't understand this calculation
->     cow1  = cow0 * (dew / ice)
+>   ilkAt id_ilk . chi  .= chi1
+>   ilkAt id_ilk . rho  .= era0
 >
->   ilkAt id_ilk . bag . at era0  ?= dew
->   ilkAt id_ilk . cow            .= cow1
->   ilkAt id_ilk . rho            .= era0
->
->   return dew
-
-\actentry{|poke|}{|urn|: add stability fee to |cdp| debt}
-
-> poke id_urn =
->
->   note $ do
->
->   -- Read previous stability fee accumulator.
->     id_ilk  <- need (urnAt id_urn  . ilk)
->     phi0    <- need (urnAt id_urn  . phi)
->     ice     <- need (ilkAt id_ilk  . bag . ix phi0)
->
->   -- Update the stability fee accumulator.
->     con0    <- need (urnAt id_urn  . con)
->     dew     <- drip id_ilk
->
->   -- Apply new stability fee to |cdp| debt.
->     urnAt id_urn . con *= cast (dew / ice)
->
->   -- Record the poke time.
->     era0 <- view era
->     urnAt id_urn . phi .= era0
+>   return chi1
 
 \section{Governance}
 
-\actentry{|form|}{|vat|: create a new |cdp| type}
+\actentry{|form|}{create a new |cdp| type}
 
 > form id_ilk id_jar =
 >   auth . note $ do
 >     vat . ilks . at id_ilk ?= defaultIlk id_jar
 
-\actentry{|frob|}{|vat|: set the sensitivity parameter}
+\actentry{|frob|}{set the sensitivity parameter}
 
 > frob how' =
 >   auth . note $ do
@@ -1308,14 +1296,14 @@ governance changes the |tax| of an |ilk|.
 
 \section{Price feedback}
 
-\actentry{|mark|}{|vat|: update market price of |dai|}
+\actentry{|mark|}{update market price of dai}
 
 > mark id_jar tag1 zzz1 =
 >   auth . note $ do
 >     jarAt id_jar . tag  .= tag1
 >     jarAt id_jar . zzz  .= zzz1
 
-\actentry{|tell|}{|gem|: update market price of collateral token}
+\actentry{|tell|}{update market price of collateral token}
 
 > tell x =
 >   auth . note $ do
@@ -1323,57 +1311,54 @@ governance changes the |tax| of an |ilk|.
 
 \section{Liquidation and settlement}
 
-\actentry{|bite|}{|urn|: trigger |cdp| liquidation}
+\actentry{|bite|}{mark |cdp| for liquidation}
 
 > bite id_urn =
 >
 >   note $ do
 >
->   -- Fail if urn is not undercollateralized.
->     gaze id_urn >>= sure . (== Panic)
+>   -- Fail if urn is not undercollateralized
+>     gaze id_urn >>= aver . (== Panic)
 >
->   -- Record the sender as the liquidation initiator.
+>   -- Record the sender as the requester of liquidation
 >     id_cat              <- view sender
 >     urnAt id_urn . cat  .= id_cat
 >
->   -- Read current debt.
->     con0    <- need (urnAt id_urn  . con)
+>   -- Read current debt
+>     art0    <- need (urnAt id_urn  . art)
+> 
+>   -- Update price of debt coin
+>     id_ilk     <- need (urnAt id_urn . ilk)
+>     chi1       <- drip id_ilk
 >
->   -- Read liquidation penalty ratio.
+>   -- Read liquidation penalty ratio
 >     id_ilk  <- need (urnAt id_urn  . ilk)
 >     axe0    <- need (ilkAt id_ilk  . axe)
 >
->   -- Apply liquidation penalty to debt.
->     let con1 = con0 * axe0
+>   -- Apply liquidation penalty to debt
+>     let art1 = art0 * axe0
 >
->   -- Update debt and record it as in need of settlement.
->     urnAt id_urn . con   .= con1
->     sin                  += con1
+>   -- Update debt and record it as in need of settlement
+>     urnAt id_urn . art   .= art1
+>     sin                  += art1 * chi1
 
-\actentry{|grab|}{|urn|: promise that liquidation is in process}
+\actentry{|grab|}{take tokens to begin |cdp| liquidation}
 
 > grab id_urn =
 >
 >   auth . note $ do
 >
->   -- Fail if |cdp| liquidation is not initiated.
->     gaze id_urn >>= sure . (== Grief)
+>   -- Fail if |cdp| is not marked for liquidation
+>     gaze id_urn >>= aver . (== Grief)
 >
->   -- Record the sender as the |cdp|'s settler.
+>   -- Record the sender as the |cdp|'s settler
 >     id_vow <- view sender
 >     urnAt id_urn . vow .= id_vow
 >
->   -- Nullify the |cdp|'s debt and collateral.
->     pro0 <- need (urnAt id_urn .pro)
->     urnAt id_urn . con  .= 0
->     urnAt id_urn . pro  .= 0
->
->   -- Send the collateral to the settler for auctioning.
->     id_ilk <- need (urnAt id_urn  . ilk)
->     id_jar <- need (ilkAt id_ilk  . jar)
->     push id_jar id_vow pro0
+>   -- Clear the |cdp|'s requester of liquidation
+>     urnAt id_urn . cat .= Nothing
 
-\actentry{|heal|}{|vat|: process bad debt}
+\actentry{|heal|}{process bad debt}
 
 > heal wad_dai =
 >
@@ -1381,7 +1366,7 @@ governance changes the |tax| of an |ilk|.
 >
 >     vat . sin -= wad_dai
 
-\actentry{|loot|}{|vat|: process stability fee revenue}
+\actentry{|loot|}{process stability fee revenue}
 
 > loot wad_dai =
 >
@@ -1391,27 +1376,27 @@ governance changes the |tax| of an |ilk|.
 
 \section{Minting, burning, and transferring}
 
-\actentry{|pull|}{|gem|: receive tokens to |vat|}
+\actentry{|pull|}{take tokens to vat}
 
 > pull id_jar id_lad w = do
 >   g   <- need (jarAt id_jar . gem)
 >   g'  <- transferFrom id_lad id_vat w g
 >   jarAt id_jar . gem .= g'
 
-\actentry{|push|}{|gem|: send tokens from |vat|}
+\actentry{|push|}{send tokens from vat}
 
 > push id_jar id_lad w = do
 >   g   <- need (jarAt id_jar . gem)
 >   g'  <- transferFrom id_vat id_lad w g
 >   jarAt id_jar . gem .= g'
 
-\actentry{|mint|}{|dai|: increase supply}
+\actentry{|mint|}{increase supply}
 
 > mint id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            += wad0
 >   jarAt id_jar . gem . balanceOf . ix id_vat  += wad0
 
-\actentry{|burn|}{|dai|: decrease supply}
+\actentry{|burn|}{decrease supply}
 
 > burn id_jar wad0 = do
 >   jarAt id_jar . gem . totalSupply            -= wad0
@@ -1452,7 +1437,7 @@ governance changes the |tax| of an |ilk|.
 >     Nothing ->
 >       throwError AssertError
 >     Just balance -> do
->       sure (balance >= wad)
+>       aver (balance >= wad)
 >       return $ gem &~ do
 >         balanceOf . ix src -= wad
 >         balanceOf . at dst %=
@@ -1483,15 +1468,13 @@ and |bag|; and it writes those same parameters except |tax|.
 >        HasVat r vat_r,
 >          HasIlks vat_r (Map (Id Ilk) ilk_r),
 >            HasTax ilk_r Ray,
->            HasCow ilk_r Ray,
 >            HasRho ilk_r Nat,
->            HasBag ilk_r (Map Nat Ray),
+>            HasChi ilk_r Ray,
 >      Writes w m,
 >        HasVat w vat_w,
 >          HasIlks vat_w (Map (Id Ilk) ilk_w),
->            HasCow ilk_w Ray,
 >            HasRho ilk_w Nat,
->            HasBag ilk_w (Map Nat Ray))
+>            HasChi ilk_w Ray)
 >   => Id Ilk -> m Ray
 
 
@@ -1541,7 +1524,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >        HasVat w vat_w,
 >          HasJars vat_w (Map (Id Jar) jar_r),
 >          HasUrns vat_w (Map (Id Urn) urn_w),
->            HasPro urn_w Wad)
+>            HasJam urn_w Wad)
 >   => Id Urn -> Wad -> m ()
 
 > mark ::
@@ -1636,18 +1619,17 @@ and |bag|; and it writes those same parameters except |tax|.
 >          HasWay vat_r ray,
 >          HasTau vat_r nat,
 >          HasUrns vat_r (Map (Id Urn) urn_r),
->            HasPro urn_r wad,
->            HasCon urn_r wad,
+>            HasJam urn_r wad,
+>            HasArt urn_r wad,
 >            HasCat urn_r (Maybe Address),  HasVow urn_r (Maybe Address),
->            HasPhi urn_r nat,
 >            HasIlk urn_r (Id Ilk),
 >          HasIlks vat_r (Map (Id Ilk) ilk_r),
->            HasHat ilk_r ray,
+>            HasHat ilk_r wad,
 >            HasMat ilk_r wad,
+>            HasDin ilk_r wad,
 >            HasTax ilk_r ray,
->            HasCow ilk_r ray,
 >            HasLag ilk_r nat,
->            HasBag ilk_r (Map Nat ray),  HasRho ilk_r nat,
+>            HasChi ilk_r ray,  HasRho ilk_r nat,
 >            HasJar ilk_r (Id Jar),
 >          HasJars vat_r (Map (Id Jar) jar_r),
 >            HasGem jar_r Gem,
@@ -1658,12 +1640,11 @@ and |bag|; and it writes those same parameters except |tax|.
 >          HasTau vat_w nat,
 >          HasWay vat_w ray,  HasPar vat_w wad,
 >          HasUrns vat_w (Map (Id Urn) urn_w),
->            HasPro urn_w wad,  HasCon urn_w wad,
->            HasPhi urn_w nat,
+>            HasJam urn_w wad,  HasArt urn_w wad,
 >            HasVow urn_w Address,
+>            HasCat urn_w (Maybe Address),
 >          HasIlks vat_w (Map (Id Ilk) ilk_w),
->            HasBag ilk_w (Map nat ray),
->            HasCow ilk_w ray,
+>            HasChi ilk_w ray,
 >            HasRho ilk_w nat,
 >          HasJars vat_w (Map (Id Jar) jar_r)
 >   ) => Id Urn -> m ()
