@@ -96,8 +96,10 @@
 %format Par = "\texttt{Par}"
 %format phi = "\texttt{phi}"
 %format Phi = "\texttt{Phi}"
-%format pie = "\texttt{pie}"
-%format Pie = "\texttt{Pie}"
+%format joy = "\texttt{joy}"
+%format Joy = "\texttt{Joy}"
+%format rum = "\texttt{rum}"
+%format Rum = "\texttt{Rum}"
 %format pro = "\texttt{pro}"
 %format Pro = "\texttt{Pro}"
 %format ray = "\texttt{ray}"
@@ -133,46 +135,48 @@
 %format jars = "\texttt{jar}s"
 %format ilks = "\texttt{ilk}s"
 
+%format art0
+%format art1
+%format axe0
+%format cat0
+%format chi0
+%format chi1
+%format con0
+%format con1
+%format cow0
+%format cow1
+%format era0
+%format fix0
+%format hat0
+%format how0
+%format how1
+%format ilk0
+%format jar0
+%format joy0
+%format joy1
+%format lag0
+%format mat0
+%format par0
+%format par1
+%format pro0
+%format rho0
+%format sys0
+%format sys1
+%format tag0
+%format tag1
+%format tau0
+%format tax0
+%format urn0
+%format vow0
 %format wad0
+%format wad_chi
 %format wad_dai
 %format wad_gem
 %format wad_mkr
-%format wad_chi
-%format art0
-%format art1
-%format era0
-%format tau0
-%format chi0
-%format chi1
-%format fix0
-%format par0
-%format how0
 %format way0
-%format par1
-%format how1
 %format way1
-%format tag1
 %format zzz0
 %format zzz1
-%format tax0
-%format cow0
-%format cow1
-%format rho0
-%format pro0
-%format con0
-%format con1
-%format axe0
-%format vow0
-%format cat0
-%format tag0
-%format lag0
-%format hat0
-%format mat0
-%format urn0
-%format ilk0
-%format jar0
-%format sys0
-%format sys1
 
 %format Gem = "\texttt{Gem}"
 %format Lad = "\texttt{Lad}"
@@ -238,8 +242,8 @@
 %format Heal = "\texttt{Heal}"
 %format lock = "\texttt{lock}"
 %format Lock = "\texttt{Lock}"
-%format loot = "\texttt{loot}"
-%format Loot = "\texttt{Loot}"
+%format love = "\texttt{love}"
+%format Love = "\texttt{Love}"
 %format mark = "\texttt{mark}"
 %format Mark = "\texttt{Mark}"
 %format tell = "\texttt{tell}"
@@ -442,6 +446,8 @@ into scope.
 > import Maker.Prelude   -- Fully import the Maker prelude
 > import Prelude ()      -- Import nothing from Prelude
 
+> import GHC.Exts (Constraint)
+
 \chapter{Types}
 
 \section{Numeric types}
@@ -598,8 +604,8 @@ This section introduces the records stored by the Maker system.
 >     ilkTax  :: Ray,     -- Stability fee
 >     ilkLag  :: Sec,     -- Limbo duration
 >     ilkRho  :: Sec,     -- Last dripped
->     ilkDin  :: Wad,     -- Total debt in dai
->     ilkChi  :: Ray      -- Debt unit
+>     ilkRum  :: Wad,     -- Total debt in debt unit
+>     ilkChi  :: Ray      -- Value of debt unit
 >
 >   } deriving (Eq, Show)
 
@@ -630,7 +636,7 @@ This section introduces the records stored by the Maker system.
 \actentry{|how|}{sensitivity parameter}
 \actentry{|way|}{rate of target price change}
 \actentry{|tau|}{timestamp of last revaluation}
-\actentry{|pie|}{unprocessed stability fee revenue}
+\actentry{|joy|}{unprocessed stability fee revenue}
 \actentry{|sin|}{bad debt from liquidated |cdp|s}
 
 > data Vat = Vat {
@@ -640,7 +646,7 @@ This section introduces the records stored by the Maker system.
 >     vatPar  :: Wad,                -- Target price
 >     vatWay  :: Ray,                -- Target rate
 >     vatTau  :: Sec,                -- Last prodded
->     vatPie  :: Wad,                -- Unprocessed stability fees
+>     vatJoy  :: Wad,                -- Unprocessed stability fees
 >     vatSin  :: Wad,                -- Bad debt from liquidated |cdp|s
 >     vatJars  :: Map (Id Jar) Jar,  -- Collateral tokens
 >     vatIlks  :: Map (Id Ilk) Ilk,  -- |cdp| types
@@ -681,7 +687,7 @@ This section introduces the records stored by the Maker system.
 >   ilkHat  = Wad 0,
 >   ilkLag  = Sec 0,
 >   ilkChi  = Ray 1,
->   ilkDin  = Wad 0,
+>   ilkRum  = Wad 0,
 >   ilkRho  = Sec 0
 > }
 
@@ -702,7 +708,7 @@ This section introduces the records stored by the Maker system.
 >   vatPar   = Wad 1,
 >   vatHow   = how0,
 >   vatWay   = Ray 1,
->   vatPie   = Wad 0,
+>   vatJoy   = Wad 0,
 >   vatSin   = Wad 0,
 >   vatIlks  = empty,
 >   vatUrns  = empty,
@@ -772,7 +778,7 @@ urn's stage.
 >     pro  = view jam urn0  * view tag jar0
 >
 >   -- |cdp| type's total debt in |sdr|:
->     cap  = view din ilk0  * cast (view chi ilk0)
+>     cap  = (view rum ilk0  * cast (view chi ilk0)) :: Wad
 >
 >   -- |cdp|'s debt in |sdr|:
 >     con  = view art urn0  * cast (view chi ilk0) * par0
@@ -814,15 +820,15 @@ Now we define the internal act |gaze| which returns the value of
 >   prod
 >
 > -- Update price of specific debt unit
->   id_ilk  <- need (urnAt id_urn . ilk)
+>   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   drip id_ilk
 >
 > -- Read parameters for risk analysis
 >   era0    <- view era
 >   par0    <- view (vat . par)
->   urn0    <- need (urnAt  id_urn)
->   ilk0    <- need (ilkAt  (view ilk urn0  ))
->   jar0    <- need (jarAt  (view jar ilk0  ))
+>   urn0    <- look (vat . urns . ix id_urn)
+>   ilk0    <- look (vat . ilks . ix (view ilk urn0  ))
+>   jar0    <- look (vat . jars . ix (view jar ilk0  ))
 >
 > -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
@@ -841,11 +847,11 @@ Now we define the internal act |gaze| which returns the value of
 > lock id_urn x = do
 >
 >   -- Ensure |cdp| exists; identify collateral type
->     id_ilk  <- need (urnAt  id_urn  . ilk)
->     id_jar  <- need (ilkAt  id_ilk  . jar)
+>     id_ilk  <- look (vat . urns . ix id_urn  . ilk)
+>     id_jar  <- look (vat . ilks . ix id_ilk  . jar)
 >
 >   -- Record an increase in collateral
->     urnAt id_urn . jam += x
+>     vat . urns . ix id_urn . jam += x
 >
 >   -- Take sender's tokens
 >     id_lad  <- view sender
@@ -855,20 +861,20 @@ Now we define the internal act |gaze| which returns the value of
 
 > free id_urn wad_gem = do
 >
->   -- Fail if sender is not the |cdp| owner.
+>   -- Fail if sender is not the |cdp| owner
 >     id_sender  <- view sender
->     id_lad     <- need (urnAt id_urn . lad)
+>     id_lad     <- look (vat . urns . ix id_urn . lad)
 >     aver (id_sender == id_lad)
 >
->   -- Tentatively record the decreased collateral.
->     urnAt id_urn . jam  -=  wad_gem
+>   -- Decrease the collateral amount
+>     vat . urns . ix id_urn . jam  -=  wad_gem
 >
->   -- Fail if collateral decrease results in undercollateralization.
+>   -- Roll back if undercollateralized
 >     gaze id_urn >>= aver . (== Pride)
 >
->   -- Send the collateral to the |cdp| owner.
->     id_ilk  <- need (urnAt  id_urn  . ilk)
->     id_jar  <- need (ilkAt  id_ilk  . jar)
+>   -- Send the collateral to the |cdp| owner
+>     id_ilk  <- look (vat . urns . ix id_urn . ilk)
+>     id_jar  <- look (vat . ilks . ix id_ilk . jar)
 >     push id_jar id_lad wad_gem
 
 \actentry{|draw|}{issue dai as debt}
@@ -877,18 +883,18 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   -- Fail if sender is not the |cdp| owner
 >     id_sender  <- view sender
->     id_lad     <- need (urnAt id_urn . lad)
+>     id_lad     <- look (vat . urns . ix id_urn . lad)
 >     aver (id_sender == id_lad)
 >
->   -- Update price of debt coin
->     id_ilk     <- need (urnAt id_urn . ilk)
+>   -- Update value of debt unit
+>     id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >     chi1       <- drip id_ilk
 >
->   -- Denominate draw amount in debt coin
+>   -- Denominate draw amount in debt unit
 >     let  wad_chi = wad_dai / cast chi1
 >
 >   -- Increase debt
->     urnAt id_urn . art += wad_chi
+>     vat . urns . ix id_urn . art += wad_chi
 >
 >   -- Roll back unless overcollateralized
 >     gaze id_urn >>= aver . (== Pride)
@@ -903,21 +909,21 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   -- Fail if sender is not the |cdp| owner
 >     id_sender  <- view sender
->     id_lad     <- need (urnAt id_urn . lad)
+>     id_lad     <- look (vat . urns . ix id_urn . lad)
 >     aver (id_sender == id_lad)
 >
->   -- Update price of debt coin
->     id_ilk <- need (urnAt id_urn . ilk)
+>   -- Update value of debt unit
+>     id_ilk <- look (vat . urns . ix id_urn . ilk)
 >     chi1   <- drip id_ilk
 >
->   -- Denominate dai amount in debt coin
->     let  wad_chi = wad_dai / cast chi1
->
->   -- Roll back if the |cdp| is not overcollateralized
+>   -- Roll back unless overcollateralized
 >     gaze id_urn >>= aver . (== Pride)
 >
+>   -- Denominate dai amount in debt unit
+>     let  wad_chi = wad_dai / cast chi1
+> 
 >   -- Reduce debt
->     urnAt id_urn . art -= wad_chi
+>     vat . urns . ix id_urn . art -= wad_chi
 >
 >   -- Take dai from |cdp| owner, or roll back
 >     pull id_dai id_lad wad_dai
@@ -929,25 +935,25 @@ Now we define the internal act |gaze| which returns the value of
 
 > give id_urn id_lad = do
 > 
->     x <- need (urnAt id_urn . lad)
+>     x <- look (vat . urns . ix id_urn . lad)
 >     y <- view sender
 >     aver (x == y)
->     urnAt id_urn . lad .= id_lad
+>     vat . urns . ix id_urn . lad .= id_lad
 
 \actentry{|shut|}{wipe, free, and delete |cdp|}
 
 > shut id_urn = do
 >
->   -- Update price of debt coin
->     id_ilk <- need (urnAt id_urn . ilk)
+>   -- Update value of debt unit
+>     id_ilk <- look (vat . urns . ix id_urn . ilk)
 >     chi1   <- drip id_ilk
 >
 >   -- Attempt to repay all the |cdp|'s outstanding dai
->     art0 <- need (urnAt id_urn . art)
+>     art0 <- look (vat . urns . ix id_urn . art)
 >     wipe id_urn (art0 * cast chi1)
 >
 >   -- Reclaim all the collateral
->     jam0 <- need (urnAt id_urn . jam)
+>     jam0 <- look (vat . urns . ix id_urn . jam)
 >     free id_urn jam0
 >
 >   -- Nullify the |cdp|
@@ -992,19 +998,28 @@ Now we define the internal act |gaze| which returns the value of
 >     prj x  = if x >= 1  then x - 1  else 1 - 1 / x
 >     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
 
-\actentry{|drip|}{update price of debt coin}
+\clearpage
+\actentry{|drip|}{update value of debt unit}
 
 > drip id_ilk = do
 >
 > -- Current time stamp
 >   era0  <- view era
->   rho0  <- need (ilkAt id_ilk . rho)
+>
+> -- Time stamp of previous |drip|
+>   rho0  <- look (vat . ilks . ix id_ilk . rho)
 >
 > -- Current stability fee
->   tax0  <- need (ilkAt id_ilk . tax)
+>   tax0  <- look (vat . ilks . ix id_ilk . tax)
 >
-> -- Current price of debt coin
->   chi0  <- need (ilkAt id_ilk . chi)
+> -- Current value of debt unit
+>   chi0  <- look (vat . ilks . ix id_ilk . chi)
+>
+> -- Current total debt in debt units
+>   rum0  <- look (vat . ilks . ix id_ilk . rum)
+>
+> -- Current unprocessed stability fee revenue
+>   joy0  <- look (vat . ilks . ix id_ilk . joy)
 >
 >   let
 >
@@ -1012,8 +1027,11 @@ Now we define the internal act |gaze| which returns the value of
 >
 >     chi1  = chi0 * tax0 ^^ age
 >
->   ilkAt id_ilk . chi  .= chi1
->   ilkAt id_ilk . rho  .= era0
+>     joy1  = joy0 + (cast (chi1 - chi0) :: Wad) * rum0
+>
+>   vat . ilks . ix id_ilk . chi  .= chi1
+>   vat . ilks . ix id_ilk . rho  .= era0
+>   vat . ilks . ix id_ilk . joy  .= joy1
 >
 >   return chi1
 
@@ -1057,24 +1075,24 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   -- Record the sender as the requester of liquidation
 >     id_cat              <- view sender
->     urnAt id_urn . cat  .= id_cat
+>     vat . urns . ix id_urn . cat  .= id_cat
 >
 >   -- Read current debt
->     art0    <- need (urnAt id_urn  . art)
+>     art0    <- look (vat . urns . ix id_urn  . art)
 >
->   -- Update price of debt coin
->     id_ilk     <- need (urnAt id_urn . ilk)
+>   -- Update value of debt unit
+>     id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >     chi1       <- drip id_ilk
 >
 >   -- Read liquidation penalty ratio
->     id_ilk  <- need (urnAt id_urn  . ilk)
->     axe0    <- need (ilkAt id_ilk  . axe)
+>     id_ilk  <- look (vat . urns . ix id_urn  . ilk)
+>     axe0    <- look (vat . ilks . ix id_ilk  . axe)
 >
 >   -- Apply liquidation penalty to debt
 >     let art1 = art0 * axe0
 >
 >   -- Update debt and record it as in need of settlement
->     urnAt id_urn . art   .=  art1
+>     vat . urns . ix id_urn . art   .=  art1
 >     sin                  +=  art1 * chi1
 
 \actentry{|grab|}{take tokens to begin |cdp| liquidation}
@@ -1088,10 +1106,10 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   -- Record the sender as the |cdp|'s settler
 >     id_vow <- view sender
->     urnAt id_urn . vow .= id_vow
+>     vat . urns . ix id_urn . vow .= id_vow
 >
 >   -- Clear the |cdp|'s requester of liquidation
->     urnAt id_urn . cat .= Nothing
+>     vat . urns . ix id_urn . cat .= Nothing
 
 \actentry{|heal|}{process bad debt}
 
@@ -1101,27 +1119,27 @@ Now we define the internal act |gaze| which returns the value of
 >
 >     vat . sin -= wad_dai
 
-\actentry{|loot|}{process stability fee revenue}
+\actentry{|love|}{process stability fee revenue}
 
-> loot wad_dai =
+> love wad_dai =
 >
 >   auth $ do
 >
->     vat . pie -= wad_dai
+>     vat . joy -= wad_dai
 
 \section{Minting, burning, and transferring}
 
 \actentry{|pull|}{take tokens to vat}
 
 > pull id_jar id_lad w = do
->   g   <- need (jarAt id_jar . gem)
+>   g   <- look (jarAt id_jar . gem)
 >   g'  <- transferFrom id_lad id_vat w g
 >   jarAt id_jar . gem .= g'
 
 \actentry{|push|}{send tokens from vat}
 
 > push id_jar id_lad w = do
->   g   <- need (jarAt id_jar . gem)
+>   g   <- look (jarAt id_jar . gem)
 >   g'  <- transferFrom id_vat id_lad w g
 >   jarAt id_jar . gem .= g'
 
@@ -1198,7 +1216,7 @@ We define the Maker act vocabulary as a data type.
 >   |  Grab     (Id Urn)
 >   |  Heal     Wad
 >   |  Lock     (Id Urn)  Wad
->   |  Loot     Wad
+>   |  Love     Wad
 >   |  Mark     (Id Jar)  Wad       Sec
 >   |  Open     (Id Urn)  (Id Ilk)
 >   |  Prod
@@ -1251,14 +1269,6 @@ read-only state.
 >     x <- m;    put s
 >     return x
 
-\section{Constraints}
-
-> type Reads   r  m = MonadReader r m
-> type Writes  w  m = MonadState w m
-> type Fails      m = MonadError Error m
->
-> type IsAct    = ?act :: Act
-
 \section{Accessor aliases}
 
 > ilkAt  id = vat . ilks  . ix id
@@ -1289,9 +1299,9 @@ read-only state.
 > aver :: Fails m => Bool -> m ()
 > aver x = unless x (throwError AssertError)
 >
-> need :: (Fails m, Reads r m)
+> look :: (Fails m, Reads r m)
 >      => Getting (First a) r a -> m a
-> need f = preview f >>= \case
+> look f = preview f >>= \case
 >   Nothing -> throwError AssertError
 >   Just x  -> return x
 
@@ -1366,6 +1376,12 @@ Thus:
 \chapter{Act type signatures}
 \label{appendix:types}
 
+> type Reads   r  m = MonadReader r m
+> type Writes  w  m = MonadState w m
+> type Fails      m = MonadError Error m
+>
+> type IsAct    = ?act :: Act
+
 > type Numbers wad ray sec =
 >   (wad ~ Wad, ray ~ Ray, sec ~ Sec)
 
@@ -1381,10 +1397,13 @@ and |bag|; and it writes those same parameters except |tax|.
 >            HasTax ilk_r Ray,
 >            HasRho ilk_r Sec,
 >            HasChi ilk_r Ray,
+>            HasRum ilk_r Wad,
+>            HasJoy ilk_r Wad,
 >      Writes w m,
 >        HasVat w vat_w,
 >          HasIlks vat_w (Map (Id Ilk) ilk_w),
 >            HasRho ilk_w Sec,
+>            HasJoy ilk_w Wad,
 >            HasChi ilk_w Ray)
 >   => Id Ilk -> m Ray
 
@@ -1537,7 +1556,8 @@ and |bag|; and it writes those same parameters except |tax|.
 >          HasIlks vat_r (Map (Id Ilk) ilk_r),
 >            HasHat ilk_r wad,
 >            HasMat ilk_r wad,
->            HasDin ilk_r wad,
+>            HasRum ilk_r wad,
+>            HasJoy ilk_r wad,
 >            HasTax ilk_r ray,
 >            HasLag ilk_r sec,
 >            HasChi ilk_r ray,  HasRho ilk_r sec,
@@ -1555,6 +1575,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >            HasVow urn_w Address,
 >            HasCat urn_w (Maybe Address),
 >          HasIlks vat_w (Map (Id Ilk) ilk_w),
+>            HasJoy ilk_w wad,
 >            HasChi ilk_w ray,
 >            HasRho ilk_w sec,
 >          HasJars vat_w (Map (Id Jar) jar_r)
