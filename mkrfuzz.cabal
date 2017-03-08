@@ -12,7 +12,8 @@ build-type:
 library
   exposed-modules:
     Maker,
-    Maker.Prelude
+    Maker.Prelude,
+    Maker.Decimal
   build-depends:
     HUnit,
     QuickCheck,

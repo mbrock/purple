@@ -10,6 +10,7 @@
 \usepackage{xcolor}
 \usepackage{parskip}
 \usepackage{tocloft}
+\usepackage{mathtools}
 
 \hypersetup{colorlinks, linkcolor={blue!45!red}}
 
@@ -460,8 +461,8 @@ into scope.
 >
 > import Maker.Prelude   -- Fully import the Maker prelude
 > import Prelude ()      -- Import nothing from Prelude
-
-> import GHC.Exts (Constraint)
+>
+> import Maker.Decimal
 
 \chapter{Types}
 
@@ -473,22 +474,16 @@ respectively 18 digits of precision (used for token quantities) and 36
 digits (used for precise rates and ratios).
 
 > -- Define the distinct |wad| type for currency quantities
-> newtype Wad = Wad (Fixed E18)
+> newtype Wad = Wad (Decimal E18)
 >   deriving (  Ord, Eq, Num, Real, Fractional, RealFrac)
 >
 > -- Define the distinct |ray| type for precise rate quantities
-> newtype Ray = Ray (Fixed E36)
+> newtype Ray = Ray (Decimal E36)
 >   deriving (  Ord, Eq, Num, Real, Fractional, RealFrac)
 
-We must define the |E18| and |E36| symbols and their fixed
-point multipliers.
-
-> data E18; data E36
->
-> instance HasResolution E18 where
->   resolution _ = 10^(18 :: Integer)
-> instance HasResolution E36 where
->   resolution _ = 10^(36 :: Integer)
+See Appendix~\ref{appendix:numbers} for details on how we modify
+Haskell's decimal fixed point type to do more correct rounding for
+multiplication and division.
 
 %if 0
 
@@ -518,23 +513,8 @@ We also define a type for time durations in whole seconds.
 > newtype Sec = Sec Int
 >   deriving (Eq, Ord, Enum, Num, Real, Integral)
 
-%if 0
-
-\subsection{Epsilon values}
-
-The fixed point number types have well-defined smallest increments
-(denoted |epsilon|).  This becomes useful when verifying equivalences.
-
-> class Epsilon t where epsilon :: t
->
-> instance HasResolution a => Epsilon (Fixed a) where
->   -- The use of |undefined| is safe since |resolution| ignores the value.
->   epsilon = 1 / fromIntegral (resolution (undefined :: Fixed a))
->
 > instance Epsilon Wad  where epsilon = Wad epsilon
 > instance Epsilon Ray  where epsilon = Ray epsilon
-
-%endif
 
 \section{Identifiers and addresses}
 
@@ -1211,6 +1191,29 @@ Now we define the internal act |gaze| which returns the value of
 >   auth $ do
 >     era += t
 
+\actentry{|mine|}{create new collateral token}
+
+> mine id_jar = do
+>     vat . jars . at id_jar ?= Jar {
+>       jarGem   = Gem {
+>         gemTotalSupply  = 1000000000000,
+>         gemBalanceOf    = singleton id_vat 1000000000000,
+>         gemAllowance    = empty
+>       },
+>       jarTag  = Wad 0,
+>       jarZzz  = 0
+>     }
+
+\actentry{|hand|}{give collateral tokens to account}
+
+> hand dst wad id_jar = do
+>   push id_jar dst wad
+
+\actentry{|sire|}{create a new account}
+
+> sire lad = do
+>   accounts %= (lad :)
+
 \section{Other stuff}
 
 > perform :: Act -> Maker ()
@@ -1226,6 +1229,9 @@ Now we define the internal act |gaze| which returns the value of
 >     Give urn lad     -> give urn lad
 >     Pull jar lad wad -> pull jar lad wad
 >     Lock urn wad     -> lock urn wad
+>     Mine id          -> mine id
+>     Hand lad wad jar -> hand lad wad jar
+>     Sire lad         -> sire lad
 >
 >
 > transferFrom
@@ -1273,6 +1279,9 @@ We define the Maker act vocabulary as a data type.
 >   |  Tell     Wad
 >   |  Warp     Sec
 >   |  Wipe     (Id Urn)  Wad
+>   |  Mine     (Id Jar)
+>   |  Hand     Address   Wad       (Id Jar)
+>   |  Sire     Address
 >
 > -- Test acts
 >   |  Addr     Address
@@ -1418,8 +1427,6 @@ Thus:
 >      (perform Prod)]
 
 \appendix
-
-%include Maker/Prelude.lhs
 
 \chapter{Act type signatures}
 \label{appendix:types}
@@ -1630,6 +1637,7 @@ and |bag|; and it writes those same parameters except |tax|.
 >   ) => Id Urn -> m ()
 >
 
-
+%include Maker/Prelude.lhs
+%include Maker/Decimal.lhs
 
 \end{document}

@@ -42,11 +42,11 @@
 >   Monad        (return, (>>=)),
 >
 > -- Numeric classes
->   Num (), Integral (), Enum (),
+>   Num (..), Integral (), Enum (),
 >
 > -- Numeric conversions
->   Real (toRational), Fractional (fromRational),
->   RealFrac (truncate),
+>   Real (..), Fractional (..),
+>   RealFrac (..),
 >   fromIntegral,
 >
 > -- Simple types
@@ -60,7 +60,7 @@
 > -- Functional operators
 >   (.), ($),
 > -- Numeric operators
->   (+), (-), (*), (/), (^), (^^),
+>   (+), (-), (*), (/), (^), (^^), div,
 >
 > -- Utilities
 >   all,
@@ -101,7 +101,7 @@ See section~\ref{section:maker-monad} (\textit{The Maker monad}).
 Our numeric types use decimal fixed-point arithmetic.
 
 > import Data.Fixed as X (
->   Fixed,                -- Type constructor for numbers of given precision
+>   Fixed (..),           -- Type constructor for numbers of given precision
 >   HasResolution (..))   -- Type class for specifying precisions
 
 We rely on the \texttt{lens} library for accessing nested values.
