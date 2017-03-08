@@ -12,3 +12,8 @@ default.nix: mkrfuzz.cabal; cabal2nix . > default.nix;
 docker:
 	docker build -t makerdao/faker .
 	docker run -it --rm makerdao/faker
+
+test:
+	cabal build
+	./dist/build/mkrfuzz/mkrfuzz > makerdao/src/fuzz.sol
+	make -C makerdao test

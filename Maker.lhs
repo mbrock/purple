@@ -11,7 +11,7 @@
 \usepackage{parskip}
 \usepackage{tocloft}
 
-\hypersetup{colorlinks, linkcolor={blue!45!black}}
+\hypersetup{colorlinks, linkcolor={blue!45!red}}
 
 %include polycode.fmt
 %include forall.fmt
@@ -138,6 +138,7 @@
 %format art0
 %format art1
 %format axe0
+%format axe1
 %format cat0
 %format chi0
 %format chi1
@@ -148,6 +149,7 @@
 %format era0
 %format fix0
 %format hat0
+%format hat1
 %format how0
 %format how1
 %format ilk0
@@ -155,7 +157,9 @@
 %format joy0
 %format joy1
 %format lag0
+%format lag1
 %format mat0
+%format mat1
 %format par0
 %format par1
 %format pro0
@@ -166,6 +170,7 @@
 %format tag1
 %format tau0
 %format tax0
+%format tax1
 %format urn0
 %format vow0
 %format wad0
@@ -234,6 +239,16 @@
 %format Free = "\texttt{Free}"
 %format frob = "\texttt{frob}"
 %format Frob = "\texttt{Frob}"
+%format chop = "\texttt{chop}"
+%format Chop = "\texttt{Chop}"
+%format cork = "\texttt{cork}"
+%format Cork = "\texttt{Cork}"
+%format calm = "\texttt{calm}"
+%format Calm = "\texttt{Calm}"
+%format cuff = "\texttt{cuff}"
+%format Cuff = "\texttt{Cuff}"
+%format crop = "\texttt{crop}"
+%format Crop = "\texttt{Crop}"
 %format give = "\texttt{give}"
 %format Give = "\texttt{Give}"
 %format grab = "\texttt{grab}"
@@ -611,8 +626,8 @@ This section introduces the records stored by the Maker system.
 
 \section{|Urn| --- collateralized debt position (|cdp|)}
 
-\actentry{|cat|}{address of liquidation requester}
-\actentry{|vow|}{address of liquidating contract}
+\actentry{|cat|}{address of liquidation initiator}
+\actentry{|vow|}{address of liquidation contract}
 \actentry{|lad|}{|dai| issuer / |cdp| owner}
 \actentry{|ilk|}{|cdp| type}
 \actentry{|art|}{debt denominated in debt units}
@@ -620,8 +635,8 @@ This section introduces the records stored by the Maker system.
 
 > data Urn = Urn {
 >   
->     urnCat  :: Maybe Address,  -- Address of biting cat
->     urnVow  :: Maybe Address,  -- Address of liquidating vow
+>     urnCat  :: Maybe Address,  -- Address of liquidation initiator
+>     urnVow  :: Maybe Address,  -- Address of liquidation contract
 >     urnLad  :: Address,        -- Issuer
 >     urnIlk  :: Id Ilk,         -- |cdp| type
 >     urnArt  :: Wad,            -- Outstanding debt in debt units
@@ -1035,20 +1050,6 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   return chi1
 
-\section{Governance}
-
-\actentry{|form|}{create a new |cdp| type}
-
-> form id_ilk id_jar =
->   auth $ do
->     vat . ilks . at id_ilk ?= defaultIlk id_jar
-
-\actentry{|frob|}{set the sensitivity parameter}
-
-> frob how' =
->   auth $ do
->     vat . how .= how'
-
 \section{Price feedback}
 
 \actentry{|mark|}{update market price of dai}
@@ -1070,10 +1071,10 @@ Now we define the internal act |gaze| which returns the value of
 
 > bite id_urn = do
 >
->   -- Fail if urn is not undercollateralized
+>   -- Fail if |cdp| is not in need of liquidation
 >     gaze id_urn >>= aver . (== Panic)
 >
->   -- Record the sender as the requester of liquidation
+>   -- Record the sender as the liquidation initiator
 >     id_cat              <- view sender
 >     vat . urns . ix id_urn . cat  .= id_cat
 >
@@ -1091,9 +1092,11 @@ Now we define the internal act |gaze| which returns the value of
 >   -- Apply liquidation penalty to debt
 >     let art1 = art0 * axe0
 >
->   -- Update debt and record it as in need of settlement
+>   -- Update |cdp| debt
 >     vat . urns . ix id_urn . art   .=  art1
->     sin                  +=  art1 * chi1
+>
+>   -- Record as bad debt
+>     sin +=  art1 * chi1
 
 \actentry{|grab|}{take tokens to begin |cdp| liquidation}
 
@@ -1126,6 +1129,51 @@ Now we define the internal act |gaze| which returns the value of
 >   auth $ do
 >
 >     vat . joy -= wad_dai
+
+\section{Governance}
+
+\actentry{|form|}{create a new |cdp| type}
+
+> form id_ilk id_jar =
+>   auth $ do
+>     vat . ilks . at id_ilk ?= defaultIlk id_jar
+
+\actentry{|frob|}{set the sensitivity parameter}
+
+> frob how' =
+>   auth $ do
+>     vat . how .= how'
+
+\actentry{|chop|}{set liquidation penalty}
+
+> chop id_ilk axe1 =
+>   auth $ do
+>     vat . ilks . ix id_ilk . axe .= axe1
+
+\actentry{|cork|}{set debt ceiling}
+
+> cork id_ilk hat1 =
+>   auth $ do
+>     vat . ilks . ix id_ilk . hat .= hat1
+
+\actentry{|calm|}{set limbo duration}
+
+> calm id_ilk lag1 =
+>   auth $ do
+>     vat . ilks . ix id_ilk . lag .= lag1
+
+\actentry{|cuff|}{set liquidation ratio}
+
+> cuff id_ilk mat1 =
+>   auth $ do
+>     vat . ilks . ix id_ilk . mat .= mat1
+
+\actentry{|crop|}{set stability fee}
+
+> crop id_ilk tax1 =
+>   auth $ do
+>     drip id_ilk
+>     vat . ilks . ix id_ilk . tax .= tax1
 
 \section{Minting, burning, and transferring}
 
