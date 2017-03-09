@@ -135,10 +135,15 @@ dump sys = do
     write
       . WadIs    ("vat.tag(jars[" <> txt i <> "])")
       $ Exactly  (view tag j)
-    forAllPairs (view (gem . balanceOf) j) $ \(Address a, x) -> do
+    forAllPairs (view (gem . balanceOf) j) $ \(a, x) -> do
+      let a' = case a of
+                 AddressHolder (Address h) ->
+                   "lads[" <> txt h <> "]"
+                 JarHolder (Id h) ->
+                   "jars[" <> txt h <> "]"
       write .
-        WadIs ("jars[" <> txt i <> "].token().balanceOf(lads[" <>
-                txt a <> "])") $ Exactly x
+        WadIs ("jars[" <> txt i <> "].token().balanceOf(" <>
+                a' <> ")") $ Exactly x
   forAllPairs (view (vat . ilks) sys) $ \(Id i, x) -> do
     write
       . RayIs ("vat.axe(id(" <> txt i <> "))")

@@ -232,6 +232,12 @@
 %format Push = "\texttt{Push}"
 %format wipe = "\texttt{wipe}"
 %format Wipe = "\texttt{Wipe}"
+%format mine = "\texttt{mine}"
+%format Mine = "\texttt{Mine}"
+%format hand = "\texttt{hand}"
+%format Hand = "\texttt{Hand}"
+%format sire = "\texttt{sire}"
+%format Sire = "\texttt{Sire}"
 %format draw = "\texttt{draw}"
 %format Draw = "\texttt{Draw}"
 %format form = "\texttt{form}"
@@ -293,6 +299,7 @@
 %format id_dai
 %format id_vat
 %format id_god
+%format id_toy
 %format id_sender
 
 \begin{document}
@@ -560,11 +567,14 @@ This section introduces the records stored by the Maker system.
 
 \section{|Gem| --- ERC20 token model}
 
+> data Holder =  AddressHolder  Address
+>             |  JarHolder      (Id Jar)
+>   deriving (Eq, Show, Ord)
+
 > data Gem = Gem {
 > 
 >     gemTotalSupply  :: Wad,
->     gemBalanceOf    :: Map Address             Wad,
->     gemAllowance    :: Map (Address, Address)  Wad
+>     gemBalanceOf    :: Map Holder Wad
 >
 >   } deriving (Eq, Show)
 >
@@ -573,7 +583,7 @@ This section introduces the records stored by the Maker system.
 
 \actentry{|gem|}{collateral token}
 \actentry{|tag|}{market price of token}
-\actentry{|zzz|}{expiration date of token price feed}
+\actentry{|zzz|}{expiration time of token price feed}
 
 > data Jar = Jar {
 >
@@ -591,9 +601,9 @@ This section introduces the records stored by the Maker system.
 \actentry{|hat|}{debt ceiling}
 \actentry{|tax|}{stability fee}
 \actentry{|lag|}{price feed limbo duration}
-\actentry{|rho|}{timestamp of last drip}
+\actentry{|rho|}{time of debt unit adjustment}
 \actentry{|din|}{total outstanding dai}
-\actentry{|chi|}{price of debt coin for |cdp| type}
+\actentry{|chi|}{dai value of debt unit}
 
 > data Ilk = Ilk {
 >
@@ -605,7 +615,7 @@ This section introduces the records stored by the Maker system.
 >     ilkLag  :: Sec,     -- Limbo duration
 >     ilkRho  :: Sec,     -- Last dripped
 >     ilkRum  :: Wad,     -- Total debt in debt unit
->     ilkChi  :: Ray      -- Value of debt unit
+>     ilkChi  :: Ray      -- Dai value of debt unit
 >
 >   } deriving (Eq, Show)
 
@@ -613,10 +623,10 @@ This section introduces the records stored by the Maker system.
 
 \actentry{|cat|}{address of liquidation initiator}
 \actentry{|vow|}{address of liquidation contract}
-\actentry{|lad|}{|dai| issuer / |cdp| owner}
+\actentry{|lad|}{|cdp| owner}
 \actentry{|ilk|}{|cdp| type}
-\actentry{|art|}{debt denominated in debt units}
-\actentry{|jam|}{collateral denominated in debt units}
+\actentry{|art|}{debt denominated in debt unit}
+\actentry{|jam|}{collateral denominated in debt unit}
 
 > data Urn = Urn {
 >   
@@ -624,8 +634,8 @@ This section introduces the records stored by the Maker system.
 >     urnVow  :: Maybe Address,  -- Address of liquidation contract
 >     urnLad  :: Address,        -- Issuer
 >     urnIlk  :: Id Ilk,         -- |cdp| type
->     urnArt  :: Wad,            -- Outstanding debt in debt units
->     urnJam  :: Wad             -- Collateral amount in debt units
+>     urnArt  :: Wad,            -- Outstanding debt in debt unit
+>     urnJam  :: Wad             -- Collateral amount in debt unit
 >
 >   } deriving (Eq, Show)
 
@@ -635,7 +645,7 @@ This section introduces the records stored by the Maker system.
 \actentry{|par|}{target price of |dai| denominated in |sdr|}
 \actentry{|how|}{sensitivity parameter}
 \actentry{|way|}{rate of target price change}
-\actentry{|tau|}{timestamp of last revaluation}
+\actentry{|tau|}{time of latest revaluation}
 \actentry{|joy|}{unprocessed stability fee revenue}
 \actentry{|sin|}{bad debt from liquidated |cdp|s}
 
@@ -656,7 +666,7 @@ This section introduces the records stored by the Maker system.
 
 \section{System model}
 
-\actentry{|era|}{Current timestamp}
+\actentry{|era|}{current time}
 
 > data System =  System {
 > 
@@ -716,8 +726,7 @@ This section introduces the records stored by the Maker system.
 >     singleton id_dai Jar {
 >       jarGem   = Gem {
 >         gemTotalSupply  = 0,
->         gemBalanceOf    = empty,
->         gemAllowance    = empty
+>         gemBalanceOf    = empty
 >       },
 >       jarTag  = Wad 0,
 >       jarZzz  = 0
@@ -741,7 +750,7 @@ act definitions behave with regard to state and rollback thereof, see
 chapter~\ref{chapter:monad}.
 
 \newpage
-\section{Risk assessment}
+\section{Assessment}
 
 \actentry{|gaze|}{identify |cdp| risk stage}
 
@@ -960,7 +969,7 @@ Now we define the internal act |gaze| which returns the value of
 >     vat . urns . at id_urn .= Nothing
 
 \clearpage
-\section{Frequent adjustments}
+\section{Adjustment}
 
 \actentry{|prod|}{perform revaluation and rate adjustment}
 
@@ -1015,7 +1024,7 @@ Now we define the internal act |gaze| which returns the value of
 > -- Current value of debt unit
 >   chi0  <- look (vat . ilks . ix id_ilk . chi)
 >
-> -- Current total debt in debt units
+> -- Current total debt in debt unit
 >   rum0  <- look (vat . ilks . ix id_ilk . rum)
 >
 > -- Current unprocessed stability fee revenue
@@ -1035,7 +1044,7 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   return chi1
 
-\section{Price feedback}
+\section{Feedback}
 
 \actentry{|mark|}{update market price of dai}
 
@@ -1050,7 +1059,7 @@ Now we define the internal act |gaze| which returns the value of
 >   auth $ do
 >     vat . fix .= x
 
-\section{Liquidation and settlement}
+\section{Liquidation}
 
 \actentry{|bite|}{mark |cdp| for liquidation}
 
@@ -1156,63 +1165,66 @@ Now we define the internal act |gaze| which returns the value of
 >     drip id_ilk
 >     vat . ilks . ix id_ilk . tax .= tax1
 
-\section{Minting, burning, and transferring}
+\section{Treasury}
 
-\actentry{|pull|}{take tokens to vat}
+\actentry{|pull|}{take tokens to vault}
 
 > pull id_jar id_lad w = do
->   g   <- look (jarAt id_jar . gem)
->   g'  <- transferFrom id_lad id_vat w g
->   jarAt id_jar . gem .= g'
+>   g   <- look (vat . jars . ix id_jar . gem)
+>   g'  <- transferFrom  (AddressHolder id_lad)
+>                        (JarHolder id_jar) w g
+>   vat . jars . ix id_jar . gem .= g'
 
-\actentry{|push|}{send tokens from vat}
+\actentry{|push|}{send tokens from vault}
 
 > push id_jar id_lad w = do
->   g   <- look (jarAt id_jar . gem)
->   g'  <- transferFrom id_vat id_lad w g
->   jarAt id_jar . gem .= g'
+>   g   <- look (vat . jars . ix id_jar . gem)
+>   g'  <- transferFrom  (JarHolder id_jar)
+>                        (AddressHolder id_lad) w g
+>   vat . jars . ix id_jar . gem .= g'
 
-\actentry{|mint|}{increase supply}
+\actentry{|mint|}{create tokens}
 
-> mint id_jar wad0 = do
->   jarAt id_jar . gem . totalSupply            += wad0
->   jarAt id_jar . gem . balanceOf . ix id_vat  += wad0
+> mint id_jar wad0 =
+>   zoom (vat . jars . ix id_jar . gem) $ do
+>     totalSupply                        += wad0
+>     balanceOf . ix (JarHolder id_jar)  += wad0
 
-\actentry{|burn|}{decrease supply}
+\actentry{|burn|}{destroy tokens}
 
-> burn id_jar wad0 = do
->   jarAt id_jar . gem . totalSupply            -= wad0
->   jarAt id_jar . gem . balanceOf . ix id_vat  -= wad0
+> burn id_jar wad0 =
+>   zoom (vat . jars . ix id_jar . gem) $ do
+>     totalSupply                        -= wad0
+>     balanceOf . ix (JarHolder id_jar)  -= wad0
 
-\section{Test-related manipulation}
+\section{Manipulation}
 
-\actentry{|warp|}{travel in time}
+\actentry{|warp|}{travel through time}
 
 > warp t =
 >   auth $ do
 >     era += t
 
-\actentry{|mine|}{create new collateral token}
+\actentry{|mine|}{create toy token type}
 
 > mine id_jar = do
 >     vat . jars . at id_jar ?= Jar {
 >       jarGem   = Gem {
 >         gemTotalSupply  = 1000000000000,
->         gemBalanceOf    = singleton id_toy 1000000000000,
->         gemAllowance    = empty
+>         gemBalanceOf    = singleton (AddressHolder id_toy) 1000000000000
 >       },
 >       jarTag  = Wad 0,
 >       jarZzz  = 0
 >     }
 
-\actentry{|hand|}{give collateral tokens to account}
+\actentry{|hand|}{give toy tokens to account}
 
 > hand dst w id_jar = do
->   g   <- look (jarAt id_jar . gem)
->   g'  <- transferFrom id_toy dst w g
->   jarAt id_jar . gem .= g'
+>   g   <- look (vat . jars . ix id_jar . gem)
+>   g'  <- transferFrom (AddressHolder id_toy) (AddressHolder dst) w g
+>   vat . jars . ix id_jar . gem .= g'
 
-\actentry{|sire|}{create a new account}
+\actentry{|sire|}{register a new toy account}
 
 > sire lad = do
 >   accounts %= (lad :)
@@ -1245,15 +1257,14 @@ Now we define the internal act |gaze| which returns the value of
 >   return y
 >
 > transferFrom
->   ::  (MonadError Error m)
->   =>  Address -> Address -> Wad
+>   ::  (?act :: Act, MonadError Error m)
+>   =>  Holder -> Holder -> Wad
 >   ->  Gem -> m Gem
 >
 > transferFrom src dst wad gem =
 >   case view (balanceOf . at src) gem of
 >     Nothing ->
->       throwError . AssertError $
->         "transferFrom " <> show (src, dst, wad)
+>       throwError (AssertError ?act)
 >     Just balance -> do
 >       aver (balance >= wad)
 >       return $ gem &~ do
@@ -1302,7 +1313,7 @@ We define the Maker act vocabulary as a data type.
 Acts can fail.  We divide the failure modes into general assertion
 failures and authentication failures.
 
-> data Error = AssertError String | AuthError
+> data Error = AssertError Act | AuthError
 >   deriving (Show, Eq)
 
 \section{The |Maker| monad}
@@ -1357,10 +1368,10 @@ read-only state.
 
 \section{Asserting}
 
-> aver x = unless x (throwError (AssertError "aver"))
+> aver x = unless x (throwError (AssertError ?act))
 
 > look f = preuse f >>= \case
->   Nothing -> throwError (AssertError "look")
+>   Nothing -> throwError (AssertError ?act)
 >   Just x  -> return x
 
 \section{Modifiers}
