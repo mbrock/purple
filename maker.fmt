@@ -4,6 +4,8 @@
 
 %format $ = "\mathrel{\,\$\,}"
 
+%format . = "\mathbin{.}"
+
 %format empty = "\varnothing"
 %format epsilon = "\epsilon"
 %format @?= = "\cong"

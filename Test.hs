@@ -181,10 +181,10 @@ testCaseX :: WriterT (Seq (Address, Act)) Gen ()
 testCaseX = do
   x <- chooseRay 1 1.000000000000000001
   y <- chooseWad 1 1.01
-  -- write (id_god, Frob x)
-  -- write (id_god, Tell y)
-  -- write (id_god, Warp (Sec 100))
-  -- write (id_god, Prod)
+  write (id_god, Frob x)
+  write (id_god, Tell y)
+  write (id_god, Warp (Sec 100))
+  write (id_god, Prod)
   write (id_god, Mine (Id "DGX"))
   write (id_god, Sire (Address "Bob"))
   write (id_god, Hand (Address "Bob") (Wad 1) (Id "DGX"))
@@ -195,7 +195,7 @@ testCaseX = do
 crossExamine :: Seq (Address, Act) -> (Bool, Seq Text)
 crossExamine acts =
   case exec (initialSystem 1.0)
-        (sequence_ (fmap (\(x, y) -> be x y) acts)) of
+        (sequence_ (fmap (\(x, y) -> y `being` x) acts)) of
     Left x ->
       (False,  solidityTest "testFail_x" (txt x) (actsCode acts))
     Right x ->

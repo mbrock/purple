@@ -172,5 +172,12 @@ Some less interesting imports are omitted from this document.
 
 > write = Writer.tell . Sequence.singleton
 
+> decreaseBy  x a = a -= x
+> increaseBy  x a = a += x
+>
+> initializeTo x a = a %= (\case Nothing -> Just x; y -> y)
+>
+> prepend x a = a %= (x :)
+
 %endif
 

@@ -264,12 +264,11 @@ We also have three predefined entity identifiers.
 > -- The |cdp| engine address
 > id_vat = Address "VAT"
 >
-> -- The account with ultimate authority
-> -- \xxx{Kludge until authority is modelled}
-> id_god = Address "GOD"
->
 > -- The address of the test driver
 > id_toy = Address "TOY"
+>
+> -- A test account with ultimate authority
+> id_god = Address "GOD"
 
 %if 0
 
@@ -286,7 +285,7 @@ following the |ERC20| interface.  Maker governance therefore involves
 due diligence on collateral token contracts.}
 
 > data Gem = Gem {
-> 
+>
 >     _balanceOf    :: Map Holder Wad
 >
 >   } deriving (Eq, Show)
@@ -296,7 +295,7 @@ other addresses.
 
 > data Holder  =  InAccount  Address
 >              |  InVault    (Id Jar)
-> 
+>
 >   deriving (Eq, Show, Ord)
 
 
@@ -350,7 +349,7 @@ other addresses.
 \actentry{|jam|}{collateral denominated in debt unit}
 
 > data Urn = Urn {
->   
+>
 >     _cat  :: Maybe Address,  -- Address of liquidation initiator
 >     _vow  :: Maybe Address,  -- Address of liquidation contract
 >     _lad  :: Address,        -- Issuer
@@ -390,7 +389,7 @@ other addresses.
 \actentry{|era|}{current time}
 
 > data System =  System {
-> 
+>
 >     _vat       :: Vat,       -- Root Maker entity
 >     _era       :: Sec,       -- Current time stamp
 >     _sender    :: Address,   -- Sender of current act
@@ -562,112 +561,125 @@ Now we define the internal act |gaze| which returns the value of
 > -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
+\clearpage
 \section{Lending}
 
-\actentry{|open|}{create |cdp| account}
+\actentry{|open|}{create |cdp|}
+Any Ethereum address can open one or more accounts with the system
+using |open|, specifying an account identifier (self-chosen) and a
+|cdp| type.
 
-> open id_urn id_ilk =
->   do
->     id_lad <- use sender
->     vat . urns . at id_urn ?= defaultUrn id_ilk id_lad
+> open id_urn id_ilk = do
+>
+> -- Fail if account identifier is taken
+>   none (vat . urns . at id_urn)
+>
+> -- Create a |cdp| record with the sender as owner
+>   id_lad <- use sender
+>   initializeTo (defaultUrn id_ilk id_lad)
+>     (vat . urns . at id_urn)
+
+\actentry{|give|}{transfer |cdp| account} The owner of a |cdp| can
+transfer its ownership at any time using |give|.
+
+> give id_urn id_lad = do
+>
+> -- Fail if sender is not the |cdp| owner
+>   owns id_urn id_lad
+>
+> -- Transfer ownership
+>   vat . urns . ix id_urn . lad .= id_lad
 
 \actentry{|lock|}{deposit collateral}
 
-> lock id_urn x = do
+
+> lock id_urn wad_gem = do
 >
->   -- Ensure |cdp| exists; identify collateral type
->     id_ilk  <- look (vat . urns . ix id_urn  . ilk)
->     id_jar  <- look (vat . ilks . ix id_ilk  . jar)
+> -- Fail if sender is not the |cdp| owner
+>   id_lad <- use sender
+>   owns id_urn id_lad
 >
->   -- Record an increase in collateral
->     vat . urns . ix id_urn . jam += x
+> -- Ensure |cdp| exists; identify collateral type
+>   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
+>   id_jar  <- look (vat . ilks . ix id_ilk  . jar)
 >
->   -- Take sender's tokens
->     id_lad  <- use sender
->     pull id_jar id_lad x
+> -- Record an increase in collateral
+>   increaseBy wad_gem (vat . urns . ix id_urn . jam)
+>
+> -- Take sender's tokens
+>   id_lad  <- use sender
+>   pull id_jar id_lad wad_gem
 
 \actentry{|free|}{withdraw collateral}
 
 > free id_urn wad_gem = do
 >
->   -- Fail if sender is not the |cdp| owner
->     id_sender  <- use sender
->     id_lad     <- look (vat . urns . ix id_urn . lad)
->     aver (id_sender == id_lad)
+> -- Fail if sender is not the |cdp| owner
+>   id_lad <- use sender
+>   owns id_urn id_lad
 >
->   -- Decrease the collateral amount
->     vat . urns . ix id_urn . jam  -=  wad_gem
+> -- Decrease the collateral amount
+>   decreaseBy wad_gem (vat . urns . ix id_urn . jam)
 >
->   -- Roll back if undercollateralized
->     gaze id_urn >>= aver . (== Pride)
+> -- Roll back if undercollateralized
+>   gaze id_urn >>= aver . (== Pride)
 >
->   -- Send the collateral to the |cdp| owner
->     id_ilk  <- look (vat . urns . ix id_urn . ilk)
->     id_jar  <- look (vat . ilks . ix id_ilk . jar)
->     push id_jar id_lad wad_gem
+> -- Send the collateral to the |cdp| owner
+>   id_ilk  <- look (vat . urns . ix id_urn . ilk)
+>   id_jar  <- look (vat . ilks . ix id_ilk . jar)
+>   push id_jar id_lad wad_gem
 
 \actentry{|draw|}{issue dai as debt}
 
 > draw id_urn wad_dai = do
 >
->   -- Fail if sender is not the |cdp| owner
->     id_sender  <- use sender
->     id_lad     <- look (vat . urns . ix id_urn . lad)
->     aver (id_sender == id_lad)
+> -- Fail if sender is not the |cdp| owner
+>   id_lad <- use sender
+>   owns id_urn id_lad
 >
->   -- Update value of debt unit
->     id_ilk     <- look (vat . urns . ix id_urn . ilk)
->     chi1       <- drip id_ilk
+> -- Update value of debt unit
+>   id_ilk     <- look (vat . urns . ix id_urn . ilk)
+>   chi1       <- drip id_ilk
 >
->   -- Denominate draw amount in debt unit
->     let  wad_chi = wad_dai / cast chi1
+> -- Denominate draw amount in debt unit
+>   let  wad_chi = wad_dai / cast chi1
 >
->   -- Increase debt
->     vat . urns . ix id_urn . art += wad_chi
+> -- Increase debt
+>   increaseBy wad_chi (vat . urns . ix id_urn . art)
 >
->   -- Roll back unless overcollateralized
->     gaze id_urn >>= aver . (== Pride)
+> -- Roll back unless overcollateralized
+>   gaze id_urn >>= aver . (== Pride)
 >
->   -- Mint dai and send to the |cdp| owner
->     mint id_dai wad_dai
->     push id_dai id_lad wad_dai
+> -- Mint dai and send to the |cdp| owner
+>   mint id_dai wad_dai
+>   push id_dai id_lad wad_dai
 
 \actentry{|wipe|}{repay debt and burn dai}
 
 > wipe id_urn wad_dai = do
 >
->   -- Fail if sender is not the |cdp| owner
->     id_sender  <- use sender
->     id_lad     <- look (vat . urns . ix id_urn . lad)
->     aver (id_sender == id_lad)
+> -- Fail if sender is not the |cdp| owner
+>   id_lad <- use sender
+>   owns id_urn id_lad
 >
->   -- Update value of debt unit
->     id_ilk <- look (vat . urns . ix id_urn . ilk)
->     chi1   <- drip id_ilk
+> -- Update value of debt unit
+>   id_ilk <- look (vat . urns . ix id_urn . ilk)
+>   chi1   <- drip id_ilk
 >
->   -- Roll back unless overcollateralized
->     gaze id_urn >>= aver . (== Pride)
+> -- Roll back unless overcollateralized
+>   gaze id_urn >>= aver . (== Pride)
 >
->   -- Denominate dai amount in debt unit
->     let  wad_chi = wad_dai / cast chi1
-> 
->   -- Reduce debt
->     vat . urns . ix id_urn . art -= wad_chi
+> -- Denominate dai amount in debt unit
+>   let  wad_chi = wad_dai / cast chi1
 >
->   -- Take dai from |cdp| owner, or roll back
->     pull id_dai id_lad wad_dai
+> -- Reduce debt
+>   decreaseBy wad_chi (vat . urns . ix id_urn . art)
 >
->   -- Destroy dai
->     burn id_dai wad_dai
-
-\actentry{|give|}{transfer |cdp| account}
-
-> give id_urn id_lad = do
-> 
->     x <- look (vat . urns . ix id_urn . lad)
->     y <- use sender
->     aver (x == y)
->     vat . urns . ix id_urn . lad .= id_lad
+> -- Take dai from |cdp| owner, or roll back
+>   pull id_dai id_lad wad_dai
+>
+> -- Destroy dai
+>   burn id_dai wad_dai
 
 \actentry{|shut|}{wipe, free, and delete |cdp|}
 
@@ -731,7 +743,7 @@ Now we define the internal act |gaze| which returns the value of
 \actentry{|drip|}{update value of debt unit}
 
 > drip id_ilk = do
-> 
+>
 >   rho0  <- look (vat . ilks . ix id_ilk . rho)  -- Time stamp of previous |drip|
 >   tax0  <- look (vat . ilks . ix id_ilk . tax)  -- Current stability fee
 >   chi0  <- look (vat . ilks . ix id_ilk . chi)  -- Current value of debt unit
@@ -761,13 +773,13 @@ Now we define the internal act |gaze| which returns the value of
 
 \actentry{|tell|}{update market price of collateral token}
 
-> tell x =
+> tell wad_gem =
 >   auth $ do
->     vat . fix .= x
+>     vat . fix .= wad_gem
 
 \section{Liquidation}
 
-\actentry{|bite|}{mark |cdp| for liquidation}
+\actentry{|bite|}{mark for liquidation}
 
 > bite id_urn = do
 >
@@ -796,9 +808,9 @@ Now we define the internal act |gaze| which returns the value of
 >     vat . urns . ix id_urn . art   .=  art1
 >
 >   -- Record as bad debt
->     vat . sin +=  art1 * cast chi1
+>     increaseBy (art1 * cast chi1) (vat . sin)
 
-\actentry{|grab|}{take tokens to begin |cdp| liquidation}
+\actentry{|grab|}{take tokens for liquidation}
 
 > grab id_urn =
 >
@@ -811,20 +823,34 @@ Now we define the internal act |gaze| which returns the value of
 >     id_vow <- use sender
 >     vat . urns . ix id_urn . vow .= Just id_vow
 >
->   -- Clear the |cdp|'s requester of liquidation
+>   -- Forget the |cdp|'s requester of liquidation
 >     vat . urns . ix id_urn . cat .= Nothing
+
+\actentry{|plop|}{finish liquidation returning profit}
+
+> plop id_urn wad_dai =
+>   auth $ do
+>
+>   -- Fail unless |cdp| is in liquidation
+>     gaze id_urn >>= aver . (== Dread)
+>
+>   -- Forget the |cdp|'s settler
+>     vat . urns . ix id_urn . vow .= Nothing
+>
+>   -- Return some amount of excess auction gains
+>     vat . urns . ix id_urn . jam .= wad_dai
 
 \actentry{|heal|}{process bad debt}
 
 > heal wad_dai =
 >   auth $ do
->     vat . sin -= wad_dai
+>     decreaseBy wad_dai (vat . sin)
 
 \actentry{|love|}{process stability fee revenue}
 
 > love wad_dai =
 >   auth $ do
->     vat . joy -= wad_dai
+>     decreaseBy wad_dai (vat . joy)
 
 \section{Governance}
 
@@ -832,13 +858,14 @@ Now we define the internal act |gaze| which returns the value of
 
 > form id_ilk id_jar =
 >   auth $ do
->     vat . ilks . at id_ilk ?= defaultIlk id_jar
+>     initializeTo (defaultIlk id_jar)
+>       (vat . ilks . at id_ilk)
 
 \actentry{|frob|}{set the sensitivity parameter}
 
-> frob how' =
+> frob how1 =
 >   auth $ do
->     vat . how .= how'
+>     vat . how .= how1
 
 \actentry{|chop|}{set liquidation penalty}
 
@@ -875,63 +902,60 @@ Now we define the internal act |gaze| which returns the value of
 
 \actentry{|pull|}{take tokens to vault}
 
-> pull id_jar id_lad w = do
->   g   <- look (vat . jars . ix id_jar . gem)
->   g'  <- transferFrom  (InAccount id_lad)
->                        (InVault id_jar) w g
->   vat . jars . ix id_jar . gem .= g'
+> pull id_jar id_lad wad_gem =
+>
+>   transfer id_jar wad_gem
+>     (InAccount  id_lad)
+>     (InVault    id_jar)
 
 \actentry{|push|}{send tokens from vault}
 
-> push id_jar id_lad w = do
->   g   <- look (vat . jars . ix id_jar . gem)
->   g'  <- transferFrom  (InVault id_jar)
->                        (InAccount id_lad) w g
->   vat . jars . ix id_jar . gem .= g'
+> push id_jar id_lad wad_gem =
+>
+>   transfer  id_jar wad_gem
+>     (InVault    id_jar)
+>     (InAccount  id_lad)
+>
 
 \actentry{|mint|}{create tokens}
 
-> mint :: Id Jar -> Wad -> Maker ()
 > mint id_jar wad0 =
 >   zoom (vat . jars . ix id_jar . gem) $ do
->     balanceOf . ix (InVault id_jar)  += wad0
+>     increaseBy wad0 (balanceOf . ix (InVault id_jar))
 
 \actentry{|burn|}{destroy tokens}
 
 > burn id_jar wad0 =
 >   zoom (vat . jars . ix id_jar . gem) $ do
->     balanceOf . ix (InVault id_jar)  -= wad0
+>     decreaseBy wad0 (balanceOf . ix (InVault id_jar))
 
 \section{Manipulation}
 
 \actentry{|warp|}{travel through time}
 
-> warp t =
->   auth $ do
->     era += t
+> warp t = auth (do increaseBy t era)
 
 \actentry{|mine|}{create toy token type}
 
 > mine id_jar = do
->     vat . jars . at id_jar ?= Jar {
->       _gem   = Gem {
->         _balanceOf    = singleton (InAccount id_toy) 1000000000000
->       },
->       _tag  = Wad 0,
->       _zzz  = 0
->     }
+>
+>     initializeTo
+>       (Jar {
+>          _gem   = Gem (singleton (InAccount id_toy) 1000000000000),
+>          _tag  = Wad 0,
+>          _zzz  = 0 })
+>       (vat . jars . at id_jar)
 
 \actentry{|hand|}{give toy tokens to account}
 
-> hand dst w id_jar = do
->   g   <- look (vat . jars . ix id_jar . gem)
->   g'  <- transferFrom (InAccount id_toy) (InAccount dst) w g
->   vat . jars . ix id_jar . gem .= g'
+> hand dst wad_gem id_jar = do
+>   transfer id_jar wad_gem
+>     (InAccount id_toy)
+>     (InAccount dst)
 
 \actentry{|sire|}{register a new toy account}
 
-> sire lad = do
->   accounts %= (lad :)
+> sire lad = do prepend lad accounts
 
 \section{Other stuff}
 
@@ -951,33 +975,30 @@ Now we define the internal act |gaze| which returns the value of
 >     Mine id          -> mine id
 >     Hand lad wad jar -> hand lad wad jar
 >     Sire lad         -> sire lad
->
-> be :: Address -> Act -> Maker ()
-> be who x = do
->   old <- use sender
->   sender .= who
->   y <- perform x
->   sender .= old
+
+> being :: Act -> Address -> Maker ()
+> being x who = do
+>   old     <- use sender
+>   sender  .= who
+>   y       <- perform x
+>   sender  .= old
 >   return y
+
+> transfer id_jar wad src dst  =
 >
-> transferFrom
->   ::  (?act :: Act, MonadError Error m)
->   =>  Holder -> Holder -> Wad
->   ->  Gem -> m Gem
+> -- Operate in the token's balance table
+>   zoom (vat . jars . ix id_jar . gem . balanceOf) $ do
 >
-> transferFrom src dst wad gem =
->   case view (balanceOf . at src) gem of
->     Nothing ->
->       throwError (AssertError ?act)
->     Just balance -> do
->       aver (balance >= wad)
->       return $ gem &~ do
->         balanceOf . ix src -= wad
->         balanceOf . at dst %=
->           (\case
->               Nothing  -> Just wad
->               Just x   -> Just (wad + x))
+>   -- Fail if source balance insufficient
+>     balance <- look (ix src)
+>     aver (balance >= wad)
 >
+>   -- Decrease source balance
+>     decreaseBy    wad  (ix src)
+>
+>   -- Increase destination balance
+>     initializeTo  0    (at dst)
+>     increaseBy    wad  (ix dst)
 
 \chapter{Act framework}
 \label{chapter:monad}
@@ -1011,7 +1032,7 @@ We define the Maker act vocabulary as a data type.
 >
 > -- Test acts
 >   |  Addr     Address
-> 
+>
 >   deriving (Eq, Show)
 
 Acts can fail.  We divide the failure modes into general assertion
@@ -1052,9 +1073,25 @@ purely functional.
 
 > aver x = unless x (throwError (AssertError ?act))
 
+> none x = preuse x >>= \case
+>   Nothing -> return ()
+>   Just _  -> throwError (AssertError ?act)
+
 > look f = preuse f >>= \case
 >   Nothing -> throwError (AssertError ?act)
 >   Just x  -> return x
+
+We define |owns id_urn id_lad| as an assertion that the given |cdp| is
+owned by the given account.
+
+> owns id_urn id_lad = do
+>
+>   id_sender  <- use sender
+>
+>   aver (id_sender == id_lad)
+>
+>   return id_sender
+
 
 \section{Modifiers}
 
@@ -1077,7 +1114,7 @@ Sketches for property stuff...
 > maintains
 >   :: Eq a  => Lens' System a -> Maker ()
 >            -> System -> Bool
-> 
+>
 > maintains p = \ m sys0 ->
 >   case exec sys0 m of
 >   -- On success, data must be compared for equality
@@ -1088,7 +1125,7 @@ Sketches for property stuff...
 > changesOnly
 >   ::  Lens' System a -> Maker ()
 >   ->  System -> Bool
-> 
+>
 > changesOnly p = \m sys0 ->
 >   case exec sys0 m of
 >   -- On success, equalize |p| and compare
