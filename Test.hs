@@ -137,9 +137,9 @@ dump sys = do
       $ Exactly  (view tag j)
     forAllPairs (view (gem . balanceOf) j) $ \(a, x) -> do
       let a' = case a of
-                 AddressHolder (Address h) ->
+                 InAccount (Address h) ->
                    "lads[" <> txt h <> "]"
-                 JarHolder (Id h) ->
+                 InVault (Id h) ->
                    "jars[" <> txt h <> "]"
       write .
         WadIs ("jars[" <> txt i <> "].token().balanceOf(" <>

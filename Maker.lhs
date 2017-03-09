@@ -17,290 +17,7 @@
 %include polycode.fmt
 %include forall.fmt
 
-%format family = "\mathbf{family}"
-
-%subst comment a = "\mbox{\hspace{.1cm}\footnotesize{\textsf{" a "}}}"
-%subst varid a = "\mathit{" a "}"
-%subst conid a = "\mathrm{" a "}"
-
-%format $ = "\mathrel{\,\$\,}"
-
-%format empty = "\varnothing"
-%format epsilon = "\epsilon"
-%format @?= = "\cong"
-%format ! = "\mathbin{ !}"
-%format <$> = "\mathbin{<\!\!\$\!\!>}"
-%format .= = "\mathrel{:=}"
-%format += = "\mathrel{+\!\!=}"
-%format *= = "\mathrel{*\!\!=}"
-%format %= = "\mathrel{\%\!\!=}"
-%format -= = "\mathrel{-\!\!=}"
-%format <$> = "\mathbin{<\!\!\$\!\!>}"
-%format <*> = "\mathbin{<\!\!\!*\!\!\!>}"
-%format ==> = "\implies"
-%format ? = "\,?\!"
-%format ?= = "\mathrel{?\!\!=}"
-
-
-%format cdp = "\textsc{cdp}"
-%format dai = "\textsc{dai}"
-%format eth = "\textsc{eth}"
-%format mkr = "\textsc{mkr}"
-%format sdr = "\textsc{sdr}"
-%format xdr = "\textsc{xdr}"
-%format imf = "\textsc{imf}"
-%format erc20 = "\textsc{erc\scalefont{0.79}{20}}"
-
-%format art = "\texttt{art}"
-%format Art = "\texttt{Art}"
-%format axe = "\texttt{axe}"
-%format Axe = "\texttt{Axe}"
-%format cap = "\texttt{cap}"
-%format Cap = "\texttt{Cap}"
-%format cat = "\texttt{cat}"
-%format Cat = "\texttt{Cat}"
-%format chi = "\texttt{chi}"
-%format Chi = "\texttt{Chi}"
-%format con = "\texttt{con}"
-%format Con = "\texttt{Con}"
-%format cow = "\texttt{cow}"
-%format Cow = "\texttt{Cow}"
-%format din = "\texttt{din}"
-%format Din = "\texttt{Din}"
-%format era = "\texttt{era}"
-%format Era = "\texttt{Era}"
-%format fix = "\texttt{fix}"
-%format Fix = "\texttt{Fix}"
-%format gem = "\texttt{gem}"
-%format Gem = "\texttt{Gem}"
-%format hat = "\texttt{hat}"
-%format Hat = "\texttt{Hat}"
-%format how = "\texttt{how}"
-%format How = "\texttt{How}"
-%format ilk = "\texttt{ilk}"
-%format Ilk = "\texttt{Ilk}"
-%format jam = "\texttt{jam}"
-%format Jam = "\texttt{Jam}"
-%format jar = "\texttt{jar}"
-%format Jar = "\texttt{Jar}"
-%format lad = "\texttt{lad}"
-%format Lad = "\texttt{Lad}"
-%format lag = "\texttt{lag}"
-%format Lag = "\texttt{Lag}"
-%format mat = "\texttt{mat}"
-%format Mat = "\texttt{Mat}"
-%format min = "\texttt{min}"
-%format Min = "\texttt{Min}"
-%format sec = "\texttt{sec}"
-%format Sec = "\texttt{Sec}"
-%format par = "\texttt{par}"
-%format Par = "\texttt{Par}"
-%format phi = "\texttt{phi}"
-%format Phi = "\texttt{Phi}"
-%format joy = "\texttt{joy}"
-%format Joy = "\texttt{Joy}"
-%format rum = "\texttt{rum}"
-%format Rum = "\texttt{Rum}"
-%format pro = "\texttt{pro}"
-%format Pro = "\texttt{Pro}"
-%format ray = "\texttt{ray}"
-%format Ray = "\texttt{Ray}"
-%format rho = "\texttt{rho}"
-%format Rho = "\texttt{Rho}"
-%format sin = "\texttt{sin}"
-%format Sin = "\texttt{Sin}"
-%format sys = "\texttt{sys}"
-%format Sys = "\texttt{Sys}"
-%format tab = "\texttt{tab}"
-%format Tab = "\texttt{Tab}"
-%format tag = "\texttt{tag}"
-%format Tag = "\texttt{Tag}"
-%format tau = "\texttt{tau}"
-%format Tau = "\texttt{Tau}"
-%format tax = "\texttt{tax}"
-%format Tax = "\texttt{Tax}"
-%format urn = "\texttt{urn}"
-%format Urn = "\texttt{Urn}"
-%format vat = "\texttt{vat}"
-%format Vat = "\texttt{Vat}"
-%format vow = "\texttt{vow}"
-%format Vow = "\texttt{Vow}"
-%format wad = "\texttt{wad}"
-%format Wad = "\texttt{Wad}"
-%format way = "\texttt{way}"
-%format Way = "\texttt{Way}"
-%format zzz = "\texttt{zzz}"
-%format Zzz = "\texttt{Zzz}"
-
-%format urns = "\texttt{urn}s"
-%format jars = "\texttt{jar}s"
-%format ilks = "\texttt{ilk}s"
-
-%format art0
-%format art1
-%format axe0
-%format axe1
-%format cat0
-%format chi0
-%format chi1
-%format con0
-%format con1
-%format cow0
-%format cow1
-%format era0
-%format fix0
-%format hat0
-%format hat1
-%format how0
-%format how1
-%format ilk0
-%format jar0
-%format joy0
-%format joy1
-%format lag0
-%format lag1
-%format mat0
-%format mat1
-%format par0
-%format par1
-%format pro0
-%format rho0
-%format sys0
-%format sys1
-%format tag0
-%format tag1
-%format tau0
-%format tax0
-%format tax1
-%format urn0
-%format vow0
-%format wad0
-%format wad_chi
-%format wad_dai
-%format wad_gem
-%format wad_mkr
-%format way0
-%format way1
-%format zzz0
-%format zzz1
-
-%format Gem = "\texttt{Gem}"
-%format Lad = "\texttt{Lad}"
-%format Ilk = "\texttt{Ilk}"
-%format Ray = "\texttt{Ray}"
-%format Urn = "\texttt{Urn}"
-%format Wad = "\texttt{Wad}"
-%format Jar = "\texttt{Jar}"
-%format Vat = "\texttt{Vat}"
-%format Wad = "\texttt{Wad}"
-%format Ray = "\texttt{Ray}"
-%format Sec = "\texttt{Sec}"
-
-%format vat_r
-%format vat_w
-%format urn_r
-%format urn_w
-%format ilk_r
-%format ilk_w
-%format jar_r
-%format jar_w
-
-%format pro_sdr
-%format con_sdr
-%format min_sdr
-
-%format Pride = "\texttt{Pride}"
-%format Anger = "\texttt{Anger}"
-%format Worry = "\texttt{Worry}"
-%format Panic = "\texttt{Panic}"
-%format Grief = "\texttt{Grief}"
-%format Dread = "\texttt{Dread}"
-
-%format pull = "\texttt{pull}"
-%format wipe = "\texttt{wipe}"
-%format plop = "\texttt{plop}"
-
-%format mint = "\texttt{mint}"
-%format Mint = "\texttt{Mint}"
-%format burn = "\texttt{burn}"
-%format Burn = "\texttt{Burn}"
-%format bite = "\texttt{bite}"
-%format Bite = "\texttt{Bite}"
-%format pull = "\texttt{pull}"
-%format Pull = "\texttt{Pull}"
-%format push = "\texttt{push}"
-%format Push = "\texttt{Push}"
-%format wipe = "\texttt{wipe}"
-%format Wipe = "\texttt{Wipe}"
-%format mine = "\texttt{mine}"
-%format Mine = "\texttt{Mine}"
-%format hand = "\texttt{hand}"
-%format Hand = "\texttt{Hand}"
-%format sire = "\texttt{sire}"
-%format Sire = "\texttt{Sire}"
-%format draw = "\texttt{draw}"
-%format Draw = "\texttt{Draw}"
-%format form = "\texttt{form}"
-%format Form = "\texttt{Form}"
-%format free = "\texttt{free}"
-%format Free = "\texttt{Free}"
-%format frob = "\texttt{frob}"
-%format Frob = "\texttt{Frob}"
-%format chop = "\texttt{chop}"
-%format Chop = "\texttt{Chop}"
-%format cork = "\texttt{cork}"
-%format Cork = "\texttt{Cork}"
-%format calm = "\texttt{calm}"
-%format Calm = "\texttt{Calm}"
-%format cuff = "\texttt{cuff}"
-%format Cuff = "\texttt{Cuff}"
-%format crop = "\texttt{crop}"
-%format Crop = "\texttt{Crop}"
-%format give = "\texttt{give}"
-%format Give = "\texttt{Give}"
-%format grab = "\texttt{grab}"
-%format Grab = "\texttt{Grab}"
-%format heal = "\texttt{heal}"
-%format Heal = "\texttt{Heal}"
-%format lock = "\texttt{lock}"
-%format Lock = "\texttt{Lock}"
-%format love = "\texttt{love}"
-%format Love = "\texttt{Love}"
-%format mark = "\texttt{mark}"
-%format Mark = "\texttt{Mark}"
-%format tell = "\texttt{tell}"
-%format Tell = "\texttt{Tell}"
-%format open = "\texttt{open}"
-%format Open = "\texttt{Open}"
-%format prod = "\texttt{prod}"
-%format Prod = "\texttt{Prod}"
-%format gaze = "\texttt{gaze}"
-%format Gaze = "\texttt{Gaze}"
-%format drip = "\texttt{drip}"
-%format Drip = "\texttt{Drip}"
-%format shut = "\texttt{shut}"
-%format Shut = "\texttt{Shut}"
-%format swap = "\texttt{swap}"
-%format Swap = "\texttt{Swap}"
-%format note = "\texttt{note}"
-%format Note = "\texttt{Note}"
-%format auth = "\texttt{auth}"
-%format Auth = "\texttt{Auth}"
-%format warp = "\texttt{warp}"
-%format Warp = "\texttt{Warp}"
-%format aver = "\texttt{aver}"
-
-%format id_urn
-%format id_ilk
-%format id_jar
-%format id_lad
-%format id_vow
-%format id_cat
-%format id_dai
-%format id_vat
-%format id_god
-%format id_toy
-%format id_sender
+%include maker.fmt
 
 \begin{document}
 
@@ -408,7 +125,7 @@ in Haskell we must give explicit defaults.  The state rollback
 behavior of failed actions is also explicit in the type of the
 execution function, which may return an error.
 
-\item \textbf{Type correctness.}  While Solidity does have a static
+\item \textbf{Typing.}  While Solidity does have a static
 type system, it is not expressive enough to encode the distinctions
 made by our system.  In particular, the two different decimal fixed
 point number types that we use are typed in Solidity with one and the
@@ -481,18 +198,16 @@ The system uses two different precisions of decimal fixed point
 numbers, which we call \emph{wads} and \emph{rays}, having
 respectively 18 digits of precision (used for token quantities) and 36
 digits (used for precise rates and ratios).
+See Appendix~\ref{appendix:numbers} for details on decimal fixed point
+numbers and rounding.
 
-> -- Define the distinct |wad| type for currency quantities
+> -- Define the distinct type for currency quantities
 > newtype Wad = Wad (Decimal E18)
 >   deriving (  Ord, Eq, Num, Real, Fractional, RealFrac)
 >
-> -- Define the distinct |ray| type for precise rate quantities
+> -- Define the distinct type for rates and ratios
 > newtype Ray = Ray (Decimal E36)
 >   deriving (  Ord, Eq, Num, Real, Fractional, RealFrac)
-
-See Appendix~\ref{appendix:numbers} for details on how we modify
-Haskell's decimal fixed point type to do more correct rounding for
-multiplication and division.
 
 %if 0
 
@@ -507,28 +222,28 @@ multiplication and division.
 > instance Show Ray  where show (Ray x)  = show x
 > instance Show Sec  where show (Sec x)  = show x
 
+> instance Epsilon Wad  where epsilon = Wad epsilon
+> instance Epsilon Ray  where epsilon = Ray epsilon
+
 %endif
-
-Haskell number types are not automatically converted, so in
-calculations that combine wads and rays, we convert explicitly with a
-|cast| function.
-
-> -- Convert via fractional $n/m$ form.
-> cast :: (Real a, Fractional b) => a -> b
-> cast = fromRational . toRational
 
 We also define a type for time durations in whole seconds.
 
 > newtype Sec = Sec Int
 >   deriving (Eq, Ord, Enum, Num, Real, Integral)
 
-> instance Epsilon Wad  where epsilon = Wad epsilon
-> instance Epsilon Ray  where epsilon = Ray epsilon
+Haskell number types are not automatically converted, so we convert
+explicitly with a |cast| function.
+
+> -- Convert via fractional $n/m$ form.
+> cast :: (Real a, Fractional b) => a -> b
+> cast = fromRational . toRational
+
 
 \section{Identifiers and addresses}
 
-There are several kinds of identifiers used in the system, and we can
-use types to distinguish them.
+There are several kinds of identifiers used in the system, and we use
+types to distinguish them.
 
 > -- The type parameter |a| creates distinct types.
 > -- For example, |Id Foo| and |Id Bar| are incompatible.
@@ -563,23 +278,29 @@ We also have three predefined entity identifiers.
 
 %endif
 
-This section introduces the records stored by the Maker system.
+\section{|Gem| --- token model}
 
-\section{|Gem| --- ERC20 token model}
-
-> data Holder =  AddressHolder  Address
->             |  JarHolder      (Id Jar)
->   deriving (Eq, Show, Ord)
+In this model, all tokens behave in the same simple way.\footnote{In
+the real world, token semantics can differ, despite nominally
+following the |ERC20| interface.  Maker governance therefore involves
+due diligence on collateral token contracts.}
 
 > data Gem = Gem {
 > 
->     gemTotalSupply  :: Wad,
->     gemBalanceOf    :: Map Holder Wad
+>     _balanceOf    :: Map Holder Wad
 >
 >   } deriving (Eq, Show)
->
 
-\section{|Jar| --- collateral type}
+We distinguish between tokens held by vaults and tokens held by
+other addresses.
+
+> data Holder  =  InAccount  Address
+>              |  InVault    (Id Jar)
+> 
+>   deriving (Eq, Show, Ord)
+
+
+\section{|Jar| --- collateral vaults}
 
 \actentry{|gem|}{collateral token}
 \actentry{|tag|}{market price of token}
@@ -587,9 +308,9 @@ This section introduces the records stored by the Maker system.
 
 > data Jar = Jar {
 >
->     jarGem  :: Gem,  -- Collateral token
->     jarTag  :: Wad,  -- Market price
->     jarZzz  :: Sec   -- Price expiration
+>     _gem  :: Gem,  -- Collateral token
+>     _tag  :: Wad,  -- Market price
+>     _zzz  :: Sec   -- Price expiration
 >
 >   } deriving (Eq, Show)
 
@@ -607,15 +328,15 @@ This section introduces the records stored by the Maker system.
 
 > data Ilk = Ilk {
 >
->     ilkJar  :: Id Jar,  -- Collateral vault
->     ilkAxe  :: Ray,     -- Liquidation penalty
->     ilkHat  :: Wad,     -- Debt ceiling
->     ilkMat  :: Ray,     -- Liquidation ratio
->     ilkTax  :: Ray,     -- Stability fee
->     ilkLag  :: Sec,     -- Limbo duration
->     ilkRho  :: Sec,     -- Last dripped
->     ilkRum  :: Wad,     -- Total debt in debt unit
->     ilkChi  :: Ray      -- Dai value of debt unit
+>     _jar  :: Id Jar,  -- Collateral vault
+>     _axe  :: Ray,     -- Liquidation penalty
+>     _hat  :: Wad,     -- Debt ceiling
+>     _mat  :: Ray,     -- Liquidation ratio
+>     _tax  :: Ray,     -- Stability fee
+>     _lag  :: Sec,     -- Limbo duration
+>     _rho  :: Sec,     -- Last dripped
+>     _rum  :: Wad,     -- Total debt in debt unit
+>     _chi  :: Ray      -- Dai value of debt unit
 >
 >   } deriving (Eq, Show)
 
@@ -630,12 +351,12 @@ This section introduces the records stored by the Maker system.
 
 > data Urn = Urn {
 >   
->     urnCat  :: Maybe Address,  -- Address of liquidation initiator
->     urnVow  :: Maybe Address,  -- Address of liquidation contract
->     urnLad  :: Address,        -- Issuer
->     urnIlk  :: Id Ilk,         -- |cdp| type
->     urnArt  :: Wad,            -- Outstanding debt in debt unit
->     urnJam  :: Wad             -- Collateral amount in debt unit
+>     _cat  :: Maybe Address,  -- Address of liquidation initiator
+>     _vow  :: Maybe Address,  -- Address of liquidation contract
+>     _lad  :: Address,        -- Issuer
+>     _ilk  :: Id Ilk,         -- |cdp| type
+>     _art  :: Wad,            -- Outstanding debt in debt unit
+>     _jam  :: Wad             -- Collateral amount in debt unit
 >
 >   } deriving (Eq, Show)
 
@@ -651,16 +372,16 @@ This section introduces the records stored by the Maker system.
 
 > data Vat = Vat {
 >
->     vatFix  :: Wad,                -- Market price
->     vatHow  :: Ray,                -- Sensitivity
->     vatPar  :: Wad,                -- Target price
->     vatWay  :: Ray,                -- Target rate
->     vatTau  :: Sec,                -- Last prodded
->     vatJoy  :: Wad,                -- Unprocessed stability fees
->     vatSin  :: Wad,                -- Bad debt from liquidated |cdp|s
->     vatJars  :: Map (Id Jar) Jar,  -- Collateral tokens
->     vatIlks  :: Map (Id Ilk) Ilk,  -- |cdp| types
->     vatUrns  :: Map (Id Urn) Urn   -- |cdp|s
+>     _fix  :: Wad,                -- Market price
+>     _how  :: Ray,                -- Sensitivity
+>     _par  :: Wad,                -- Target price
+>     _way  :: Ray,                -- Target rate
+>     _tau  :: Sec,                -- Last prodded
+>     _joy  :: Wad,                -- Unprocessed stability fees
+>     _sin  :: Wad,                -- Bad debt from liquidated |cdp|s
+>     _jars  :: Map (Id Jar) Jar,  -- Collateral tokens
+>     _ilks  :: Map (Id Ilk) Ilk,  -- |cdp| types
+>     _urns  :: Map (Id Urn) Urn   -- |cdp|s
 >
 >   } deriving (Eq, Show)
 
@@ -670,75 +391,74 @@ This section introduces the records stored by the Maker system.
 
 > data System =  System {
 > 
->     systemVat       :: Vat,       -- Root Maker entity
->     systemEra       :: Sec,       -- Current time stamp
->     systemSender    :: Address,   -- Sender of current act
->     systemAccounts  :: [Address]  -- For test suites
+>     _vat       :: Vat,       -- Root Maker entity
+>     _era       :: Sec,       -- Current time stamp
+>     _sender    :: Address,   -- Sender of current act
+>     _accounts  :: [Address]  -- For test suites
 >
 >   } deriving (Eq, Show)
 
 \section*{Lens fields}
 
-> makeFields ''Gem
-> makeFields ''Jar
-> makeFields ''Ilk
-> makeFields ''Urn
-> makeFields ''Vat
-> makeFields ''System
+> makeLenses ''Gem
+> makeLenses ''Jar
+> makeLenses ''Ilk
+> makeLenses ''Urn
+> makeLenses ''Vat
+> makeLenses ''System
 
 \section{Default data}
 
 > defaultIlk :: Id Jar -> Ilk
 > defaultIlk id_jar = Ilk {
->   ilkJar  = id_jar,
->   ilkAxe  = Ray 1,
->   ilkMat  = Ray 1,
->   ilkTax  = Ray 1,
->   ilkHat  = Wad 0,
->   ilkLag  = Sec 0,
->   ilkChi  = Ray 1,
->   ilkRum  = Wad 0,
->   ilkRho  = Sec 0
+>   _jar  = id_jar,
+>   _axe  = Ray 1,
+>   _mat  = Ray 1,
+>   _tax  = Ray 1,
+>   _hat  = Wad 0,
+>   _lag  = Sec 0,
+>   _chi  = Ray 1,
+>   _rum  = Wad 0,
+>   _rho  = Sec 0
 > }
 
 > defaultUrn :: Id Ilk -> Address -> Urn
 > defaultUrn id_ilk id_lad = Urn {
->   urnVow  = Nothing,
->   urnCat  = Nothing,
->   urnLad  = id_lad,
->   urnIlk  = id_ilk,
->   urnArt  = Wad 0,
->   urnJam  = Wad 0
+>   _vow  = Nothing,
+>   _cat  = Nothing,
+>   _lad  = id_lad,
+>   _ilk  = id_ilk,
+>   _art  = Wad 0,
+>   _jam  = Wad 0
 > }
 
 > initialVat :: Ray -> Vat
 > initialVat how0 = Vat {
->   vatTau   = 0,
->   vatFix   = Wad 1,
->   vatPar   = Wad 1,
->   vatHow   = how0,
->   vatWay   = Ray 1,
->   vatJoy   = Wad 0,
->   vatSin   = Wad 0,
->   vatIlks  = empty,
->   vatUrns  = empty,
->   vatJars  =
+>   _tau   = 0,
+>   _fix   = Wad 1,
+>   _par   = Wad 1,
+>   _how   = how0,
+>   _way   = Ray 1,
+>   _joy   = Wad 0,
+>   _sin   = Wad 0,
+>   _ilks  = empty,
+>   _urns  = empty,
+>   _jars  =
 >     singleton id_dai Jar {
->       jarGem   = Gem {
->         gemTotalSupply  = 0,
->         gemBalanceOf    = empty
+>       _gem   = Gem {
+>         _balanceOf    = empty
 >       },
->       jarTag  = Wad 0,
->       jarZzz  = 0
+>       _tag  = Wad 0,
+>       _zzz  = 0
 >     }
 > }
 
 > initialSystem :: Ray -> System
 > initialSystem how0 = System {
->   systemVat       = initialVat how0,
->   systemEra       = 0,
->   systemSender    = id_god,
->   systemAccounts  = mempty
+>   _vat       = initialVat how0,
+>   _era       = 0,
+>   _sender    = id_god,
+>   _accounts  = mempty
 > }
 
 \chapter{Acts}
@@ -793,7 +513,7 @@ urn's stage.
 >     con  = view art urn0  * cast (view chi ilk0) * par0
 >
 >   -- Required collateral as per liquidation ratio:
->     min  = con * view mat ilk0
+>     min  = con * cast (view mat ilk0)
 >
 
 \clearpage
@@ -1011,36 +731,22 @@ Now we define the internal act |gaze| which returns the value of
 \actentry{|drip|}{update value of debt unit}
 
 > drip id_ilk = do
->
-> -- Current time stamp
->   era0  <- use era
->
-> -- Time stamp of previous |drip|
->   rho0  <- look (vat . ilks . ix id_ilk . rho)
->
-> -- Current stability fee
->   tax0  <- look (vat . ilks . ix id_ilk . tax)
->
-> -- Current value of debt unit
->   chi0  <- look (vat . ilks . ix id_ilk . chi)
->
-> -- Current total debt in debt unit
->   rum0  <- look (vat . ilks . ix id_ilk . rum)
->
-> -- Current unprocessed stability fee revenue
->   joy0  <- look (vat . ilks . ix id_ilk . joy)
+> 
+>   rho0  <- look (vat . ilks . ix id_ilk . rho)  -- Time stamp of previous |drip|
+>   tax0  <- look (vat . ilks . ix id_ilk . tax)  -- Current stability fee
+>   chi0  <- look (vat . ilks . ix id_ilk . chi)  -- Current value of debt unit
+>   rum0  <- look (vat . ilks . ix id_ilk . rum)  -- Current total debt in debt unit
+>   joy0  <- look (vat . joy)                     -- Current unprocessed stability fee revenue
+>   era0  <- use era                              -- Current time stamp
 >
 >   let
->
 >     age   = era0 - rho0
->
 >     chi1  = chi0 * tax0 ^^ age
->
 >     joy1  = joy0 + (cast (chi1 - chi0) :: Wad) * rum0
 >
 >   vat . ilks . ix id_ilk . chi  .= chi1
 >   vat . ilks . ix id_ilk . rho  .= era0
->   vat . ilks . ix id_ilk . joy  .= joy1
+>   vat . joy  .= joy1
 >
 >   return chi1
 
@@ -1070,10 +776,10 @@ Now we define the internal act |gaze| which returns the value of
 >
 >   -- Record the sender as the liquidation initiator
 >     id_cat              <- use sender
->     vat . urns . ix id_urn . cat  .= id_cat
+>     vat . urns . ix id_urn . cat  .= Just id_cat
 >
 >   -- Read current debt
->     art0    <- look (vat . urns . ix id_urn  . art)
+>     art0    <- look (vat . urns . ix id_urn . art)
 >
 >   -- Update value of debt unit
 >     id_ilk     <- look (vat . urns . ix id_urn . ilk)
@@ -1084,13 +790,13 @@ Now we define the internal act |gaze| which returns the value of
 >     axe0    <- look (vat . ilks . ix id_ilk  . axe)
 >
 >   -- Apply liquidation penalty to debt
->     let art1 = art0 * axe0
+>     let art1 = art0 * cast axe0
 >
 >   -- Update |cdp| debt
 >     vat . urns . ix id_urn . art   .=  art1
 >
 >   -- Record as bad debt
->     sin +=  art1 * chi1
+>     vat . sin +=  art1 * cast chi1
 
 \actentry{|grab|}{take tokens to begin |cdp| liquidation}
 
@@ -1171,31 +877,30 @@ Now we define the internal act |gaze| which returns the value of
 
 > pull id_jar id_lad w = do
 >   g   <- look (vat . jars . ix id_jar . gem)
->   g'  <- transferFrom  (AddressHolder id_lad)
->                        (JarHolder id_jar) w g
+>   g'  <- transferFrom  (InAccount id_lad)
+>                        (InVault id_jar) w g
 >   vat . jars . ix id_jar . gem .= g'
 
 \actentry{|push|}{send tokens from vault}
 
 > push id_jar id_lad w = do
 >   g   <- look (vat . jars . ix id_jar . gem)
->   g'  <- transferFrom  (JarHolder id_jar)
->                        (AddressHolder id_lad) w g
+>   g'  <- transferFrom  (InVault id_jar)
+>                        (InAccount id_lad) w g
 >   vat . jars . ix id_jar . gem .= g'
 
 \actentry{|mint|}{create tokens}
 
+> mint :: Id Jar -> Wad -> Maker ()
 > mint id_jar wad0 =
 >   zoom (vat . jars . ix id_jar . gem) $ do
->     totalSupply                        += wad0
->     balanceOf . ix (JarHolder id_jar)  += wad0
+>     balanceOf . ix (InVault id_jar)  += wad0
 
 \actentry{|burn|}{destroy tokens}
 
 > burn id_jar wad0 =
 >   zoom (vat . jars . ix id_jar . gem) $ do
->     totalSupply                        -= wad0
->     balanceOf . ix (JarHolder id_jar)  -= wad0
+>     balanceOf . ix (InVault id_jar)  -= wad0
 
 \section{Manipulation}
 
@@ -1209,19 +914,18 @@ Now we define the internal act |gaze| which returns the value of
 
 > mine id_jar = do
 >     vat . jars . at id_jar ?= Jar {
->       jarGem   = Gem {
->         gemTotalSupply  = 1000000000000,
->         gemBalanceOf    = singleton (AddressHolder id_toy) 1000000000000
+>       _gem   = Gem {
+>         _balanceOf    = singleton (InAccount id_toy) 1000000000000
 >       },
->       jarTag  = Wad 0,
->       jarZzz  = 0
+>       _tag  = Wad 0,
+>       _zzz  = 0
 >     }
 
 \actentry{|hand|}{give toy tokens to account}
 
 > hand dst w id_jar = do
 >   g   <- look (vat . jars . ix id_jar . gem)
->   g'  <- transferFrom (AddressHolder id_toy) (AddressHolder dst) w g
+>   g'  <- transferFrom (InAccount id_toy) (InAccount dst) w g
 >   vat . jars . ix id_jar . gem .= g'
 
 \actentry{|sire|}{register a new toy account}
@@ -1324,13 +1028,19 @@ understand the code.  What they give us is a nice syntax---the |do|
 notation---for expressing exceptions and state in a way that is still
 purely functional.
 
-> newtype Maker a =
->   Maker (StateT System (Except Error) a)
+> newtype Maker' s a =
+>   Maker (StateT s (Except Error) a)
 >
 >   deriving
 >     (  Functor, Applicative, Monad,
 >        MonadError   Error,
->        MonadState   System)
+>        MonadState   s)
+
+> type Maker a = Maker' System a
+
+> type instance Zoomed (Maker' s) = Focusing (Except Error)
+> instance Zoom (Maker' s) (Maker' t) s t where
+>   zoom l (Maker m) = Maker (zoom l m)
 
 > exec  ::  System
 >       ->  Maker ()

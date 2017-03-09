@@ -1,0 +1,318 @@
+%subst comment a = "\mbox{\hspace{.1cm}\footnotesize{\textsf{" a "}}}"
+%subst varid a = "\mathit{" a "}"
+%subst conid a = "\mathrm{" a "}"
+
+%format $ = "\mathrel{\,\$\,}"
+
+%format empty = "\varnothing"
+%format epsilon = "\epsilon"
+%format @?= = "\cong"
+%format ! = "\mathbin{ !}"
+%format <$> = "\mathbin{<\!\!\$\!\!>}"
+%format .= = "\mathrel{:=}"
+%format += = "\mathrel{+\!\!=}"
+%format *= = "\mathrel{*\!\!=}"
+%format %= = "\mathrel{\%\!\!=}"
+%format -= = "\mathrel{-\!\!=}"
+%format <$> = "\mathbin{<\!\!\$\!\!>}"
+%format <*> = "\mathbin{<\!\!\!*\!\!\!>}"
+%format ==> = "\implies"
+%format ? = "\,?\!"
+%format ?= = "\mathrel{?\!\!=}"
+
+%format cdp = "\textsc{cdp}"
+%format dai = "\textsc{dai}"
+%format eth = "\textsc{eth}"
+%format mkr = "\textsc{mkr}"
+%format sdr = "\textsc{sdr}"
+%format xdr = "\textsc{xdr}"
+%format imf = "\textsc{imf}"
+%format erc20 = "\textsc{erc\scalefont{0.79}{20}}"
+
+%format art = "\texttt{art}"
+%format Art = "\texttt{Art}"
+%format axe = "\texttt{axe}"
+%format Axe = "\texttt{Axe}"
+%format cap = "\texttt{cap}"
+%format Cap = "\texttt{Cap}"
+%format cat = "\texttt{cat}"
+%format Cat = "\texttt{Cat}"
+%format chi = "\texttt{chi}"
+%format Chi = "\texttt{Chi}"
+%format con = "\texttt{con}"
+%format Con = "\texttt{Con}"
+%format cow = "\texttt{cow}"
+%format Cow = "\texttt{Cow}"
+%format din = "\texttt{din}"
+%format Din = "\texttt{Din}"
+%format era = "\texttt{era}"
+%format Era = "\texttt{Era}"
+%format fix = "\texttt{fix}"
+%format Fix = "\texttt{Fix}"
+%format gem = "\texttt{gem}"
+%format Gem = "\texttt{Gem}"
+%format hat = "\texttt{hat}"
+%format Hat = "\texttt{Hat}"
+%format how = "\texttt{how}"
+%format How = "\texttt{How}"
+%format ilk = "\texttt{ilk}"
+%format Ilk = "\texttt{Ilk}"
+%format jam = "\texttt{jam}"
+%format Jam = "\texttt{Jam}"
+%format jar = "\texttt{jar}"
+%format Jar = "\texttt{Jar}"
+%format lad = "\texttt{lad}"
+%format Lad = "\texttt{Lad}"
+%format lag = "\texttt{lag}"
+%format Lag = "\texttt{Lag}"
+%format mat = "\texttt{mat}"
+%format Mat = "\texttt{Mat}"
+%format min = "\texttt{min}"
+%format Min = "\texttt{Min}"
+%format sec = "\texttt{sec}"
+%format Sec = "\texttt{Sec}"
+%format par = "\texttt{par}"
+%format Par = "\texttt{Par}"
+%format phi = "\texttt{phi}"
+%format Phi = "\texttt{Phi}"
+%format joy = "\texttt{joy}"
+%format Joy = "\texttt{Joy}"
+%format rum = "\texttt{rum}"
+%format Rum = "\texttt{Rum}"
+%format pro = "\texttt{pro}"
+%format Pro = "\texttt{Pro}"
+%format ray = "\texttt{ray}"
+%format Ray = "\texttt{Ray}"
+%format rho = "\texttt{rho}"
+%format Rho = "\texttt{Rho}"
+%format sin = "\texttt{sin}"
+%format Sin = "\texttt{Sin}"
+%format sys = "\texttt{sys}"
+%format Sys = "\texttt{Sys}"
+%format tab = "\texttt{tab}"
+%format Tab = "\texttt{Tab}"
+%format tag = "\texttt{tag}"
+%format Tag = "\texttt{Tag}"
+%format tau = "\texttt{tau}"
+%format Tau = "\texttt{Tau}"
+%format tax = "\texttt{tax}"
+%format Tax = "\texttt{Tax}"
+%format urn = "\texttt{urn}"
+%format Urn = "\texttt{Urn}"
+%format vat = "\texttt{vat}"
+%format Vat = "\texttt{Vat}"
+%format vow = "\texttt{vow}"
+%format Vow = "\texttt{Vow}"
+%format wad = "\texttt{wad}"
+%format Wad = "\texttt{Wad}"
+%format way = "\texttt{way}"
+%format Way = "\texttt{Way}"
+%format zzz = "\texttt{zzz}"
+%format Zzz = "\texttt{Zzz}"
+
+%format urns = "\texttt{urn}s"
+%format jars = "\texttt{jar}s"
+%format ilks = "\texttt{ilk}s"
+
+%format art0
+%format art1
+%format axe0
+%format axe1
+%format cat0
+%format chi0
+%format rum0
+%format chi1
+%format con0
+%format con1
+%format cow0
+%format cow1
+%format era0
+%format fix0
+%format hat0
+%format hat1
+%format how0
+%format how1
+%format ilk0
+%format jar0
+%format joy0
+%format joy1
+%format lag0
+%format lag1
+%format mat0
+%format mat1
+%format par0
+%format par1
+%format pro0
+%format rho0
+%format sys0
+%format sys1
+%format tag0
+%format tag1
+%format tau0
+%format tax0
+%format tax1
+%format urn0
+%format vow0
+%format wad0
+%format wad_chi
+%format wad_dai
+%format wad_gem
+%format wad_mkr
+%format way0
+%format way1
+%format zzz0
+%format zzz1
+
+%format Gem = "\texttt{Gem}"
+%format Lad = "\texttt{Lad}"
+%format Ilk = "\texttt{Ilk}"
+%format Ray = "\texttt{Ray}"
+%format Urn = "\texttt{Urn}"
+%format Wad = "\texttt{Wad}"
+%format Jar = "\texttt{Jar}"
+%format Vat = "\texttt{Vat}"
+%format Wad = "\texttt{Wad}"
+%format Ray = "\texttt{Ray}"
+%format Sec = "\texttt{Sec}"
+
+%format vat_r
+%format vat_w
+%format urn_r
+%format urn_w
+%format ilk_r
+%format ilk_w
+%format jar_r
+%format jar_w
+
+%format pro_sdr
+%format con_sdr
+%format min_sdr
+
+%format Pride = "\texttt{Pride}"
+%format Anger = "\texttt{Anger}"
+%format Worry = "\texttt{Worry}"
+%format Panic = "\texttt{Panic}"
+%format Grief = "\texttt{Grief}"
+%format Dread = "\texttt{Dread}"
+
+%format pull = "\texttt{pull}"
+%format wipe = "\texttt{wipe}"
+%format plop = "\texttt{plop}"
+
+%format mint = "\texttt{mint}"
+%format Mint = "\texttt{Mint}"
+%format burn = "\texttt{burn}"
+%format Burn = "\texttt{Burn}"
+%format bite = "\texttt{bite}"
+%format Bite = "\texttt{Bite}"
+%format pull = "\texttt{pull}"
+%format Pull = "\texttt{Pull}"
+%format push = "\texttt{push}"
+%format Push = "\texttt{Push}"
+%format wipe = "\texttt{wipe}"
+%format Wipe = "\texttt{Wipe}"
+%format mine = "\texttt{mine}"
+%format Mine = "\texttt{Mine}"
+%format hand = "\texttt{hand}"
+%format Hand = "\texttt{Hand}"
+%format sire = "\texttt{sire}"
+%format Sire = "\texttt{Sire}"
+%format draw = "\texttt{draw}"
+%format Draw = "\texttt{Draw}"
+%format form = "\texttt{form}"
+%format Form = "\texttt{Form}"
+%format free = "\texttt{free}"
+%format Free = "\texttt{Free}"
+%format frob = "\texttt{frob}"
+%format Frob = "\texttt{Frob}"
+%format chop = "\texttt{chop}"
+%format Chop = "\texttt{Chop}"
+%format cork = "\texttt{cork}"
+%format Cork = "\texttt{Cork}"
+%format calm = "\texttt{calm}"
+%format Calm = "\texttt{Calm}"
+%format cuff = "\texttt{cuff}"
+%format Cuff = "\texttt{Cuff}"
+%format crop = "\texttt{crop}"
+%format Crop = "\texttt{Crop}"
+%format give = "\texttt{give}"
+%format Give = "\texttt{Give}"
+%format grab = "\texttt{grab}"
+%format Grab = "\texttt{Grab}"
+%format heal = "\texttt{heal}"
+%format Heal = "\texttt{Heal}"
+%format lock = "\texttt{lock}"
+%format Lock = "\texttt{Lock}"
+%format love = "\texttt{love}"
+%format Love = "\texttt{Love}"
+%format mark = "\texttt{mark}"
+%format Mark = "\texttt{Mark}"
+%format tell = "\texttt{tell}"
+%format Tell = "\texttt{Tell}"
+%format open = "\texttt{open}"
+%format Open = "\texttt{Open}"
+%format prod = "\texttt{prod}"
+%format Prod = "\texttt{Prod}"
+%format gaze = "\texttt{gaze}"
+%format Gaze = "\texttt{Gaze}"
+%format drip = "\texttt{drip}"
+%format Drip = "\texttt{Drip}"
+%format shut = "\texttt{shut}"
+%format Shut = "\texttt{Shut}"
+%format swap = "\texttt{swap}"
+%format Swap = "\texttt{Swap}"
+%format note = "\texttt{note}"
+%format Note = "\texttt{Note}"
+%format auth = "\texttt{auth}"
+%format Auth = "\texttt{Auth}"
+%format warp = "\texttt{warp}"
+%format Warp = "\texttt{Warp}"
+%format aver = "\texttt{aver}"
+
+%format id_urn
+%format id_ilk
+%format id_jar
+%format id_lad
+%format id_vow
+%format id_cat
+%format id_dai
+%format id_vat
+%format id_god
+%format id_toy
+%format id_sender
+
+%format gemBalanceOf = "\texttt{gemBalanceOf}"
+
+%format _gem = "\texttt{$\bullet$ gem}"
+%format _tag = "\texttt{$\bullet$ tag}"
+%format _zzz = "\texttt{$\bullet$ zzz}"
+%format _jar = "\texttt{$\bullet$ jar}"
+%format _axe = "\texttt{$\bullet$ axe}"
+%format _hat = "\texttt{$\bullet$ hat}"
+%format _mat = "\texttt{$\bullet$ mat}"
+%format _tax = "\texttt{$\bullet$ tax}"
+%format _lag = "\texttt{$\bullet$ lag}"
+%format _rho = "\texttt{$\bullet$ rho}"
+%format _rum = "\texttt{$\bullet$ rum}"
+%format _chi = "\texttt{$\bullet$ chi}"
+%format _cat = "\texttt{$\bullet$ cat}"
+%format _vow = "\texttt{$\bullet$ vow}"
+%format _lad = "\texttt{$\bullet$ lad}"
+%format _ilk = "\texttt{$\bullet$ ilk}"
+%format _art = "\texttt{$\bullet$ art}"
+%format _jam = "\texttt{$\bullet$ jam}"
+%format _fix = "\texttt{$\bullet$ fix}"
+%format _how = "\texttt{$\bullet$ how}"
+%format _par = "\texttt{$\bullet$ par}"
+%format _way = "\texttt{$\bullet$ way}"
+%format _tau = "\texttt{$\bullet$ tau}"
+%format _joy = "\texttt{$\bullet$ joy}"
+%format _sin = "\texttt{$\bullet$ sin}"
+%format _jars = "\texttt{$\bullet$ jars}"
+%format _ilks = "\texttt{$\bullet$ ilks}"
+%format _urns = "\texttt{$\bullet$ urns}"
+%format _vat = "\texttt{$\bullet$ vat}"
+%format _era = "\texttt{$\bullet$ era}"
+%format _sender = "\texttt{$\bullet$ sender}"
+%format _accounts = "\texttt{$\bullet$ accounts}"
+%format _balanceOf = "\texttt{$\bullet$ balanceOf}"

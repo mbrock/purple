@@ -126,10 +126,11 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 >   Lens',
 >   lens,
 >
+>   makeLenses,        -- Defines lenses for record fields
 >   makeFields,        -- Defines lenses for record fields
 >   set,               -- Writes a lens
 >   use, preuse,
->   zoom,
+>   Zoom (..),
 >   view, preview,     -- Reads a lens in a |do| block
 >   (&~),              -- Lets us use a |do| block with setters \xxx{Get rid of this.}
 >   ix,                -- Lens for map retrieval and updating
@@ -140,6 +141,9 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 >   (-=), (+=),        -- Update arithmetically
 >   (%=),              -- Update according to function
 >   (?=))              -- Insert into map
+>
+> import Control.Lens.Zoom as X
+> import Control.Lens.Internal.Zoom as X
 
 Where the Solidity code uses \texttt{mapping}, we use Haskell's
 regular tree-based map type\footnote{We assume the axiom that Keccak
