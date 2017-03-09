@@ -128,6 +128,7 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 >
 >   makeFields,        -- Defines lenses for record fields
 >   set,               -- Writes a lens
+>   use, preuse,
 >   view, preview,     -- Reads a lens in a |do| block
 >   (&~),              -- Lets us use a |do| block with setters \xxx{Get rid of this.}
 >   ix,                -- Lens for map retrieval and updating

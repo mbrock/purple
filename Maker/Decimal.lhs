@@ -5,8 +5,9 @@
 \DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
 
 This somewhat arcane-looking code implements a wrapper around the base
-library's decimal fixed point type, only using a more precise rounding
-method for the |x*y| and |x/y| operations.
+library's decimal fixed point type, only with |x*y| and |x/y|
+operations that do rounding instead of truncation of their
+intermediate results.
 
 %if 0
 

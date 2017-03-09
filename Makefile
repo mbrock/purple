@@ -15,5 +15,5 @@ docker:
 
 test:
 	cabal build
-	./dist/build/mkrfuzz/mkrfuzz > makerdao/src/fuzz.sol
-	make -C makerdao test
+	./dist/build/mkrfuzz/mkrfuzz > solidity/src/fuzz.sol
+	make -C solidity test

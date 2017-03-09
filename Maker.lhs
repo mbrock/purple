@@ -463,6 +463,8 @@ into scope.
 > import Prelude ()      -- Import nothing from Prelude
 >
 > import Maker.Decimal
+>
+> import Debug.Trace
 
 \chapter{Types}
 
@@ -535,14 +537,17 @@ We define another type for representing Ethereum account addresses.
 We also have three predefined entity identifiers.
 
 > -- The |dai| token address
-> id_dai = Id "Dai"
+> id_dai = Id "DAI"
 >
 > -- The |cdp| engine address
-> id_vat = Address "Vat"
+> id_vat = Address "VAT"
 >
 > -- The account with ultimate authority
 > -- \xxx{Kludge until authority is modelled}
-> id_god = Address "God"
+> id_god = Address "GOD"
+>
+> -- The address of the test driver
+> id_toy = Address "TOY"
 
 %if 0
 
@@ -819,8 +824,8 @@ Now we define the internal act |gaze| which returns the value of
 >   drip id_ilk
 >
 > -- Read parameters for risk analysis
->   era0    <- view era
->   par0    <- view (vat . par)
+>   era0    <- use era
+>   par0    <- use (vat . par)
 >   urn0    <- look (vat . urns . ix id_urn)
 >   ilk0    <- look (vat . ilks . ix (view ilk urn0  ))
 >   jar0    <- look (vat . jars . ix (view jar ilk0  ))
@@ -834,7 +839,7 @@ Now we define the internal act |gaze| which returns the value of
 
 > open id_urn id_ilk =
 >   do
->     id_lad <- view sender
+>     id_lad <- use sender
 >     vat . urns . at id_urn ?= defaultUrn id_ilk id_lad
 
 \actentry{|lock|}{deposit collateral}
@@ -849,7 +854,7 @@ Now we define the internal act |gaze| which returns the value of
 >     vat . urns . ix id_urn . jam += x
 >
 >   -- Take sender's tokens
->     id_lad  <- view sender
+>     id_lad  <- use sender
 >     pull id_jar id_lad x
 
 \actentry{|free|}{withdraw collateral}
@@ -857,7 +862,7 @@ Now we define the internal act |gaze| which returns the value of
 > free id_urn wad_gem = do
 >
 >   -- Fail if sender is not the |cdp| owner
->     id_sender  <- view sender
+>     id_sender  <- use sender
 >     id_lad     <- look (vat . urns . ix id_urn . lad)
 >     aver (id_sender == id_lad)
 >
@@ -877,7 +882,7 @@ Now we define the internal act |gaze| which returns the value of
 > draw id_urn wad_dai = do
 >
 >   -- Fail if sender is not the |cdp| owner
->     id_sender  <- view sender
+>     id_sender  <- use sender
 >     id_lad     <- look (vat . urns . ix id_urn . lad)
 >     aver (id_sender == id_lad)
 >
@@ -903,7 +908,7 @@ Now we define the internal act |gaze| which returns the value of
 > wipe id_urn wad_dai = do
 >
 >   -- Fail if sender is not the |cdp| owner
->     id_sender  <- view sender
+>     id_sender  <- use sender
 >     id_lad     <- look (vat . urns . ix id_urn . lad)
 >     aver (id_sender == id_lad)
 >
@@ -931,7 +936,7 @@ Now we define the internal act |gaze| which returns the value of
 > give id_urn id_lad = do
 > 
 >     x <- look (vat . urns . ix id_urn . lad)
->     y <- view sender
+>     y <- use sender
 >     aver (x == y)
 >     vat . urns . ix id_urn . lad .= id_lad
 
@@ -961,12 +966,12 @@ Now we define the internal act |gaze| which returns the value of
 
 > prod = do
 >
->   era0  <- view era
->   tau0  <- view (vat . tau)
->   fix0  <- view (vat . fix)
->   par0  <- view (vat . par)
->   how0  <- view (vat . how)
->   way0  <- view (vat . way)
+>   era0  <- use era
+>   tau0  <- use (vat . tau)
+>   fix0  <- use (vat . fix)
+>   par0  <- use (vat . par)
+>   how0  <- use (vat . how)
+>   way0  <- use (vat . way)
 >
 >   let
 >
@@ -999,7 +1004,7 @@ Now we define the internal act |gaze| which returns the value of
 > drip id_ilk = do
 >
 > -- Current time stamp
->   era0  <- view era
+>   era0  <- use era
 >
 > -- Time stamp of previous |drip|
 >   rho0  <- look (vat . ilks . ix id_ilk . rho)
@@ -1036,8 +1041,8 @@ Now we define the internal act |gaze| which returns the value of
 
 > mark id_jar tag1 zzz1 =
 >   auth $ do
->     jarAt id_jar . tag  .= tag1
->     jarAt id_jar . zzz  .= zzz1
+>     vat . jars . ix id_jar . tag  .= tag1
+>     vat . jars . ix id_jar . zzz  .= zzz1
 
 \actentry{|tell|}{update market price of collateral token}
 
@@ -1055,7 +1060,7 @@ Now we define the internal act |gaze| which returns the value of
 >     gaze id_urn >>= aver . (== Panic)
 >
 >   -- Record the sender as the liquidation initiator
->     id_cat              <- view sender
+>     id_cat              <- use sender
 >     vat . urns . ix id_urn . cat  .= id_cat
 >
 >   -- Read current debt
@@ -1088,8 +1093,8 @@ Now we define the internal act |gaze| which returns the value of
 >     gaze id_urn >>= aver . (== Grief)
 >
 >   -- Record the sender as the |cdp|'s settler
->     id_vow <- view sender
->     vat . urns . ix id_urn . vow .= id_vow
+>     id_vow <- use sender
+>     vat . urns . ix id_urn . vow .= Just id_vow
 >
 >   -- Clear the |cdp|'s requester of liquidation
 >     vat . urns . ix id_urn . cat .= Nothing
@@ -1097,17 +1102,13 @@ Now we define the internal act |gaze| which returns the value of
 \actentry{|heal|}{process bad debt}
 
 > heal wad_dai =
->
 >   auth $ do
->
 >     vat . sin -= wad_dai
 
 \actentry{|love|}{process stability fee revenue}
 
 > love wad_dai =
->
 >   auth $ do
->
 >     vat . joy -= wad_dai
 
 \section{Governance}
@@ -1197,7 +1198,7 @@ Now we define the internal act |gaze| which returns the value of
 >     vat . jars . at id_jar ?= Jar {
 >       jarGem   = Gem {
 >         gemTotalSupply  = 1000000000000,
->         gemBalanceOf    = singleton id_vat 1000000000000,
+>         gemBalanceOf    = singleton id_toy 1000000000000,
 >         gemAllowance    = empty
 >       },
 >       jarTag  = Wad 0,
@@ -1206,8 +1207,10 @@ Now we define the internal act |gaze| which returns the value of
 
 \actentry{|hand|}{give collateral tokens to account}
 
-> hand dst wad id_jar = do
->   push id_jar dst wad
+> hand dst w id_jar = do
+>   g   <- look (jarAt id_jar . gem)
+>   g'  <- transferFrom id_toy dst w g
+>   jarAt id_jar . gem .= g'
 
 \actentry{|sire|}{create a new account}
 
@@ -1233,6 +1236,13 @@ Now we define the internal act |gaze| which returns the value of
 >     Hand lad wad jar -> hand lad wad jar
 >     Sire lad         -> sire lad
 >
+> be :: Address -> Act -> Maker ()
+> be who x = do
+>   old <- use sender
+>   sender .= who
+>   y <- perform x
+>   sender .= old
+>   return y
 >
 > transferFrom
 >   ::  (MonadError Error m)
@@ -1242,7 +1252,8 @@ Now we define the internal act |gaze| which returns the value of
 > transferFrom src dst wad gem =
 >   case view (balanceOf . at src) gem of
 >     Nothing ->
->       throwError AssertError
+>       throwError . AssertError $
+>         "transferFrom " <> show (src, dst, wad)
 >     Just balance -> do
 >       aver (balance >= wad)
 >       return $ gem &~ do
@@ -1291,7 +1302,7 @@ We define the Maker act vocabulary as a data type.
 Acts can fail.  We divide the failure modes into general assertion
 failures and authentication failures.
 
-> data Error = AssertError | AuthError
+> data Error = AssertError String | AuthError
 >   deriving (Show, Eq)
 
 \section{The |Maker| monad}
@@ -1318,13 +1329,6 @@ purely functional.
 
 The following instance makes the mutable state also available as
 read-only state.
-
-> instance MonadReader System Maker where
->   ask = Maker get
->   local f (Maker m) = Maker $ do
->     s <- get;  put (f s)
->     x <- m;    put s
->     return x
 
 \section{Accessor aliases}
 
@@ -1353,27 +1357,18 @@ read-only state.
 
 \section{Asserting}
 
-> aver :: Fails m => Bool -> m ()
-> aver x = unless x (throwError AssertError)
->
-> look :: (Fails m, Reads r m)
->      => Getting (First a) r a -> m a
-> look f = preview f >>= \case
->   Nothing -> throwError AssertError
+> aver x = unless x (throwError (AssertError "aver"))
+
+> look f = preuse f >>= \case
+>   Nothing -> throwError (AssertError "look")
 >   Just x  -> return x
 
 \section{Modifiers}
 
 \actentry{|auth|}{authenticating actions}
 
-> auth ::
->   (  IsAct, Fails m,
->      Reads r m,
->        HasSender r Address)
->   => m a -> m a
-
 > auth continue = do
->   s <- view sender
+>   s <- use sender
 >   unless (s == id_god)
 >     (throwError AuthError)
 >   continue
@@ -1427,215 +1422,6 @@ Thus:
 >      (perform Prod)]
 
 \appendix
-
-\chapter{Act type signatures}
-\label{appendix:types}
-
-> type Reads   r  m = MonadReader r m
-> type Writes  w  m = MonadState w m
-> type Fails      m = MonadError Error m
->
-> type IsAct    = ?act :: Act
-
-> type Numbers wad ray sec =
->   (wad ~ Wad, ray ~ Ray, sec ~ Sec)
-
-We see that |drip| may fail; it reads an |ilk|'s |tax|, |cow|, |rho|,
-and |bag|; and it writes those same parameters except |tax|.
-
-> drip ::
->   (  Fails m,
->      Reads r m,
->        HasEra r Sec,
->        HasVat r vat_r,
->          HasIlks vat_r (Map (Id Ilk) ilk_r),
->            HasTax ilk_r Ray,
->            HasRho ilk_r Sec,
->            HasChi ilk_r Ray,
->            HasRum ilk_r Wad,
->            HasJoy ilk_r Wad,
->      Writes w m,
->        HasVat w vat_w,
->          HasIlks vat_w (Map (Id Ilk) ilk_w),
->            HasRho ilk_w Sec,
->            HasJoy ilk_w Wad,
->            HasChi ilk_w Ray)
->   => Id Ilk -> m Ray
-
-
-> form ::
->
->   (  IsAct, Fails m,
->      Reads r m,   HasSender r Address,
->      Writes w m,  HasVat w vat_w,
->                     HasIlks vat_w (Map (Id Ilk) Ilk))
->
->  => Id Ilk -> Id Jar -> m ()
-
-> frob :: (  IsAct, Fails m,
->            Reads r m,   HasSender r Address,
->            Writes w m,  HasVat w vat_w,
->                           HasHow vat_w ray)
->   => ray -> m ()
-
-> open ::
->   (  IsAct,
->      Reads r m,   HasSender r Address,
->      Writes w m,  HasVat w vat_w,
->                     HasUrns vat_w (Map (Id Urn) Urn))
->   => Id Urn -> Id Ilk -> m ()
-
-> give ::
->   (  IsAct, Fails m,
->      Reads r m,   HasSender r Address,
->                   HasVat r vat_r,
->                     HasUrns vat_r (Map (Id Urn) urn_r),
->                       HasLad urn_r Address,
->      Writes w m,  HasVat w vat_r)
->   => Id Urn -> Address -> m ()
-
-> lock ::
->   (  IsAct, Fails m,
->      Reads r m,
->        HasSender r Address,
->        HasVat r vat_r,
->          HasUrns vat_r (Map (Id Urn) urn_r),
->            HasIlk urn_r (Id Ilk),
->          HasIlks vat_r (Map (Id Ilk) ilk_r),
->            HasJar ilk_r (Id Jar),
->          HasJars vat_r (Map (Id Jar) jar_r),
->            HasGem jar_r Gem,
->      Writes w m,
->        HasVat w vat_w,
->          HasJars vat_w (Map (Id Jar) jar_r),
->          HasUrns vat_w (Map (Id Urn) urn_w),
->            HasJam urn_w Wad)
->   => Id Urn -> Wad -> m ()
-
-> mark ::
->   (  IsAct, Fails m,
->      Reads r m,   HasSender r Address,
->      Writes w m,  HasVat w vat_w,
->                     HasJars vat_w (Map (Id Jar) jar_w),
->                       HasTag jar_w wad,
->                       HasZzz jar_w sec)
->   => Id Jar -> wad -> sec -> m ()
-
-> tell ::
->   (  IsAct, Fails m,
->      Reads r m,   HasSender r Address,
->      Writes w m,  HasVat w vat_w,
->                     HasFix vat_w wad)
->   => wad -> m ()
-
-> prod ::
->   (  IsAct,
->      Reads r m,
->        HasSender r Address,
->        HasEra r sec,
->        HasVat r vat_r,  (  HasPar vat_r wad,
->                            HasTau vat_r sec,
->                            HasHow vat_r ray,
->                            HasWay vat_r ray,
->                            HasFix vat_r wad),
->      Writes w m,
->        HasVat w vat_w,  (  HasPar vat_w wad,
->                            HasWay vat_w ray,
->                            HasTau vat_w sec),
->      Integral sec,
->      Ord wad, Fractional wad,
->      Fractional ray, Real ray)
->   => m ()
-
-> warp ::
->   (  IsAct, Fails m,
->      Reads r m,   HasSender r Address,
->      Writes w m,  HasEra w sec,
->                     Num sec)
->   => sec -> m ()
-
-
-> pull ::
->   (  Fails m,
->      Reads r m,
->        HasVat r vat_r,  HasJars vat_r (Map (Id Jar) jar_r),
->                           HasGem jar_r Gem,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
->   => Id Jar -> Address -> Wad -> m ()
-
-> push ::
->   (  Fails m,
->      Reads r m,
->        HasVat r vat_r,  HasJars vat_r (Map (Id Jar) jar_r),
->                           HasGem jar_r Gem,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r))
->   => Id Jar -> Address -> Wad -> m ()
-
-> mint ::
->   (  Fails m,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
->                           HasGem jar_r gem_r,
->                             HasTotalSupply  gem_r Wad,
->                             HasBalanceOf    gem_r (Map Address Wad))
->   => Id Jar -> Wad -> m ()
-
-> burn ::
->   (  Fails m,
->      Writes w m,
->        HasVat w vat_w,  HasJars vat_w (Map (Id Jar) jar_r),
->                           HasGem jar_r gem_r,
->                             HasTotalSupply  gem_r Wad,
->                             HasBalanceOf    gem_r (Map Address Wad))
->   => Id Jar -> Wad -> m ()
-
-> grab ::
->   (  IsAct, Fails m,
->      Numbers wad ray sec,
->      Reads r m,
->        HasSender r Address,
->        HasEra r Sec,
->        HasVat r vat_r,
->          HasFix vat_r wad,
->          HasPar vat_r wad,
->          HasHow vat_r ray,
->          HasWay vat_r ray,
->          HasTau vat_r sec,
->          HasUrns vat_r (Map (Id Urn) urn_r),
->            HasJam urn_r wad,
->            HasArt urn_r wad,
->            HasCat urn_r (Maybe Address),  HasVow urn_r (Maybe Address),
->            HasIlk urn_r (Id Ilk),
->          HasIlks vat_r (Map (Id Ilk) ilk_r),
->            HasHat ilk_r wad,
->            HasMat ilk_r wad,
->            HasRum ilk_r wad,
->            HasJoy ilk_r wad,
->            HasTax ilk_r ray,
->            HasLag ilk_r sec,
->            HasChi ilk_r ray,  HasRho ilk_r sec,
->            HasJar ilk_r (Id Jar),
->          HasJars vat_r (Map (Id Jar) jar_r),
->            HasGem jar_r Gem,
->            HasTag jar_r wad,
->            HasZzz jar_r sec,
->      Writes w m,
->        HasVat w vat_w,
->          HasTau vat_w sec,
->          HasWay vat_w ray,  HasPar vat_w wad,
->          HasUrns vat_w (Map (Id Urn) urn_w),
->            HasJam urn_w wad,  HasArt urn_w wad,
->            HasVow urn_w Address,
->            HasCat urn_w (Maybe Address),
->          HasIlks vat_w (Map (Id Ilk) ilk_w),
->            HasJoy ilk_w wad,
->            HasChi ilk_w ray,
->            HasRho ilk_w sec,
->          HasJars vat_w (Map (Id Jar) jar_r)
->   ) => Id Urn -> m ()
->
 
 %include Maker/Prelude.lhs
 %include Maker/Decimal.lhs
