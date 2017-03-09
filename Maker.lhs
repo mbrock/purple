@@ -1338,34 +1338,6 @@ purely functional.
 > exec sys (Maker m) =
 >   runExcept (execStateT m sys)
 
-The following instance makes the mutable state also available as
-read-only state.
-
-\section{Accessor aliases}
-
-> ilkAt  id = vat . ilks  . ix id
-> urnAt  id = vat . urns  . ix id
-> jarAt  id = vat . jars  . ix id
-
-%if 0
-
-> ilkAt ::
->   ( HasIlks vat (Map (Id Ilk) ilk)
->   , HasVat s vat
->   ) => Id Ilk -> Traversal' s ilk
->
-> urnAt ::
->   ( HasUrns vat (Map (Id Urn) urn)
->   , HasVat s vat
->   ) => Id Urn -> Traversal' s urn
->
-> jarAt ::
->   ( HasJars vat (Map (Id Jar) jar)
->   , HasVat s vat
->   ) => Id Jar -> Traversal' s jar
-
-%endif
-
 \section{Asserting}
 
 > aver x = unless x (throwError (AssertError ?act))
