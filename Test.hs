@@ -24,7 +24,7 @@ import Prelude (IO, print, snd, round)
 import IPPrint.Colored
 
 import Maker
-import Maker.Prelude
+import Maker.Prelude hiding (empty)
 
 import qualified Data.Map as Map
 
@@ -33,7 +33,7 @@ import Control.Monad.Trans (MonadTrans, lift)
 import Control.Monad (sequence_, forM_)
 
 import Data.CReal
-import Data.Text (Text, pack, intercalate)
+import Data.Text.Lazy (Text, pack, intercalate)
 import Data.Text.IO (putStrLn)
 import Data.Foldable (toList, foldl')
 
@@ -49,6 +49,8 @@ import Test.QuickCheck
      frequency, conjoin, counterexample, (===)
   )
 
+import Text.PrettyPrint.Leijen.Text hiding ((<>))
+
 type Precise = CReal 256
 
 wad :: Precise -> Wad
@@ -61,17 +63,18 @@ data Comparison a = Exactly a
   deriving Show
 
 data Claim =
-     WadIs Text (Comparison Wad)
-  |  RayIs Text (Comparison Ray)
-  |  SecIs Text (Comparison Sec)
+     WadIs Doc (Comparison Wad)
+  |  RayIs Doc (Comparison Ray)
+  |  SecIs Doc (Comparison Sec)
   deriving Show
 
 solidityClaim =
   let assertDecimal n x (Exactly y) =
-        "assertEqDecimal(" <>
-          "uint256(" <> x <> "), " <>
+        "assertEqDecimal(" </> indent 4 (
+          "uint256(" <> x <> ")," </>
+          comment (txt y) </>
           "uint256(" <> txt (round (y * (10^^n))) <> "), " <>
-          pack (show (n :: Int)) <> "); // " <> txt y
+          txt (n :: Int) <> ");")
 
   in \case
     WadIs e x -> assertDecimal 18 e x
@@ -79,21 +82,24 @@ solidityClaim =
     SecIs e (Exactly x) ->
       "assertEq(uint(" <> e <> "), uint(" <> txt x <> "));"
 
-txt :: Show a => a -> Text
-txt = pack . show
+txt :: Show a => a -> Doc
+txt = string . pack . show
 
+unwad :: Wad -> Integer
 unwad x = round $ x * 1000000000000000000
+unray :: Ray -> Integer
 unray x = round $ x * 1000000000000000000000000000000000000
-unsec x = x
+unsec :: Sec -> Integer
+unsec x = fromIntegral x
 
-solidityAct :: (Address, Act) -> Text
+solidityAct :: (Address, Act) -> Doc
 solidityAct = \case
   (_, Prod)    ->
     "this.prod();"
   (_, Frob x)  ->
-    "this.frob(" <> txt (unray x) <> "); // " <> txt x
+    "this.frob(" </> indent 4 (comment (txt x) </> txt (unray x) <> ");")
   (_, Tell x)  ->
-    "this.tell(" <> txt (unwad x) <> "); // " <> txt x
+    "this.tell(" </> indent 4 (comment (txt x) </> txt (unwad x) <> ");")
   (_, Warp x)  ->
     "this.warp(" <> txt (unsec x) <> ");"
   (_, Form (Id x) (Id y)) ->
@@ -103,34 +109,36 @@ solidityAct = \case
   (_, Sire (Address x))   ->
     "this.lad(" <> txt x <> ");"
   (_, Hand (Address x) y (Id z))   ->
-    "this.hand(" <> txt x <> ", " <> txt (unwad y) <> ", " <> txt z<> ");"
+    "this.hand(" <> txt x <> ", " </>
+      indent 4 (comment (txt y) </> txt (unwad y) <> "," <$> txt z <> ");")
   (Address x, Open (Id _) (Id z)) ->
     "this.open(" <> txt x <> ", " <> txt z <> ");"
   (Address x, Lock (Id _) z) ->
-    "this.lock(" <> txt x <> ", " <> txt (unwad z) <> "); // " <> txt z
+    "this.lock(" <> txt x <> ", " </>
+      indent 4 (comment (txt z) </>
+                txt (unwad z) <> ");")
 
-actsCode :: Seq (Address, Act) -> Seq Text
-actsCode = fmap solidityAct
+actsCode :: Seq (Address, Act) -> Doc
+actsCode = vsep . toList . fmap solidityAct
 
-indent :: Seq Text -> Seq Text
-indent = fmap ("  " <>)
+comment x = "/*" <+> x <+> "*/"
 
-solidityTest :: Text -> Text -> Seq Text -> Seq Text
-solidityTest name s seq =
-  Seq.singleton ("function " <> name <> "() {") <>
-    Seq.singleton ("  // " <> s) <>
-    indent seq <>
-    Seq.singleton "}"
+solidityTest :: Text -> Text -> Doc -> Doc
+solidityTest name s code =
+  "function" <+> string name <+> "()" <+>
+      (braces $
+         line <>
+         indent 4 (comment (string s) <$> code))
 
 pairs = Map.toAscList
 forAllPairs x f = forM_ (pairs x) f
 
 dump :: System -> Writer (Seq Claim) ()
 dump sys = do
-  write . WadIs "vox.fix()" $ Exactly (view (vat . fix) sys)
-  write . WadIs "vox.par()" $ Exactly (view (vat . par) sys)
-  write . RayIs "vox.way()" $ Exactly (view (vat . way) sys)
-  write . RayIs "vox.how()" $ Exactly (view (vat . how) sys)
+  write . WadIs ("vox.fix()") $ Exactly (view (vat . fix) sys)
+  write . WadIs ("vox.par()") $ Exactly (view (vat . par) sys)
+  write . RayIs ("vox.way()") $ Exactly (view (vat . way) sys)
+  write . RayIs ("vox.how()") $ Exactly (view (vat . how) sys)
   forAllPairs (view (vat . jars) sys) $ \(Id i, j) -> do
     write
       . WadIs    ("vat.tag(jars[" <> txt i <> "])")
@@ -141,6 +149,8 @@ dump sys = do
                    "lads[" <> txt h <> "]"
                  InVault (Id h) ->
                    "jars[" <> txt h <> "]"
+                 InToy ->
+                   "this"
       write .
         WadIs ("jars[" <> txt i <> "].token().balanceOf(" <>
                 a' <> ")") $ Exactly x
@@ -192,27 +202,29 @@ testCaseX = do
   write (Address "Bob", Open (Id "Bob") (Id "DGX1"))
   write (Address "Bob", Lock (Id "Bob") 0.5)
 
-crossExamine :: Seq (Address, Act) -> (Bool, Seq Text)
+crossExamine :: Seq (Address, Act) -> (Bool, Doc)
 crossExamine acts =
   case exec (initialSystem 1.0)
         (sequence_ (fmap (\(x, y) -> y `being` x) acts)) of
     Left x ->
-      (False,  solidityTest "testFail_x" (txt x) (actsCode acts))
+      (False,  solidityTest "testFail_x" (pack (show x)) (actsCode acts))
     Right x ->
-      (True,   solidityTest "test_x" "" (actsCode acts <> soliditySystem x))
+      (True,   solidityTest "test_x" "" (actsCode acts <$> space <$> vsep (toList (soliditySystem x))))
 
-solidityFile :: Seq Text -> Text
-solidityFile xs = intercalate "\n" $
+solidityFile :: Doc -> Doc
+solidityFile xs = vsep $
   ["pragma solidity ^0.4.8;",
    "import \"./toy.sol\";",
    "contract FakerToy is MakerToy {",
-   "  function setUp() {",
-   "    this.par(1 ether);",
-   "  }"]
-  <> toList (indent xs) <>
-  ["}", ""]
+   "    function setUp() {",
+   "        this.par(1 ether);",
+   "    }",
+   space,
+   indent 4 xs,
+   "}",
+   space]
   
 main :: IO ()
 main = do
   x <- generate $ execWriterT testCaseX
-  putStrLn . solidityFile . snd $ crossExamine x
+  putDoc . solidityFile . snd $ crossExamine x

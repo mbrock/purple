@@ -23,6 +23,7 @@ library
     ghci-pretty,
     lens,
     mtl,
+    wl-pprint-text,
     random,
     tasty,
     tasty-hunit,
@@ -35,19 +36,20 @@ executable mkrfuzz
   default-language:
     Haskell2010
   build-depends:
+    QuickCheck,
     base < 5,
+    containers,
+    exact-real,
+    ghci-pretty,
+    lens,
     mkrfuzz,
     mtl,
-    lens,
-    containers,
+    wl-pprint-text,
     random,
     tasty,
     tasty-hunit,
     tasty-quickcheck,
-    text,
-    QuickCheck,
-    ghci-pretty,
-    exact-real
+    text
   main-is:
     Test.hs
   

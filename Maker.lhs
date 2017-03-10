@@ -150,6 +150,21 @@ statistical aspects.
 
 \end{enumerate}
 
+\section{Limitations}
+
+This implementation has a simplified model of Maker's governance
+authorization.  Instead of the ``access control list'' approach of the
+\texttt{DSGuard} component, we give full authority to one single
+address.  A future iteration will include the full
+authorization model.
+
+We also do not currently model the EVM's 256 bit word size, but allow
+all quantities to grow arbitrarily large.  This will also be modelled
+in a future iteration.
+
+Finally, our model of |ERC20| tokens is simplified, and for example
+does not include the concept of ``allowances.''
+
 \part{Implementation}
 
 \chapter{Preamble}
@@ -183,12 +198,19 @@ into scope.
 
 > module Maker where
 >
-> import Maker.Prelude   -- Fully import the Maker prelude
 > import Prelude ()      -- Import nothing from Prelude
->
+> import Maker.Prelude   -- Import everything from Maker Prelude
+
+We also import our definition of decimal fixed point numbers, listed
+in Appendix~\ref{appendix:numbers}.
+
 > import Maker.Decimal
->
+
+%if 0
+
 > import Debug.Trace
+
+%endif
 
 \chapter{Types}
 
@@ -226,7 +248,6 @@ numbers and rounding.
 > instance Epsilon Ray  where epsilon = Ray epsilon
 
 %endif
-
 We also define a type for time durations in whole seconds.
 
 > newtype Sec = Sec Int
@@ -264,9 +285,6 @@ We also have three predefined entity identifiers.
 > -- The |cdp| engine address
 > id_vat = Address "VAT"
 >
-> -- The address of the test driver
-> id_toy = Address "TOY"
->
 > -- A test account with ultimate authority
 > id_god = Address "GOD"
 
@@ -282,7 +300,8 @@ We also have three predefined entity identifiers.
 In this model, all tokens behave in the same simple way.\footnote{In
 the real world, token semantics can differ, despite nominally
 following the |ERC20| interface.  Maker governance therefore involves
-due diligence on collateral token contracts.}
+due diligence on collateral token contracts.}  We omit the |ERC20|
+concept of ``allowances.''
 
 > data Gem = Gem {
 >
@@ -290,11 +309,12 @@ due diligence on collateral token contracts.}
 >
 >   } deriving (Eq, Show)
 
-We distinguish between tokens held by vaults and tokens held by
-other addresses.
+We distinguish between tokens held by vaults, tokens held by the test
+driver, and tokens held by |cdp| owners.
 
 > data Holder  =  InAccount  Address
 >              |  InVault    (Id Jar)
+>              |  InToy
 >
 >   deriving (Eq, Show, Ord)
 
@@ -572,7 +592,7 @@ using |open|, specifying an account identifier (self-chosen) and a
 > open id_urn id_ilk = do
 >
 > -- Fail if account identifier is taken
->   none (vat . urns . at id_urn)
+>   none (vat . urns . ix id_urn)
 >
 > -- Create a |cdp| record with the sender as owner
 >   id_lad <- use sender
@@ -941,7 +961,7 @@ transfer its ownership at any time using |give|.
 >
 >     initializeTo
 >       (Jar {
->          _gem   = Gem (singleton (InAccount id_toy) 1000000000000),
+>          _gem   = Gem (singleton InToy 1000000000000),
 >          _tag  = Wad 0,
 >          _zzz  = 0 })
 >       (vat . jars . at id_jar)
@@ -950,8 +970,7 @@ transfer its ownership at any time using |give|.
 
 > hand dst wad_gem id_jar = do
 >   transfer id_jar wad_gem
->     (InAccount id_toy)
->     (InAccount dst)
+>     InToy (InAccount dst)
 
 \actentry{|sire|}{register a new toy account}
 
