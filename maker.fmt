@@ -21,6 +21,7 @@
 %format ==> = "\implies"
 %format ? = "\,?\!"
 %format ?= = "\mathrel{?\!\!=}"
+%format < = "\mathrel{<}"
 
 %format cdp = "\textsc{cdp}"
 %format dai = "\textsc{dai}"
@@ -122,7 +123,6 @@
 %format axe1
 %format cat0
 %format chi0
-%format rum0
 %format chi1
 %format con0
 %format con1
@@ -135,6 +135,7 @@
 %format how0
 %format how1
 %format ilk0
+%format jam0
 %format jar0
 %format joy0
 %format joy1
@@ -146,6 +147,7 @@
 %format par1
 %format pro0
 %format rho0
+%format rum0
 %format sys0
 %format sys1
 %format tag0

@@ -394,7 +394,7 @@ driver, and tokens held by |cdp| owners.
 \actentry{|par|}{target price of |dai| denominated in |sdr|}
 \actentry{|how|}{sensitivity parameter}
 \actentry{|way|}{rate of target price change}
-\actentry{|tau|}{time of latest revaluation}
+\actentry{|tau|}{time of latest target update}
 \actentry{|joy|}{unprocessed stability fee revenue}
 \actentry{|sin|}{bad debt from liquidated |cdp|s}
 
@@ -491,7 +491,7 @@ driver, and tokens held by |cdp| owners.
 
 \chapter{Acts}
 
-The \emph{acts} are the basic state transitions of the credit system.
+The \emph{acts} are the basic state transitions of the system.
 
 For details on the underlying ``Maker monad,'' which specifies how the
 act definitions behave with regard to state and rollback thereof, see
@@ -548,24 +548,21 @@ urn's stage.
 
 \newcommand{\yep}{$\bullet$}
 \begin{table}[t]
-\caption{Urn acts in the five stages of risk}\label{table:stages}
+\caption{|cdp| acts in the five stages of risk}\label{table:stages}
 \vspace{0.25cm}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{ r c c c c c c c c c l }
 &|give|&|shut|&|lock|&|wipe|&|free|&|draw|&|bite|&|grab|&|plop|& \\
-\hline
 |Pride|&\yep&\yep&\yep&\yep&\yep&\yep&&&& overcollateralized \\
-\hline
 |Anger|&\yep&\yep&\yep&\yep&\yep&&&&& debt ceiling reached \\
-\hline
 |Worry|&\yep&\yep&\yep&\yep&&&&&& price feed in limbo \\
-\hline
 |Panic|&\yep&\yep&\yep&\yep&&&\yep&&& undercollateralized \\
-\hline
 |Grief|&\yep&&&&&&&\yep&& liquidation initiated \\
-\hline
 |Dread|&\yep&&&&&&&&\yep& liquidation in progress \\
-\hline
+\multicolumn{2}{c}{} &
+\multicolumn{3}{c}{risk decreasing} &
+\multicolumn{2}{c}{risk increasing} &
+\multicolumn{3}{c}{risk unwinding} &
 \end{tabular}}
 \end{table}
 
@@ -573,7 +570,7 @@ Now we define the internal act |gaze| which returns the value of
 |analyze| after ensuring the system state is updated.
 
 > gaze id_urn = do
-> -- Perform dai revaluation and rate adjustment
+> -- Adjust target price and target rate
 >   prod
 >
 > -- Update price of specific debt unit
@@ -605,8 +602,9 @@ using |open|, specifying an account identifier (self-chosen) and a
 >
 > -- Create a |cdp| record with the sender as owner
 >   id_lad <- use sender
->   initializeTo (defaultUrn id_ilk id_lad)
->     (vat . urns . at id_urn)
+>   initialize (vat . urns . at id_urn)
+>     (defaultUrn id_ilk id_lad)
+>     
 
 \actentry{|give|}{transfer |cdp| account} The owner of a |cdp| can
 transfer its ownership at any time using |give|.
@@ -614,13 +612,15 @@ transfer its ownership at any time using |give|.
 > give id_urn id_lad = do
 >
 > -- Fail if sender is not the |cdp| owner
->   owns id_urn id_lad
+>   id_sender <- use sender
+>   owns id_urn id_sender
 >
 > -- Transfer ownership
 >   vat . urns . ix id_urn . lad .= id_lad
 
-\actentry{|lock|}{deposit collateral}
-
+\actentry{|lock|}{deposit collateral}Unless liquidation has begun for
+a |cdp|, its owner can use |lock| to deposit more collateral, thus
+increasing the collateralization ratio.
 
 > lock id_urn wad_gem = do
 >
@@ -628,18 +628,24 @@ transfer its ownership at any time using |give|.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Ensure |cdp| exists; identify collateral type
+> -- Fail if liquiditation initiated
+>   want (gaze id_urn) (< Grief)
+>
+> -- Identify collateral type
 >   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
 >   id_jar  <- look (vat . ilks . ix id_ilk  . jar)
 >
-> -- Record an increase in collateral
->   increaseBy wad_gem (vat . urns . ix id_urn . jam)
->
-> -- Take sender's tokens
+> -- Transfer tokens from owner to collateral vault
 >   id_lad  <- use sender
 >   pull id_jar id_lad wad_gem
+>
+> -- Record an increase in collateral
+>   increase (vat . urns . ix id_urn . jam) wad_gem
 
-\actentry{|free|}{withdraw collateral}
+\actentry{|free|}{withdraw collateral}When a |cdp| is
+overcollateralized, its owner can use |free| to withdraw any amount of
+collateral, as long as the withdrawal would not
+cause undercollateralization.
 
 > free id_urn wad_gem = do
 >
@@ -647,18 +653,22 @@ transfer its ownership at any time using |give|.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Decrease the collateral amount
->   decreaseBy wad_gem (vat . urns . ix id_urn . jam)
+> -- Record a decrease in collateral
+>   decrease (vat . urns . ix id_urn . jam) wad_gem
 >
-> -- Roll back if undercollateralized
->   gaze id_urn >>= aver . (== Pride)
+> -- Roll back if withdrawal caused undercollateralization
+>   want (gaze id_urn) (`elem` [Pride, Worry])
 >
-> -- Send the collateral to the |cdp| owner
+> -- Transfer tokens from collateral vault to owner
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   id_jar  <- look (vat . ilks . ix id_ilk . jar)
 >   push id_jar id_lad wad_gem
 
-\actentry{|draw|}{issue dai as debt}
+\actentry{|draw|}{issue dai as debt}A |cdp| owner can use |draw| to
+issue and lend an amount of dai, thus increasing the |cdp|'s debt and
+lowering its collateralization ratio---as long as the |cdp| type's
+debt ceiling is not reached and the loan would not result
+in undercollateralization.
 
 > draw id_urn wad_dai = do
 >
@@ -666,24 +676,29 @@ transfer its ownership at any time using |give|.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Update value of debt unit
+> -- Update value of |cdp| type's debt unit
 >   id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >   chi1       <- drip id_ilk
 >
 > -- Denominate draw amount in debt unit
 >   let  wad_chi = wad_dai / cast chi1
 >
-> -- Increase debt
->   increaseBy wad_chi (vat . urns . ix id_urn . art)
+> -- Increase |cdp| debt
+>   increase (vat . urns . ix id_urn . art) wad_chi
 >
-> -- Roll back unless overcollateralized
->   gaze id_urn >>= aver . (== Pride)
+> -- Increase total debt of |cdp| type
+>   increase (vat . ilks . ix id_ilk . rum) wad_chi
 >
-> -- Mint dai and send to the |cdp| owner
+> -- Roll back if loan caused undercollateralization or debt excess
+>   want (gaze id_urn) (== Pride)
+>
+> -- Mint dai and send to |cdp| owner
 >   mint id_dai wad_dai
 >   push id_dai id_lad wad_dai
 
-\actentry{|wipe|}{repay debt and burn dai}
+\actentry{|wipe|}{repay debt and burn dai}A |cdp| owner who has
+previously loaned dai can use |wipe| to repay part of their debt as
+long as liquidation has not been initiated.
 
 > wipe id_urn wad_dai = do
 >
@@ -691,26 +706,32 @@ transfer its ownership at any time using |give|.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
+> -- Fail if liquidation initiated
+>   want (gaze id_urn) (< Grief)
+>
 > -- Update value of debt unit
 >   id_ilk <- look (vat . urns . ix id_urn . ilk)
 >   chi1   <- drip id_ilk
 >
-> -- Roll back unless overcollateralized
->   gaze id_urn >>= aver . (== Pride)
->
 > -- Denominate dai amount in debt unit
 >   let  wad_chi = wad_dai / cast chi1
 >
-> -- Reduce debt
->   decreaseBy wad_chi (vat . urns . ix id_urn . art)
+> -- Decrease |cdp| debt
+>   decrease (vat . urns . ix id_urn . art) wad_chi
 >
-> -- Take dai from |cdp| owner, or roll back
+> -- Decrease total |cdp| type debt
+>   decrease (vat . ilks . ix id_ilk . rum) wad_chi
+>
+> -- Transfer dai from |cdp| owner to dai vault
 >   pull id_dai id_lad wad_dai
 >
-> -- Destroy dai
+> -- Destroy reclaimed dai
 >   burn id_dai wad_dai
 
-\actentry{|shut|}{wipe, free, and delete |cdp|}
+\actentry{|shut|}{wipe, free, and delete |cdp|}A |cdp| owner can use
+|shut| to close their account---repaying all debt and reclaiming all
+collateral---if the price feed is up to date and liquidation has not
+been initiated.
 
 > shut id_urn = do
 >
@@ -718,21 +739,21 @@ transfer its ownership at any time using |give|.
 >     id_ilk <- look (vat . urns . ix id_urn . ilk)
 >     chi1   <- drip id_ilk
 >
->   -- Attempt to repay all the |cdp|'s outstanding dai
+>   -- Reclaim all outstanding dai
 >     art0 <- look (vat . urns . ix id_urn . art)
 >     wipe id_urn (art0 * cast chi1)
 >
->   -- Reclaim all the collateral
+>   -- Reclaim all collateral
 >     jam0 <- look (vat . urns . ix id_urn . jam)
 >     free id_urn jam0
 >
->   -- Nullify the |cdp|
+>   -- Nullify |cdp| record
 >     vat . urns . at id_urn .= Nothing
 
 \clearpage
 \section{Adjustment}
 
-\actentry{|prod|}{perform revaluation and rate adjustment}
+\actentry{|prod|}{adjust target price and target rate}
 
 > prod = do
 >
@@ -813,7 +834,7 @@ transfer its ownership at any time using |give|.
 > bite id_urn = do
 >
 >   -- Fail if |cdp| is not in need of liquidation
->     gaze id_urn >>= aver . (== Panic)
+>     want (gaze id_urn) (== Panic)
 >
 >   -- Record the sender as the liquidation initiator
 >     id_cat              <- use sender
@@ -837,7 +858,7 @@ transfer its ownership at any time using |give|.
 >     vat . urns . ix id_urn . art   .=  art1
 >
 >   -- Record as bad debt
->     increaseBy (art1 * cast chi1) (vat . sin)
+>     increase (vat . sin) (art1 * cast chi1)
 
 \actentry{|grab|}{take tokens for liquidation}
 
@@ -846,7 +867,7 @@ transfer its ownership at any time using |give|.
 >   auth $ do
 >
 >   -- Fail if |cdp| is not marked for liquidation
->     gaze id_urn >>= aver . (== Grief)
+>     want (gaze id_urn) (== Grief)
 >
 >   -- Record the sender as the |cdp|'s settler
 >     id_vow <- use sender
@@ -861,7 +882,7 @@ transfer its ownership at any time using |give|.
 >   auth $ do
 >
 >   -- Fail unless |cdp| is in liquidation
->     gaze id_urn >>= aver . (== Dread)
+>     want (gaze id_urn) (== Dread)
 >
 >   -- Forget the |cdp|'s settler
 >     vat . urns . ix id_urn . vow .= Nothing
@@ -873,13 +894,13 @@ transfer its ownership at any time using |give|.
 
 > heal wad_dai =
 >   auth $ do
->     decreaseBy wad_dai (vat . sin)
+>     decrease (vat . sin) wad_dai
 
 \actentry{|love|}{process stability fee revenue}
 
 > love wad_dai =
 >   auth $ do
->     decreaseBy wad_dai (vat . joy)
+>     decrease (vat . joy) wad_dai
 
 \section{Governance}
 
@@ -887,8 +908,8 @@ transfer its ownership at any time using |give|.
 
 > form id_ilk id_jar =
 >   auth $ do
->     initializeTo (defaultIlk id_jar)
->       (vat . ilks . at id_ilk)
+>     initialize (vat . ilks . at id_ilk)
+>        (defaultIlk id_jar)
 
 \actentry{|frob|}{set the sensitivity parameter}
 
@@ -950,30 +971,29 @@ transfer its ownership at any time using |give|.
 
 > mint id_jar wad0 =
 >   zoom (vat . jars . ix id_jar . gem) $ do
->     increaseBy wad0 (balanceOf . ix (InVault id_jar))
+>     increase (balanceOf . ix (InVault id_jar)) wad0
 
 \actentry{|burn|}{destroy tokens}
 
 > burn id_jar wad0 =
 >   zoom (vat . jars . ix id_jar . gem) $ do
->     decreaseBy wad0 (balanceOf . ix (InVault id_jar))
+>     decrease (balanceOf . ix (InVault id_jar)) wad0
 
 \section{Manipulation}
 
 \actentry{|warp|}{travel through time}
 
-> warp t = auth (do increaseBy t era)
+> warp t = auth (do increase era t)
 
 \actentry{|mine|}{create toy token type}
 
 > mine id_jar = do
 >
->     initializeTo
+>     initialize (vat . jars . at id_jar)
 >       (Jar {
 >          _gem   = Gem (singleton InToy 1000000000000),
 >          _tag  = Wad 0,
 >          _zzz  = 0 })
->       (vat . jars . at id_jar)
 
 \actentry{|hand|}{give toy tokens to account}
 
@@ -983,7 +1003,7 @@ transfer its ownership at any time using |give|.
 
 \actentry{|sire|}{register a new toy account}
 
-> sire lad = do prepend lad accounts
+> sire lad = do prepend accounts lad
 
 \section{Other stuff}
 
@@ -1022,11 +1042,11 @@ transfer its ownership at any time using |give|.
 >     aver (balance >= wad)
 >
 >   -- Decrease source balance
->     decreaseBy    wad  (ix src)
+>     decrease    (ix src)  wad
 >
 >   -- Increase destination balance
->     initializeTo  0    (at dst)
->     increaseBy    wad  (ix dst)
+>     initialize  (at dst)  0
+>     increase    (ix dst)  wad
 
 \chapter{Act framework}
 \label{chapter:monad}
@@ -1109,16 +1129,14 @@ purely functional.
 >   Nothing -> throwError (AssertError ?act)
 >   Just x  -> return x
 
+> want m p = m >>= (aver . p)
+
 We define |owns id_urn id_lad| as an assertion that the given |cdp| is
 owned by the given account.
 
 > owns id_urn id_lad = do
->
->   id_sender  <- use sender
->
->   aver (id_sender == id_lad)
->
->   return id_sender
+> 
+>   want (look (vat . urns . ix id_urn . lad)) (== id_lad)
 
 
 \section{Modifiers}
