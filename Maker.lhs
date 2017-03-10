@@ -38,6 +38,15 @@
 \par \vspace{0.8cm}
 {\large {issuing a diversely collateralized stablecoin}}
 
+\par \vspace{2.5cm}
+\addtolength{\tabcolsep}{-4pt}
+\addtolength{\extrarowheight}{4pt}
+{\large\sffamily
+\begin{tabular}{ r l }
+Daniel & Brockman \\ Mikael & Brockman \\ Nikolai & Mushegian
+\end{tabular}
+\addtolength{\extrarowheight}{-4pt}
+\addtolength{\tabcolsep}{4pt}}
 
 \vfill
 {\textit{with last update on \today}.}
