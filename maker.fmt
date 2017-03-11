@@ -6,6 +6,8 @@
 
 %format . = "\mathbin{.}"
 
+%format `notElem` = "\notin "
+
 %format empty = "\varnothing"
 %format epsilon = "\epsilon"
 %format @?= = "\cong"
@@ -113,9 +115,9 @@
 %format zzz = "\texttt{zzz}"
 %format Zzz = "\texttt{Zzz}"
 
-%format urns = "\texttt{urn}s"
-%format jars = "\texttt{jar}s"
-%format ilks = "\texttt{ilk}s"
+%format urns = "\texttt{urns}"
+%format jars = "\texttt{jars}"
+%format ilks = "\texttt{ilks}"
 
 %format art0
 %format art1

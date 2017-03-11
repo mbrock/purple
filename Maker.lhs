@@ -1,7 +1,7 @@
 \documentclass[twoside,12pt]{report}
 
 \usepackage[a4paper]{geometry}
-\usepackage[T1]{fontenc}
+\usepackage{polyglossia}
 \usepackage{amsmath}
 \usepackage{scalefnt}
 \usepackage{amssymb}
@@ -9,8 +9,27 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
 \usepackage{parskip}
-\usepackage{tocloft}
+%\usepackage{tocloft}
 \usepackage{mathtools}
+\usepackage[labelfont=bf]{caption}
+\usepackage{fontawesome}
+
+\usepackage{fontspec}
+\setmainfont[Ligatures=TeX]{Linux Libertine O}
+\setsansfont[Ligatures=TeX]{Linux Biolinum O}
+%\setmonofont[Scale=0.9]{Fantasque Sans Mono}
+
+\usepackage{pict2e}
+
+\DeclareRobustCommand{\daisym}{%
+  \begingroup
+  \setlength{\unitlength}{1.5ex}%
+  \begin{picture}(1,1)
+  \polygon(.5,0)(1,.5)(.5,1)(0,.5)
+  \polygon*(.5,0.2)(.8,.5)(.5,.8)(.2,.5)
+  \end{picture}%
+  \endgroup
+}
 
 \hypersetup{colorlinks, linkcolor={blue!45!red}}
 
@@ -29,22 +48,34 @@
 \input{maker-logo.tex}
 \par\vspace{1cm}
 {\large \textsl{presents the}}
-\par\vspace{0.3cm}
+\par\vspace{0.15cm}
 {\Large \scshape reference implementation}
-\par \vspace{0.8cm}
+\par\vspace{0.4cm}
+{\small also known as the} \\
+\par\vspace{0.1cm}
+{\large \textcolor{violet}{\textsc{purple paper}}}
+\par \vspace{0.5cm}
 {\large \textsl{of the remarkable}}
 \par \vspace{0.4cm}
 {\bfseries\LARGE DAI CREDIT SYSTEM} \par
-\par \vspace{0.8cm}
-{\large {issuing a diversely collateralized stablecoin}}
+\par \vspace{0.5cm}
 
-\par \vspace{2.5cm}
+{\large issuing a diversely collateralized stablecoin}
+
+\par\vspace{0.6cm}{\Huge \daisym}
+\par \vspace{0.5cm}
+elucidated by
 \addtolength{\tabcolsep}{-4pt}
 \addtolength{\extrarowheight}{4pt}
-{\large\sffamily
+{\sffamily
+\[ \left \{
 \begin{tabular}{ r l }
-Daniel & Brockman \\ Mikael & Brockman \\ Nikolai & Mushegian
+Daniel & Brockman \\
+Mikael & Brockman \\
+Nikolai & Mushegian \\
+Rain & Clever
 \end{tabular}
+\right \} \]
 \addtolength{\extrarowheight}{-4pt}
 \addtolength{\tabcolsep}{4pt}}
 
@@ -58,7 +89,6 @@ Daniel & Brockman \\ Mikael & Brockman \\ Nikolai & Mushegian
 
 \tableofcontents
 \listoftables
-\listoffigures
 
 \clearpage
 
@@ -73,47 +103,44 @@ Daniel & Brockman \\ Mikael & Brockman \\ Nikolai & Mushegian
 
 The \textsc{dai credit system}, henceforth also ``Maker,'' is a
 network of Ethereum contracts designed to issue the |dai| currency
-token and automatically adjust incentives in order to keep dai market
-value stable relative to |sdr|\footnote{``Special Drawing Rights''
-(ticker symbol |xdr|), the international reserve asset created by the
-International Monetary Fund, whose value is derives from a weighted
-basket of world currencies.  In the long term, the value of dai may
-diverge from the value of |sdr|; whether in an inflationary or
-deflationary way will depend on market forces.} in the short and
+token and automatically adjust credit incentives in order to keep its
+market value stable relative to |sdr|\footnote{``Special Drawing
+Rights'' (ticker symbol |xdr|), the international reserve asset
+created by the International Monetary Fund, whose value is derives
+from a weighted basket of world currencies.} in the short and
 medium term.
 
 New dai enters the money supply when a borrower takes out a loan
 backed by an excess of collateral locked in Maker's token vault.
-The debt and collateral amounts are recorded in a
-\textit{collateralized debt position}, or |cdp|.  Thus all outstanding
-dai represents some |cdp| owner's claim on their collateral.
+Thus all outstanding dai represents some |cdp| owner's claim on their
+collateral.  The debt and collateral amounts are recorded in a
+\textit{collateralized debt position}, or |cdp|.
 
-Maker's knowledge of the market values of dai and the various tokens
-used as collateral comes from \textit{price feeds}.  Prices are used
-to continuously assess the risk of each |cdp|.  If the value of a
-|cdp|'s collateral drops below a certain multiple of its debt, it is
-marked for liquidation, which triggers a decentralized
-auction mechanism.
+Off-chain \textit{price feeds} give Maker knowledge of the market
+values of dai and the various tokens used as collateral, enabling the
+system to assess credit risk.  If the value of a |cdp|'s collateral
+drops below a certain multiple of its debt, a decentralized
+liquidation auction is triggered to sell the collateral for dai to be
+burned thus settling the debt.
 
-Another token, |mkr|, is also controlled by Maker, acting as a
-``share'' in the system itself.  When a |cdp| liquidation fails to
-recover the full value of debt, Maker mints more |mkr| and auctions it
-out.  Thus |mkr| is used to fund last resort market making.  The value
-of the |mkr| token is based on the \textit{stability fee} imposed on
-all dai loans: stability fee revenue goes toward buying |mkr|
-for burning.
+The system issues a separate token with symbol |mkr|, which behaves
+like a ``share'' in Maker itself.  When a collateral auction fails to
+recover the full debt value, the |mkr| token is diluted by way of a
+\emph{reverse auction}. The value of |mkr|, though volatile by design,
+is backed by the revenue from a \textit{stability fee} imposed on all
+dai loans and used to buy |mkr| for burning.
 
-This document is an executable technical specification of the exact
-workings of the Maker smart contracts.
+This document is an executable technical specification of the of the
+Maker smart contracts.  It is a draft; be aware that the contents
+will certainly change before the public launch of the dai.
 
 \section{Reference implementation}
 
-The version of this system that will be deployed on the Ethereum
-blockchain is written in Solidity, which is a workable smart contract
-implementation language.  This reference implementation is a precise
-model of the behavior of those contracts, written as a ``literate''
-Haskell program.  The motivations for such a reference implementation
-include:
+The version of this system that will be deployed on the blockchain is
+written in Solidity, which is a workable smart contract implementation
+language.  This reference implementation is a model of the behavior of
+those contracts, written as a ``literate'' Haskell program.
+The motivations for such a reference implementation include:
 
 \begin{enumerate}
 
@@ -121,9 +148,9 @@ include:
 against each other is a well-known way of ensuring that they both
 behave as intended.
 
-\item \textbf{Testing.}  Haskell lets us use flexible and powerful
-testing tools such as QuickCheck and SmallCheck for comprehensively
-verifying key properties as a middle ground between unit testing and
+\item \textbf{Testing.}  Haskell lets us use powerful testing tools
+such as QuickCheck and SmallCheck for comprehensively verifying key
+properties as a middle ground between unit testing and
 formal verification.
 
 \item \textbf{Explicitness.}  Coding the contract behavior in Haskell,
@@ -176,7 +203,7 @@ does not include the concept of ``allowances.''
 
 \part{Implementation}
 
-\chapter{Preamble}
+\chapter*{Preamble}
 
 %if false
 
@@ -222,6 +249,9 @@ in Appendix~\ref{appendix:numbers}.
 %endif
 
 \chapter{Types}
+
+We now define the data types used by Maker: numeric types,
+identifiers, on-chain records, and test model data.
 
 \section{Numeric types}
 
@@ -273,11 +303,9 @@ explicitly with a |cast| function.
 \section{Identifiers and addresses}
 
 There are several kinds of identifiers used in the system, and we use
-types to distinguish them.
+types to distinguish them.  The type parameter |a| creates distinct
+types; e.g., |Id Foo| and |Id Bar| are incompatible.
 
-> -- The type parameter |a| creates distinct types.
-> -- For example, |Id Foo| and |Id Bar| are incompatible.
->
 > data Id a = Id String
 >   deriving (Show, Eq, Ord)
 
@@ -286,13 +314,10 @@ We define another type for representing Ethereum account addresses.
 > data Address = Address String
 >   deriving (Ord, Eq, Show)
 
-We also have three predefined entity identifiers.
+We also have two predefined entity identifiers.
 
-> -- The |dai| token address
+> -- The |dai| token vault address
 > id_dai = Id "DAI"
->
-> -- The |cdp| engine address
-> id_vat = Address "VAT"
 >
 > -- A test account with ultimate authority
 > id_god = Address "GOD"
@@ -312,20 +337,17 @@ following the |ERC20| interface.  Maker governance therefore involves
 due diligence on collateral token contracts.}  We omit the |ERC20|
 concept of ``allowances.''
 
-> data Gem = Gem {
->
->     _balanceOf    :: Map Holder Wad
->
->   } deriving (Eq, Show)
+Tokens can be held by |cdp| owners, by collateral vaults, or by the
+test driver.  We model this distinction with a data type.
 
-We distinguish between tokens held by vaults, tokens held by the test
-driver, and tokens held by |cdp| owners.
-
-> data Holder  =  InAccount  Address
->              |  InVault    (Id Jar)
->              |  InToy
->
+> data Holder = InAccount Address | InVault (Id Jar) |  InToy
 >   deriving (Eq, Show, Ord)
+
+We now define a |Gem| as simply a map keeping track of the currency
+amount held by each holder.
+
+> data Gem = Gem { _balanceOf    :: Map Holder Wad }
+>   deriving (Eq, Show)
 
 
 \section{|Jar| --- collateral vaults}
@@ -357,12 +379,12 @@ driver, and tokens held by |cdp| owners.
 > data Ilk = Ilk {
 >
 >     _jar  :: Id Jar,  -- Collateral vault
+>     _mat  :: Ray,     -- Liquidation ratio
 >     _axe  :: Ray,     -- Liquidation penalty
 >     _hat  :: Wad,     -- Debt ceiling
->     _mat  :: Ray,     -- Liquidation ratio
 >     _tax  :: Ray,     -- Stability fee
->     _lag  :: Sec,     -- Limbo duration
->     _rho  :: Sec,     -- Last dripped
+>     _lag  :: Sec,     -- Price feed limbo duration
+>     _rho  :: Sec,     -- Time of latest debt unit adjustment
 >     _rum  :: Wad,     -- Total debt in debt unit
 >     _chi  :: Ray      -- Dai value of debt unit
 >
@@ -377,6 +399,9 @@ driver, and tokens held by |cdp| owners.
 \actentry{|art|}{debt denominated in debt unit}
 \actentry{|jam|}{collateral denominated in debt unit}
 
+\begin{table}[h]
+\caption{|cdp| record}
+
 > data Urn = Urn {
 >
 >     _cat  :: Maybe Address,  -- Address of liquidation initiator
@@ -387,6 +412,8 @@ driver, and tokens held by |cdp| owners.
 >     _jam  :: Wad             -- Collateral amount in debt unit
 >
 >   } deriving (Eq, Show)
+ 
+\end{table}
 
 \section{|Vat| --- |cdp| engine}
 
@@ -450,8 +477,8 @@ driver, and tokens held by |cdp| owners.
 >   _rho  = Sec 0
 > }
 
-> defaultUrn :: Id Ilk -> Address -> Urn
-> defaultUrn id_ilk id_lad = Urn {
+> emptyUrn :: Id Ilk -> Address -> Urn
+> emptyUrn id_ilk id_lad = Urn {
 >   _vow  = Nothing,
 >   _cat  = Nothing,
 >   _lad  = id_lad,
@@ -502,40 +529,45 @@ chapter~\ref{chapter:monad}.
 
 \actentry{|gaze|}{identify |cdp| risk stage}
 
-We divide an urn's situation into five stages of risk.
-Table \ref{table:stages} shows which acts each stage allows.
-The stages are naturally ordered from more to less risky.
+In order to prohibit |cdp| acts based on risk situation, we define
+five stages of risk.
 
-> data Stage  =  Dread | Grief | Panic | Worry | Anger | Pride
->
->   deriving (Eq, Ord, Show)
+> data Stage  =  Pride |  Anger |  Worry |  Panic |  Grief |  Dread
+> 
+>   deriving (Eq, Show)
 
-First we define a pure function |analyze| that determines an
-urn's stage.
+We define the function |analyze| that determines the risk stage of a
+|cdp|.
 
 > analyze era0 par0 urn0 ilk0 jar0 =
->   if
->   -- Undergoing liquidation?
->     | view vow  urn0  /= Nothing                -> Dread
->   -- Liquidation triggered?
->     | view cat  urn0  /= Nothing                -> Grief
->   -- Undercollateralized?
->     | pro < min                                 -> Panic
->   -- Price feed expired?
->     | era0 > view zzz jar0 + view lag ilk0      -> Panic
->   -- Price feed in limbo?
->     | view zzz  jar0  < era0                    -> Worry
->   -- Debt ceiling reached?
->     | cap  > view hat ilk0                      -> Anger
->   -- Safely overcollateralized
->     | otherwise                                 -> Pride
+>   if  | view vow  urn0  /= Nothing
+>         -- |cdp| liquidation in progress
+>          -> Dread
+>       | view cat  urn0  /= Nothing
+>         -- |cdp| liquidation triggered
+>          -> Grief  
+>       | pro < min
+>         -- |cdp|'s collateralization below liquidation ratio
+>          -> Panic  
+>       | view zzz jar0 + view lag ilk0 < era0
+>         -- |cdp| type's price limbo exceeded limit
+>          -> Panic  
+>       | view zzz jar0 < era0
+>         -- |cdp| type's price feed in limbo
+>          -> Worry  
+>       | cap  > view hat ilk0
+>         -- |cdp| type's debt ceiling exceeded
+>          -> Anger
+>       | otherwise   
+>         -- No problems
+>          -> Pride
 >
 >   where
 >   -- |cdp|'s collateral value in |sdr|:
 >     pro  = view jam urn0  * view tag jar0
 >
 >   -- |cdp| type's total debt in |sdr|:
->     cap  = (view rum ilk0  * cast (view chi ilk0)) :: Wad
+>     cap  = view rum ilk0  * cast (view chi ilk0)
 >
 >   -- |cdp|'s debt in |sdr|:
 >     con  = view art urn0  * cast (view chi ilk0) * par0
@@ -546,54 +578,72 @@ urn's stage.
 
 \clearpage
 
-\newcommand{\yep}{$\bullet$}
+\newcommand{\yah}{\faHandPeaceO}
+\newcommand{\yep}{\faHandScissorsO}
+\newcommand{\hey}{\faHandGrabO}
+\newcommand{\meh}{\faHandPointerO}
+\newcommand{\woo}{\faHandPaperO}
+\newcommand{\nah}{---}
 \begin{table}[t]
 \caption{|cdp| acts in the five stages of risk}\label{table:stages}
 \vspace{0.25cm}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{ r c c c c c c c c c l }
-&|give|&|shut|&|lock|&|wipe|&|free|&|draw|&|bite|&|grab|&|plop|& \\
-|Pride|&\yep&\yep&\yep&\yep&\yep&\yep&&&& overcollateralized \\
-|Anger|&\yep&\yep&\yep&\yep&\yep&&&&& debt ceiling reached \\
-|Worry|&\yep&\yep&\yep&\yep&&&&&& price feed in limbo \\
-|Panic|&\yep&\yep&\yep&\yep&&&\yep&&& undercollateralized \\
-|Grief|&\yep&&&&&&&\yep&& liquidation initiated \\
-|Dread|&\yep&&&&&&&&\yep& liquidation in progress \\
-\multicolumn{2}{c}{} &
-\multicolumn{3}{c}{risk decreasing} &
-\multicolumn{2}{c}{risk increasing} &
-\multicolumn{3}{c}{risk unwinding} &
-\end{tabular}}
+%\resizebox{\textwidth}{!}{%
+\begin{tabular}{ r c c c c c c c c c }
+       &|give|&|shut|&|lock|&|wipe|&|free|&|draw|&|bite|&|grab|&|plop| \\
+|Pride|&\yah  &\yep  &\yep  &\yep  &\meh  &\meh  &\nah  &\nah  &\nah \\
+|Anger|&\yah  &\yep  &\yep  &\yep  &\meh  &\nah  &\nah  &\nah  &\nah \\
+|Worry|&\yah  &\yep  &\yep  &\yep  &\nah  &\nah  &\nah  &\nah  &\nah \\
+|Panic|&\yah  &\yep  &\yep  &\yep  &\nah  &\nah  &\woo  &\nah  &\nah \\
+|Grief|&\yah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\hey  &\nah \\
+|Dread|&\yah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\hey \\
+&  &
+\multicolumn{3}{c}{decrease risk} &
+\multicolumn{2}{c}{increase risk} &
+\multicolumn{3}{c}{unwind risk}
+\end{tabular} %}
+\vspace{0.5cm}
+\caption*{
+\begin{tabular} { c l }
+\yah & allowed for owner unconditionally \\
+\yep & allowed for owner if able to repay \\
+\meh & allowed for owner if collateralization maintained \\
+\hey & allowed for settler contract \\
+\woo & allowed for anyone
+\end{tabular}
+}
 \end{table}
 
 Now we define the internal act |gaze| which returns the value of
-|analyze| after ensuring the system state is updated.
+|analyze| after ensuring that the system state is updated.
 
 > gaze id_urn = do
 > -- Adjust target price and target rate
 >   prod
 >
-> -- Update price of specific debt unit
+> -- Update debt unit and unprocessed fee revenue
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   drip id_ilk
 >
 > -- Read parameters for risk analysis
->   era0    <- use era
->   par0    <- use (vat . par)
->   urn0    <- look (vat . urns . ix id_urn)
->   ilk0    <- look (vat . ilks . ix (view ilk urn0  ))
->   jar0    <- look (vat . jars . ix (view jar ilk0  ))
+>   era0    <- use   era
+>   par0    <- use   (vat . par)
+>   urn0    <- look  (vat . urns . ix id_urn)
+>   ilk0    <- look  (vat . ilks . ix (view ilk urn0  ))
+>   jar0    <- look  (vat . jars . ix (view jar ilk0  ))
 >
 > -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
+Acts on |cdp|s use |gaze| to prohibit increasing risk when already
+risky, and to freeze debt and collateral during liquidation; see
+Table~\ref{table:stages}.
+
 \clearpage
 \section{Lending}
 
-\actentry{|open|}{create |cdp|}
-Any Ethereum address can open one or more accounts with the system
-using |open|, specifying an account identifier (self-chosen) and a
-|cdp| type.
+\actentry{|open|}{create |cdp|} Any user can open one or more accounts
+with the system using |open|, specifying a self-chosen account
+identifier and a |cdp| type.
 
 > open id_urn id_ilk = do
 >
@@ -602,8 +652,7 @@ using |open|, specifying an account identifier (self-chosen) and a
 >
 > -- Create a |cdp| record with the sender as owner
 >   id_lad <- use sender
->   initialize (vat . urns . at id_urn)
->     (defaultUrn id_ilk id_lad)
+>   initialize (vat . urns . at id_urn) (emptyUrn id_ilk id_lad)
 >     
 
 \actentry{|give|}{transfer |cdp| account} The owner of a |cdp| can
@@ -618,9 +667,9 @@ transfer its ownership at any time using |give|.
 > -- Transfer ownership
 >   vat . urns . ix id_urn . lad .= id_lad
 
-\actentry{|lock|}{deposit collateral}Unless liquidation has begun for
-a |cdp|, its owner can use |lock| to deposit more collateral, thus
-increasing the collateralization ratio.
+\actentry{|lock|}{deposit collateral}Unless liquidation has been
+triggered for a |cdp|, its owner can use |lock| to deposit more
+collateral.
 
 > lock id_urn wad_gem = do
 >
@@ -628,24 +677,24 @@ increasing the collateralization ratio.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Fail if liquiditation initiated
->   want (gaze id_urn) (< Grief)
+> -- Fail if liquidation initiated
+>   want (gaze id_urn) (`notElem` [Grief, Dread])
 >
 > -- Identify collateral type
 >   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
 >   id_jar  <- look (vat . ilks . ix id_ilk  . jar)
 >
 > -- Transfer tokens from owner to collateral vault
->   id_lad  <- use sender
 >   pull id_jar id_lad wad_gem
 >
 > -- Record an increase in collateral
 >   increase (vat . urns . ix id_urn . jam) wad_gem
 
-\actentry{|free|}{withdraw collateral}When a |cdp| is
-overcollateralized, its owner can use |free| to withdraw any amount of
-collateral, as long as the withdrawal would not
-cause undercollateralization.
+\actentry{|free|}{withdraw collateral}When a |cdp| has no risk
+problems---except that its |cdp| type's debt ceiling may be
+exceeded---its owner can use |free| to withdraw some amount of
+collateral, as long as the withdrawal would not reduce
+collateralization below the liquidation ratio.
 
 > free id_urn wad_gem = do
 >
@@ -656,19 +705,18 @@ cause undercollateralization.
 > -- Record a decrease in collateral
 >   decrease (vat . urns . ix id_urn . jam) wad_gem
 >
-> -- Roll back if withdrawal caused undercollateralization
->   want (gaze id_urn) (`elem` [Pride, Worry])
+> -- Roll back on any risk problem except debt ceiling excess
+>   want (gaze id_urn) (`elem` [Pride, Anger])
 >
 > -- Transfer tokens from collateral vault to owner
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   id_jar  <- look (vat . ilks . ix id_ilk . jar)
 >   push id_jar id_lad wad_gem
 
-\actentry{|draw|}{issue dai as debt}A |cdp| owner can use |draw| to
-issue and lend an amount of dai, thus increasing the |cdp|'s debt and
-lowering its collateralization ratio---as long as the |cdp| type's
-debt ceiling is not reached and the loan would not result
-in undercollateralization.
+\actentry{|draw|}{issue dai as debt}When a |cdp| has no risk problems,
+its owner can can use |draw| to take out a loan of newly minted dai,
+as long as the |cdp| type's debt ceiling is not reached and the loan
+would not result in undercollateralization.
 
 > draw id_urn wad_dai = do
 >
@@ -676,11 +724,11 @@ in undercollateralization.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Update value of |cdp| type's debt unit
+> -- Update debt unit and unprocessed fee revenue
 >   id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >   chi1       <- drip id_ilk
 >
-> -- Denominate draw amount in debt unit
+> -- Denominate loan in debt unit
 >   let  wad_chi = wad_dai / cast chi1
 >
 > -- Increase |cdp| debt
@@ -689,10 +737,10 @@ in undercollateralization.
 > -- Increase total debt of |cdp| type
 >   increase (vat . ilks . ix id_ilk . rum) wad_chi
 >
-> -- Roll back if loan caused undercollateralization or debt excess
+> -- Roll back on any risk problem
 >   want (gaze id_urn) (== Pride)
 >
-> -- Mint dai and send to |cdp| owner
+> -- Mint dai and transfer to |cdp| owner
 >   mint id_dai wad_dai
 >   push id_dai id_lad wad_dai
 
@@ -707,9 +755,9 @@ long as liquidation has not been initiated.
 >   owns id_urn id_lad
 >
 > -- Fail if liquidation initiated
->   want (gaze id_urn) (< Grief)
+>   want (gaze id_urn) (`notElem` [Grief, Dread])
 >
-> -- Update value of debt unit
+> -- Update debt unit and unprocessed fee revenue
 >   id_ilk <- look (vat . urns . ix id_urn . ilk)
 >   chi1   <- drip id_ilk
 >
@@ -735,7 +783,7 @@ been initiated.
 
 > shut id_urn = do
 >
->   -- Update value of debt unit
+>   -- Update debt unit and unprocessed fee revenue
 >     id_ilk <- look (vat . urns . ix id_urn . ilk)
 >     chi1   <- drip id_ilk
 >
@@ -790,13 +838,13 @@ been initiated.
 >     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
 
 \clearpage
-\actentry{|drip|}{update value of debt unit}
+\actentry{|drip|}{update debt unit and unprocessed fee revenue}
 
 > drip id_ilk = do
 >
 >   rho0  <- look (vat . ilks . ix id_ilk . rho)  -- Time stamp of previous |drip|
 >   tax0  <- look (vat . ilks . ix id_ilk . tax)  -- Current stability fee
->   chi0  <- look (vat . ilks . ix id_ilk . chi)  -- Current value of debt unit
+>   chi0  <- look (vat . ilks . ix id_ilk . chi)  -- Current debt unit value
 >   rum0  <- look (vat . ilks . ix id_ilk . rum)  -- Current total debt in debt unit
 >   joy0  <- look (vat . joy)                     -- Current unprocessed stability fee revenue
 >   era0  <- use era                              -- Current time stamp
@@ -843,7 +891,7 @@ been initiated.
 >   -- Read current debt
 >     art0    <- look (vat . urns . ix id_urn . art)
 >
->   -- Update value of debt unit
+>   -- Update debt unit
 >     id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >     chi1       <- drip id_ilk
 >
@@ -950,7 +998,7 @@ been initiated.
 
 \section{Treasury}
 
-\actentry{|pull|}{take tokens to vault}
+\actentry{|pull|}{transfer tokens to collateral vault}
 
 > pull id_jar id_lad wad_gem =
 >
@@ -958,7 +1006,7 @@ been initiated.
 >     (InAccount  id_lad)
 >     (InVault    id_jar)
 
-\actentry{|push|}{send tokens from vault}
+\actentry{|push|}{transfer tokens from collateral vault}
 
 > push id_jar id_lad wad_gem =
 >
@@ -1130,6 +1178,8 @@ purely functional.
 >   Just x  -> return x
 
 > want m p = m >>= (aver . p)
+
+> notElem x xs = not (elem x xs)
 
 We define |owns id_urn id_lad| as an assertion that the given |cdp| is
 owned by the given account.

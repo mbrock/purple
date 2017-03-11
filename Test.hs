@@ -200,7 +200,7 @@ testCaseX = do
   write (id_god, Hand (Address "Bob") (Wad 1) (Id "DGX"))
   write (id_god, Form (Id "DGX1") (Id "DGX"))
   write (Address "Bob", Open (Id "Bob") (Id "DGX1"))
-  write (Address "Bob", Lock (Id "Bob") 0.5)
+  -- write (Address "Bob", Lock (Id "Bob") 0.5)
 
 crossExamine :: Seq (Address, Act) -> (Bool, Doc)
 crossExamine acts =

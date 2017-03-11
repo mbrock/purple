@@ -63,7 +63,7 @@
 >   (+), (-), (*), (/), (^), (^^), div,
 >
 > -- Utilities
->   all,
+>   all, not, elem,
 >
 > -- Constants
 >   mempty, undefined, otherwise)
