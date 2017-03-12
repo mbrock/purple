@@ -135,7 +135,7 @@ diluted to back emergency debt. The value of |mkr|, though volatile by
 design, is backed by the revenue from a \textit{stability fee} imposed
 on all dai loans and used to buy |mkr| for burning.
 
-For more details on the economics of the Dai Credit System, as well as
+For more details on the economics of the system, as well as
 descriptions of governance, off-chain mechanisms that provide
 efficiency, and so on, see the white\-paper.
 
