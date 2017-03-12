@@ -94,7 +94,6 @@ Rain & Clever \\
 \setcounter{tocdepth}{3}
 
 \tableofcontents
-\listoftables
 
 \clearpage
 
@@ -610,7 +609,7 @@ chapter~\ref{chapter:monad}.
 \newpage
 \section{Assessment}
 
-\actentry{|gaze|}{identify |cdp| risk stage}
+\actentry{|feel|}{identify |cdp| risk stage}
 
 In order to prohibit |cdp| acts based on risk situation, we define
 five stages of risk.
@@ -696,10 +695,10 @@ We define the function |analyze| that determines the risk stage of a
 }
 \end{table}
 
-Now we define the internal act |gaze| which returns the value of
+Now we define the internal act |feel| which returns the value of
 |analyze| after ensuring that the system state is updated.
 
-> gaze id_urn = do
+> feel id_urn = do
 > -- Adjust target price and target rate
 >   prod
 >
@@ -717,7 +716,7 @@ Now we define the internal act |gaze| which returns the value of
 > -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
 
-Acts on |cdp|s use |gaze| to prohibit increasing risk when already
+Acts on |cdp|s use |feel| to prohibit increasing risk when already
 risky, and to freeze debt and collateral during liquidation; see
 Table~\ref{table:stages}.
 
@@ -761,7 +760,7 @@ collateral.
 >   owns id_urn id_lad
 >
 > -- Fail if liquidation triggered or initiated
->   want (gaze id_urn) (`notElem` [Grief, Dread])
+>   want (feel id_urn) (`notElem` [Grief, Dread])
 >
 > -- Identify collateral type
 >   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
@@ -791,7 +790,7 @@ liquidation ratio.
 >   decrease (vat . urns . ix id_urn . jam) wad_gem
 >
 > -- Roll back on any risk problem except debt ceiling excess
->   want (gaze id_urn) (`elem` [Pride, Anger])
+>   want (feel id_urn) (`elem` [Pride, Anger])
 >
 > -- Transfer tokens from collateral vault to owner
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
@@ -823,7 +822,7 @@ would not result in undercollateralization.
 >   increase (vat . ilks . ix id_ilk . rum) wad_chi
 >
 > -- Roll back on any risk problem
->   want (gaze id_urn) (== Pride)
+>   want (feel id_urn) (== Pride)
 >
 > -- Mint dai and transfer to |cdp| owner
 >   mint id_dai wad_dai
@@ -840,7 +839,7 @@ long as liquidation has not been triggered.
 >   owns id_urn id_lad
 >
 > -- Fail if liquidation triggered or initiated
->   want (gaze id_urn) (`notElem` [Grief, Dread])
+>   want (feel id_urn) (`notElem` [Grief, Dread])
 >
 > -- Update debt unit and unprocessed fee revenue
 >   id_ilk <- look (vat . urns . ix id_urn . ilk)
@@ -890,7 +889,7 @@ been initiated.
 
 The feedback mechanism is updated through |prod|, which can be invoked
 at any time by keepers, but is also invoked as a side effect of any
-|cdp| act that uses |gaze| to assess the |cdp| risk.
+|cdp| act that uses |feel| to assess the |cdp| risk.
 
 > prod = do
 >
@@ -941,7 +940,7 @@ system cannot iterate over |cdp| records to effect such changes.
 Instead each |cdp| type has a single ``debt unit'' which accumulates
 the stability fee.  The |drip| act updates this unit.  It can be
 called at any time by keepers, but is also called as a side effect of
-every act that uses |gaze| to assess |cdp| risk.
+every act that uses |feel| to assess |cdp| risk.
 
 > drip id_ilk = do
 >
@@ -1004,7 +1003,7 @@ grab the collateral and begin auctioning.
 > bite id_urn = do
 >
 >   -- Fail if |cdp| is not in the appropriate risk stage
->     want (gaze id_urn) (== Panic)
+>     want (feel id_urn) (== Panic)
 >
 >   -- Record the sender as the liquidation initiator
 >     id_cat              <- use sender
@@ -1032,7 +1031,7 @@ receive the collateral tokens.
 > grab id_urn = auth $ do
 >
 >   -- Fail if |cdp| is not marked for liquidation
->     want (gaze id_urn) (== Grief)
+>     want (feel id_urn) (== Grief)
 >
 >   -- Record the sender as the |cdp|'s settler
 >     id_vow <- use sender
@@ -1054,7 +1053,7 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 > plop id_urn wad_dai = auth $ do
 >
 >   -- Fail unless |cdp| is in liquidation
->     want (gaze id_urn) (== Dread)
+>     want (feel id_urn) (== Dread)
 >
 >   -- Forget the |cdp|'s settler
 >     vat . urns . ix id_urn . vow .= Nothing
