@@ -23,11 +23,11 @@
 \chapter{Prelude}
 \label{appendix:prelude}
 
-> module Maker.Prelude (
->   module Maker.Prelude,
->   module X
-> ) where
+This module reexports symbols from other packages and exports a few
+new symbols of its own.
 
+> module Maker.Prelude (module Maker.Prelude, module X) where
+>
 > import Prelude as X (
 >
 > -- Conversions to and from strings
@@ -73,19 +73,12 @@ We use a typical composition of monad transformers from the
 See section~\ref{section:maker-monad} (\textit{The Maker monad}).
 
 > import Control.Monad.State as X (
->   MonadState,          -- Type class of monads with state
 >   StateT,              -- Type constructor that adds state to a monad type
 >   execStateT,          -- Runs a state monad with given initial state
 >   get,                 -- Gets the state in a |do| block
 >   put)                 -- Sets the state in a |do| block
 >
-> import Control.Monad.Reader as X (
->   MonadReader,         -- Type class of monads with ``environments''
->   ask,                 -- Reads the environment in a |do| block
->   local)               -- Runs a sub-computation with a modified environment
->
 > import Control.Monad.Writer as X (
->   MonadWriter,         -- Type class of monads that emit logs
 >   WriterT,             -- Type constructor that adds logging to a monad type
 >   Writer,              -- Type constructor of logging monads
 >   runWriterT,          -- Runs a writer monad transformer
@@ -123,16 +116,13 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 
 > import Control.Lens as X (
 >
->   Lens',
->   lens,
+>   Lens', lens,
 >
 >   makeLenses,        -- Defines lenses for record fields
 >   makeFields,        -- Defines lenses for record fields
 >   set,               -- Writes a lens
->   use, preuse,
->   Zoom (..),
->   view, preview,     -- Reads a lens in a |do| block
->   (&~),              -- Lets us use a |do| block with setters \xxx{Get rid of this.}
+>   use, preuse,       -- Reads a lens from a state value
+>   view,              -- Reads a lens from a value
 >   ix,                -- Lens for map retrieval and updating
 >   at,                -- Lens for map insertion
 >
@@ -142,8 +132,7 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 >   (%=),              -- Update according to function
 >   (?=))              -- Insert into map
 >
-> import Control.Lens.Zoom as X
-> import Control.Lens.Internal.Zoom as X
+> import Control.Lens.Zoom as X (zoom)
 
 Where the Solidity code uses \texttt{mapping}, we use Haskell's
 regular tree-based map type\footnote{We assume the axiom that Keccak
@@ -154,28 +143,20 @@ hash collisions are impossible.}.
 >   empty,       -- Polymorphic empty mapping
 >   singleton)   -- Creates a mapping with a single key--value pair
 
-For sequences of log entries, we use a sequence structure which has better
-time complexity than regular lists.
-
-> import            Data.Sequence as X (Seq)
-> import qualified  Data.Sequence as Sequence
-
-Some less interesting imports are omitted from this document.
-
 %if 0
 
 > import Data.Monoid as X (First, (<>))
 > import Control.Monad as X (unless)
 > import Control.Arrow as X (first)
 >
-> import qualified Control.Monad.Writer as Writer
-
-> write = Writer.tell . Sequence.singleton
-
-> decrease   a x = a -=  x
-> increase   a x = a +=  x
-> initialize a x = a %=  (\case Nothing -> Just x; y -> y)
-> prepend    a x = a %=  (x :)
 
 %endif
 
+Finally we define some of our own convenience functions.
+
+> decrease    a x = a -=  x
+> increase    a x = a +=  x
+> initialize  a x = a %=  (\case Nothing -> Just x; y -> y)
+> prepend     a x = a %=  (x :)
+> 
+> x `notElem` xs = not (elem x xs)

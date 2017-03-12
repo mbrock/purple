@@ -32,7 +32,8 @@
 %format sdr = "\textsc{sdr}"
 %format xdr = "\textsc{xdr}"
 %format imf = "\textsc{imf}"
-%format erc20 = "\textsc{erc\scalefont{0.79}{20}}"
+%format erc20 = "\texttt{ERC20}"
+%format ERC20 = "\texttt{ERC20}"
 
 %format art = "\texttt{art}"
 %format Art = "\texttt{Art}"
@@ -106,6 +107,8 @@
 %format Urn = "\texttt{Urn}"
 %format vat = "\texttt{vat}"
 %format Vat = "\texttt{Vat}"
+%format vox = "\texttt{vox}"
+%format Vox = "\texttt{Vox}"
 %format vow = "\texttt{vow}"
 %format Vow = "\texttt{Vow}"
 %format wad = "\texttt{wad}"
@@ -118,6 +121,7 @@
 %format urns = "\texttt{urns}"
 %format jars = "\texttt{jars}"
 %format ilks = "\texttt{ilks}"
+%format gems = "\texttt{gems}"
 
 %format art0
 %format art1
@@ -273,11 +277,13 @@
 %format Auth = "\texttt{Auth}"
 %format warp = "\texttt{warp}"
 %format Warp = "\texttt{Warp}"
+%format Addr = "\texttt{addr}"
 %format aver = "\texttt{aver}"
 
 %format id_urn
 %format id_ilk
 %format id_jar
+%format id_gem
 %format id_lad
 %format id_vow
 %format id_cat
@@ -289,6 +295,7 @@
 
 %format gemBalanceOf = "\texttt{gemBalanceOf}"
 
+%format _erc20 = "\texttt{$\bullet$ erc20}"
 %format _gem = "\texttt{$\bullet$ gem}"
 %format _tag = "\texttt{$\bullet$ tag}"
 %format _zzz = "\texttt{$\bullet$ zzz}"
@@ -315,9 +322,11 @@
 %format _joy = "\texttt{$\bullet$ joy}"
 %format _sin = "\texttt{$\bullet$ sin}"
 %format _jars = "\texttt{$\bullet$ jars}"
+%format _gems = "\texttt{$\bullet$ gems}"
 %format _ilks = "\texttt{$\bullet$ ilks}"
 %format _urns = "\texttt{$\bullet$ urns}"
 %format _vat = "\texttt{$\bullet$ vat}"
+%format _vox = "\texttt{$\bullet$ vox}"
 %format _era = "\texttt{$\bullet$ era}"
 %format _sender = "\texttt{$\bullet$ sender}"
 %format _accounts = "\texttt{$\bullet$ accounts}"

@@ -11,4 +11,4 @@ CMD cp -r /src/*.lhs /src/*.fmt /src/Maker /src/*.pdf /src/*.tex . && lhs2TeX *.
 xelatex -halt-on-error x.tex && \
 xelatex -halt-on-error x.tex && \
 xelatex -halt-on-error x.tex && \
-cp x.pdf /doc/MakerDao900.pdf
+cp x.pdf /doc/purple.pdf

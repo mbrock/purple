@@ -1,4 +1,4 @@
-\chapter{Rounding fixed point numbers}
+\chapter{Fixed point numbers with rounding}
 \label{appendix:numbers}
 
 \DeclarePairedDelimiter\ceil{\lceil}{\rceil}

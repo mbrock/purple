@@ -38,18 +38,20 @@
 
 %include maker.fmt
 
+\newenvironment{code}{\begin\{Verbatim\}[samepage=true]}{\end\{Verbatim\}}
+
 \begin{document}
 
 \begin{titlepage}
 \centering
 
-\vspace*{2cm}
+\vspace*{0cm}
 \def\svgwidth{2cm}
 \input{maker-logo.tex}
 \par\vspace{1cm}
 {\large \textsl{presents the}}
-\par\vspace{0.15cm}
-{\Large \scshape reference implementation}
+\par\vspace{0.3cm}
+{\LARGE \scshape reference \\[0.25cm] implementation}
 \par\vspace{0.4cm}
 {\small also known as the} \\
 \par\vspace{0.1cm}
@@ -62,9 +64,8 @@
 
 {\large issuing a diversely collateralized stablecoin}
 
-\par\vspace{0.6cm}{\Huge \daisym}
-\par \vspace{0.5cm}
-elucidated by
+\par \vspace{0.7cm}
+formulated by
 \addtolength{\tabcolsep}{-4pt}
 \addtolength{\extrarowheight}{4pt}
 {\sffamily
@@ -73,14 +74,19 @@ elucidated by
 Daniel & Brockman \\
 Mikael & Brockman \\
 Nikolai & Mushegian \\
-Rain & Clever
+Rune & Christensen \\
+Rain & Clever \\
 \end{tabular}
 \right \} \]
 \addtolength{\extrarowheight}{-4pt}
 \addtolength{\tabcolsep}{4pt}}
 
-\vfill
+\par\vspace{0.35cm}
+
 {\textit{with last update on \today}.}
+
+
+\par\vfill{\Huge \daisym}
 
 \end{titlepage}
 
@@ -110,31 +116,35 @@ created by the International Monetary Fund, whose value is derives
 from a weighted basket of world currencies.} in the short and
 medium term.
 
-New dai enters the money supply when a borrower takes out a loan
-backed by an excess of collateral locked in Maker's token vault.
-Thus all outstanding dai represents some |cdp| owner's claim on their
-collateral.  The debt and collateral amounts are recorded in a
-\textit{collateralized debt position}, or |cdp|.
+New dai enters the money supply when a borrower locks an excess of
+collateral in Maker's token vault and takes out a loan.  The debt and
+collateral amounts are recorded in a \textit{collateralized debt
+position}, or |cdp|.  Thus all outstanding dai represents some |cdp|
+owner's claim on their collateral---until risk provokes a liquidation.
 
 Off-chain \textit{price feeds} give Maker knowledge of the market
 values of dai and the various tokens used as collateral, enabling the
 system to assess credit risk.  If the value of a |cdp|'s collateral
-drops below a certain multiple of its debt, a decentralized
-liquidation auction is triggered to sell the collateral for dai to be
-burned thus settling the debt.
+drops below a certain multiple of its debt, a decentralized auction is
+triggered to liquidate the collateral for dai to be burned thus
+settling the debt.
 
 The system issues a separate token with symbol |mkr|, which behaves
-like a ``share'' in Maker itself.  When a collateral auction fails to
-recover the full debt value, the |mkr| token is diluted by way of a
-\emph{reverse auction}. The value of |mkr|, though volatile by design,
-is backed by the revenue from a \textit{stability fee} imposed on all
-dai loans and used to buy |mkr| for burning.
+like a ``share'' in Maker itself.  Since collateral auctions may fail
+to recover the full value of liquidated debt, the |mkr| token can be
+diluted to back emergency debt. The value of |mkr|, though volatile by
+design, is backed by the revenue from a \textit{stability fee} imposed
+on all dai loans and used to buy |mkr| for burning.
+
+For more details on the economics of the Dai Credit System, as well as
+descriptions of governance, off-chain mechanisms that provide
+efficiency, and so on, see the white\-paper.
 
 This document is an executable technical specification of the of the
 Maker smart contracts.  It is a draft; be aware that the contents
-will certainly change before the public launch of the dai.
+will certainly change before launch.
 
-\section{Reference implementation}
+\section{Motivation}
 
 The version of this system that will be deployed on the blockchain is
 written in Solidity, which is a workable smart contract implementation
@@ -177,6 +187,11 @@ Haskell, such as Liquid Haskell (which provides compile time logical
 property checking) and \texttt{sbv} (a toolkit for model checking and
 symbolic execution).
 
+\item \textbf{Clarity.}  An implementation not intended to be deployed
+on the blockchain is free from concerns about optimizing for gas cost
+and other factors that make the Solidity implementation less ideal as
+an understandable specification.
+
 \item \textbf{Simulation.}  Solidity is highly specific to the
 Ethereum blockchain environment and as such does not have facilities
 for interfacing with files or other computer programs.  This makes the
@@ -188,18 +203,34 @@ statistical aspects.
 
 \section{Limitations}
 
-This implementation has a simplified model of Maker's governance
-authorization.  Instead of the ``access control list'' approach of the
-\texttt{DSGuard} component, we give full authority to one single
-address.  A future iteration will include the full
-authorization model.
+This model is limited in that it has
 
-We also do not currently model the EVM's 256 bit word size, but allow
-all quantities to grow arbitrarily large.  This will also be modelled
-in a future iteration.
+\begin{enumerate}
+\item a simplified version of authorization for governance;
+\item a simplified version of |ERC20| token semantics;
+\item no implementation of the decentralized auction contracts; and
+\item no 256-bit word limits.
+\end{enumerate}
 
-Finally, our model of |ERC20| tokens is simplified, and for example
-does not include the concept of ``allowances.''
+These limitations will be addressed in future revisions.
+
+\section{Verification}
+
+Separately from this document, we are developing automatic test suites
+that generate many, large, and diverse action sequences for property
+verification.  One such property is that the reference implementation
+exactly matches the on-chain implementation; this is verified through
+the generation of Solidity test cases with assertions covering the
+entire state.  Other key properties include
+
+\begin{itemize}
+\item that the target price changes only according to the target rate;
+\item that the total dai supply is fully accounted for by |cdp| debts;
+\item that |cdp| acts are restricted with respect to risk stage;
+\end{itemize}
+
+along with similar invariants and conditions.  A future revision of
+this document will include formal statements of these properties.
 
 \part{Implementation}
 
@@ -227,10 +258,15 @@ does not include the concept of ``allowances.''
 
 %endif
 
-We replace the default prelude module with our own.  This brings in
-dependencies and hides unneeded symbols.
-Consult Appendix~\ref{appendix:prelude} to see exactly what is brought
-into scope.
+This is a Haskell program, and as such makes reference to a background
+of symbols defined in libraries, as a mathematical paper depends on
+preestablished theories.
+
+Context should allow the reader to understand most symbols without
+further reading, but Appendix~\ref{appendix:prelude} lists and briefly
+explains each imported type and function.
+
+We replace the default prelude module with our own.
 
 > module Maker where
 >
@@ -247,11 +283,16 @@ in Appendix~\ref{appendix:numbers}.
 > import Debug.Trace
 
 %endif
+Now we proceed to define the specifics of the Maker system.
 
 \chapter{Types}
 
-We now define the data types used by Maker: numeric types,
+This chapter defines the data types used by Maker: numeric types,
 identifiers, on-chain records, and test model data.
+
+Haskell syntax note: |newtype| defines a type synonym with distinct
+type identity; |data| creates a record type; and |deriving| creates
+automatic instances of common functionality.
 
 \section{Numeric types}
 
@@ -262,11 +303,11 @@ digits (used for precise rates and ratios).
 See Appendix~\ref{appendix:numbers} for details on decimal fixed point
 numbers and rounding.
 
-> -- Define the distinct type for currency quantities
+> -- Define the distinct type of currency quantities
 > newtype Wad = Wad (Decimal E18)
 >   deriving (  Ord, Eq, Num, Real, Fractional, RealFrac)
 >
-> -- Define the distinct type for rates and ratios
+> -- Define the distinct type of rates and ratios
 > newtype Ray = Ray (Decimal E36)
 >   deriving (  Ord, Eq, Num, Real, Fractional, RealFrac)
 
@@ -287,7 +328,8 @@ numbers and rounding.
 > instance Epsilon Ray  where epsilon = Ray epsilon
 
 %endif
-We also define a type for time durations in whole seconds.
+We also define a type for time durations in whole seconds, as this is
+the maximum precision allowed by the Ethereum virtual machine.
 
 > newtype Sec = Sec Int
 >   deriving (Eq, Ord, Enum, Num, Real, Integral)
@@ -306,13 +348,11 @@ There are several kinds of identifiers used in the system, and we use
 types to distinguish them.  The type parameter |a| creates distinct
 types; e.g., |Id Foo| and |Id Bar| are incompatible.
 
-> data Id a = Id String
->   deriving (Show, Eq, Ord)
+> newtype Id a = Id String deriving (Eq, Ord, Show)
 
 We define another type for representing Ethereum account addresses.
 
-> data Address = Address String
->   deriving (Ord, Eq, Show)
+> newtype Address = Address String deriving (Eq, Ord, Show)
 
 We also have two predefined entity identifiers.
 
@@ -329,43 +369,46 @@ We also have two predefined entity identifiers.
 
 %endif
 
-\section{|Gem| --- token model}
-
-In this model, all tokens behave in the same simple way.\footnote{In
-the real world, token semantics can differ, despite nominally
-following the |ERC20| interface.  Maker governance therefore involves
-due diligence on collateral token contracts.}  We omit the |ERC20|
-concept of ``allowances.''
-
-Tokens can be held by |cdp| owners, by collateral vaults, or by the
-test driver.  We model this distinction with a data type.
-
-> data Holder = InAccount Address | InVault (Id Jar) |  InToy
->   deriving (Eq, Show, Ord)
-
-We now define a |Gem| as simply a map keeping track of the currency
-amount held by each holder.
-
-> data Gem = Gem { _balanceOf    :: Map Holder Wad }
->   deriving (Eq, Show)
-
-
-\section{|Jar| --- collateral vaults}
-
-\actentry{|gem|}{collateral token}
+\section{|Gem| --- collateral price feed entry}
+\actentry{|jar|}{collateral token}
 \actentry{|tag|}{market price of token}
 \actentry{|zzz|}{expiration time of token price feed}
 
-> data Jar = Jar {
+The data received from price feeds is categorized by token and stored
+in |Gem| records.  Our model also has the token balances embedded in
+these records; in reality\footnote{We use ``reality'' to denote the
+actual state of the consensus Ethereum blockchain.}, the balances are
+in separate |ERC20| contracts.
+
+> data Gem = Gem {
 >
->     _gem  :: Gem,  -- Collateral token
->     _tag  :: Wad,  -- Market price
->     _zzz  :: Sec   -- Price expiration
+>     _erc20  :: ERC20,  -- Token balances
+>     _tag    :: Wad,    -- Market price denominated in |SDR|
+>     _zzz    :: Sec     -- Time of price expiration
 >
 >   } deriving (Eq, Show)
 
-\section{|Ilk| --- |cdp| type}
+\section{|erc20| --- token model}
 
+In reality, token semantics can differ, despite nominally following
+the |erc20| interface.  Governance therefore involves reviewing the
+behaviors of collateral tokens.  In our model, tokens behave in the
+same simple way.  We also omit the notion of ``allowance.''
+
+Tokens can be held by |cdp| owners, by token vaults, or by the test
+driver.  We model this distinction with a data type.
+
+> data Holder = InAccount Address | InVault (Id Gem) |  InToy
+>   deriving (Eq, Ord, Show)
+
+We now define an |ERC20| instance as a map tracking the token quantity
+held by each holder.
+
+> data ERC20 = ERC20 { _balanceOf    :: Map Holder Wad }
+>   deriving (Eq, Show)
+
+
+\section{|Ilk| --- |cdp| type}
 \actentry{|jar|}{collateral token vault}
 \actentry{|mat|}{liquidation ratio}
 \actentry{|axe|}{liquidation penalty ratio}
@@ -376,73 +419,106 @@ amount held by each holder.
 \actentry{|din|}{total outstanding dai}
 \actentry{|chi|}{dai value of debt unit}
 
+Each |cdp| belongs to a |cdp| type, specified by an |Ilk| record
+containing parameters for lending: the collateral token, the limit for
+the debt-to-collateral ratio, the penalty upon forced liquidation, and
+various other parameters.  These are defined by governance.
+The meaning of each parameter is defined by its interactions in the
+act definitions of Chapter~\ref{chapter:acts}; see the whitepaper for
+an overview.
+
 > data Ilk = Ilk {
 >
->     _jar  :: Id Jar,  -- Collateral vault
->     _mat  :: Ray,     -- Liquidation ratio
->     _axe  :: Ray,     -- Liquidation penalty
->     _hat  :: Wad,     -- Debt ceiling
->     _tax  :: Ray,     -- Stability fee
->     _lag  :: Sec,     -- Price feed limbo duration
+>     _jar  :: Id Gem,  -- Collateral token identifier
+>     _lag  :: Sec,     -- Maximum duration of price feed limbo
+> 
+>     _mat  :: Ray,     -- Collateral-to-debt ratio at which liquidation can be triggered
+>     _axe  :: Ray,     -- Penalty on liquidation as fraction of collateral value
+>     _hat  :: Wad,     -- Limit on total debt for |cdp| type (``debt ceiling'')
+>     _tax  :: Ray,     -- Stability fee as per-second fraction of debt value
+> 
+>     _chi  :: Ray,     -- Dai value of internal debt unit
 >     _rho  :: Sec,     -- Time of latest debt unit adjustment
->     _rum  :: Wad,     -- Total debt in debt unit
->     _chi  :: Ray      -- Dai value of debt unit
+>     _rum  :: Wad      -- Total debt denominated in debt unit
 >
 >   } deriving (Eq, Show)
 
 \section{|Urn| --- collateralized debt position (|cdp|)}
-
 \actentry{|cat|}{address of liquidation initiator}
 \actentry{|vow|}{address of liquidation contract}
 \actentry{|lad|}{|cdp| owner}
 \actentry{|ilk|}{|cdp| type}
 \actentry{|art|}{debt denominated in debt unit}
 \actentry{|jam|}{collateral denominated in debt unit}
-
-\begin{table}[h]
-\caption{|cdp| record}
+For each |cdp| we maintain an |Urn| record identifying its type and
+specifying ownership, quantities of debt and collateral denominated in
+the |cdp| type's debt unit, along with the progress of liquidation (if
+relevant).
 
 > data Urn = Urn {
 >
->     _cat  :: Maybe Address,  -- Address of liquidation initiator
->     _vow  :: Maybe Address,  -- Address of liquidation contract
->     _lad  :: Address,        -- Issuer
->     _ilk  :: Id Ilk,         -- |cdp| type
+>     _ilk  :: Id Ilk,         -- Identifier of |cdp| type
+>     _lad  :: Address,        -- Owner of |cdp|
+> 
 >     _art  :: Wad,            -- Outstanding debt in debt unit
->     _jam  :: Wad             -- Collateral amount in debt unit
+>     _jam  :: Wad,            -- Collateral amount in debt unit
+> 
+>     _cat  :: Maybe Address,  -- Address that triggered liquidation, if relevant
+>     _vow  :: Maybe Address   -- Address of settling contract, if relevant
 >
 >   } deriving (Eq, Show)
- 
-\end{table}
 
-\section{|Vat| --- |cdp| engine}
-
+\section{|Vox| --- feedback mechanism data}
 \actentry{|fix|}{market price of |dai| denominated in |sdr|}
 \actentry{|par|}{target price of |dai| denominated in |sdr|}
 \actentry{|how|}{sensitivity parameter}
 \actentry{|way|}{rate of target price change}
 \actentry{|tau|}{time of latest target update}
+
+The \emph{feedback mechanism} is the aspect of the |cdp| engine that
+adjusts the target price of dai based on market price, and its data is
+kept in a singleton record called |Vox|.
+
+> data Vox = Vox {
+> 
+>     _fix   :: Wad,    -- Market price of dai denominated in |sdr|
+>     _par   :: Wad,    -- Target price of dai denominated in |sdr|
+>     _way   :: Ray,    -- Current per-second change in target price
+> 
+>     _how   :: Ray,    -- Sensitivity parameter set by governance
+>     _tau   :: Sec     -- Time of latest feedback update
+> 
+>  } deriving (Eq, Show)
+
+Keeping the feedback data separate allows us to more easily upgrade
+the mechanism in the future.
+
+\section{|Vat| --- |cdp| engine data}
 \actentry{|joy|}{unprocessed stability fee revenue}
 \actentry{|sin|}{bad debt from liquidated |cdp|s}
 
+The |Vat| record aggregates the records of |cdp|s, |cdp| types, and
+price feeds, along with the data of the feedback mechanism, and two
+accounting quantities.
+
 > data Vat = Vat {
->
->     _fix  :: Wad,                -- Market price
->     _how  :: Ray,                -- Sensitivity
->     _par  :: Wad,                -- Target price
->     _way  :: Ray,                -- Target rate
->     _tau  :: Sec,                -- Last prodded
->     _joy  :: Wad,                -- Unprocessed stability fees
->     _sin  :: Wad,                -- Bad debt from liquidated |cdp|s
->     _jars  :: Map (Id Jar) Jar,  -- Collateral tokens
->     _ilks  :: Map (Id Ilk) Ilk,  -- |cdp| types
->     _urns  :: Map (Id Urn) Urn   -- |cdp|s
+> 
+>     _gems  :: Map (Id Gem) Gem,   -- Price feed data
+>     _ilks  :: Map (Id Ilk) Ilk,   -- |cdp| type records
+>     _urns  :: Map (Id Urn) Urn,   -- |cdp| records
+> 
+>     _vox   :: Vox,                -- Data of feedback mechanism
+> 
+>     _joy   :: Wad,                -- Unprocessed stability fees
+>     _sin   :: Wad                 -- Bad debt from liquidated |cdp|s
 >
 >   } deriving (Eq, Show)
 
 \section{System model}
-
 \actentry{|era|}{current time}
+
+Finally we define a record with no direct counterpart in the Solidity
+contracts, which has the |Vat| record along with model state.
 
 > data System =  System {
 >
@@ -453,20 +529,21 @@ amount held by each holder.
 >
 >   } deriving (Eq, Show)
 
+%if 0
+
 \section*{Lens fields}
 
-> makeLenses ''Gem
-> makeLenses ''Jar
-> makeLenses ''Ilk
-> makeLenses ''Urn
-> makeLenses ''Vat
+> makeLenses ''ERC20  ; makeLenses ''Gem  ; makeLenses ''Ilk
+> makeLenses ''Urn    ; makeLenses ''Vox  ; makeLenses ''Vat
 > makeLenses ''System
+
+%endif
 
 \section{Default data}
 
-> defaultIlk :: Id Jar -> Ilk
-> defaultIlk id_jar = Ilk {
->   _jar  = id_jar,
+> defaultIlk :: Id Gem -> Ilk
+> defaultIlk id_gem = Ilk {
+>   _jar  = id_gem,
 >   _axe  = Ray 1,
 >   _mat  = Ray 1,
 >   _tax  = Ray 1,
@@ -489,23 +566,22 @@ amount held by each holder.
 
 > initialVat :: Ray -> Vat
 > initialVat how0 = Vat {
->   _tau   = 0,
->   _fix   = Wad 1,
->   _par   = Wad 1,
->   _how   = how0,
->   _way   = Ray 1,
+>   _vox   = Vox {
+>     _tau   = 0,
+>     _fix   = Wad 1,
+>     _par   = Wad 1,
+>     _how   = how0,
+>     _way   = Ray 1
+>   },
 >   _joy   = Wad 0,
 >   _sin   = Wad 0,
 >   _ilks  = empty,
 >   _urns  = empty,
->   _jars  =
->     singleton id_dai Jar {
->       _gem   = Gem {
->         _balanceOf    = empty
->       },
->       _tag  = Wad 0,
->       _zzz  = 0
->     }
+>   _gems  = singleton id_dai Gem {
+>     _erc20  = ERC20 { _balanceOf = empty },
+>     _tag    = Wad 0,
+>     _zzz    = 0
+>   }
 > }
 
 > initialSystem :: Ray -> System
@@ -517,11 +593,18 @@ amount held by each holder.
 > }
 
 \chapter{Acts}
+\label{chapter:acts}
 
 The \emph{acts} are the basic state transitions of the system.
 
+Unless specified as \emph{internal}, acts are accessible as public
+functions on the blockchain.
+
+The |auth| modifier marks acts which can only be invoked from
+addresses to which the system has granted authority.
+
 For details on the underlying ``Maker monad,'' which specifies how the
-act definitions behave with regard to state and rollback thereof, see
+act definitions behave with regard to state and rollback, see
 chapter~\ref{chapter:monad}.
 
 \newpage
@@ -604,11 +687,11 @@ We define the function |analyze| that determines the risk stage of a
 \vspace{0.5cm}
 \caption*{
 \begin{tabular} { c l }
+\woo & allowed for anyone \\
 \yah & allowed for owner unconditionally \\
 \yep & allowed for owner if able to repay \\
-\meh & allowed for owner if collateralization maintained \\
+\meh & allowed for owner if collateralized \\
 \hey & allowed for settler contract \\
-\woo & allowed for anyone
 \end{tabular}
 }
 \end{table}
@@ -626,10 +709,10 @@ Now we define the internal act |gaze| which returns the value of
 >
 > -- Read parameters for risk analysis
 >   era0    <- use   era
->   par0    <- use   (vat . par)
+>   par0    <- use   (vat . vox . par)
 >   urn0    <- look  (vat . urns . ix id_urn)
 >   ilk0    <- look  (vat . ilks . ix (view ilk urn0  ))
->   jar0    <- look  (vat . jars . ix (view jar ilk0  ))
+>   jar0    <- look  (vat . gems . ix (view jar ilk0  ))
 >
 > -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
@@ -677,24 +760,26 @@ collateral.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Fail if liquidation initiated
+> -- Fail if liquidation triggered or initiated
 >   want (gaze id_urn) (`notElem` [Grief, Dread])
 >
 > -- Identify collateral type
 >   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
->   id_jar  <- look (vat . ilks . ix id_ilk  . jar)
+>   id_gem  <- look (vat . ilks . ix id_ilk  . jar)
 >
 > -- Transfer tokens from owner to collateral vault
->   pull id_jar id_lad wad_gem
+>   pull id_gem id_lad wad_gem
 >
 > -- Record an increase in collateral
 >   increase (vat . urns . ix id_urn . jam) wad_gem
 
+\clearpage
+
 \actentry{|free|}{withdraw collateral}When a |cdp| has no risk
-problems---except that its |cdp| type's debt ceiling may be
-exceeded---its owner can use |free| to withdraw some amount of
-collateral, as long as the withdrawal would not reduce
-collateralization below the liquidation ratio.
+problems (except that its |cdp| type's debt ceiling may be exceeded),
+its owner can use |free| to withdraw some amount of collateral, as
+long as the withdrawal would not reduce collateralization below the
+liquidation ratio.
 
 > free id_urn wad_gem = do
 >
@@ -710,8 +795,8 @@ collateralization below the liquidation ratio.
 >
 > -- Transfer tokens from collateral vault to owner
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
->   id_jar  <- look (vat . ilks . ix id_ilk . jar)
->   push id_jar id_lad wad_gem
+>   id_gem  <- look (vat . ilks . ix id_ilk . jar)
+>   push id_gem id_lad wad_gem
 
 \actentry{|draw|}{issue dai as debt}When a |cdp| has no risk problems,
 its owner can can use |draw| to take out a loan of newly minted dai,
@@ -746,7 +831,7 @@ would not result in undercollateralization.
 
 \actentry{|wipe|}{repay debt and burn dai}A |cdp| owner who has
 previously loaned dai can use |wipe| to repay part of their debt as
-long as liquidation has not been initiated.
+long as liquidation has not been triggered.
 
 > wipe id_urn wad_dai = do
 >
@@ -754,7 +839,7 @@ long as liquidation has not been initiated.
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Fail if liquidation initiated
+> -- Fail if liquidation triggered or initiated
 >   want (gaze id_urn) (`notElem` [Grief, Dread])
 >
 > -- Update debt unit and unprocessed fee revenue
@@ -803,14 +888,19 @@ been initiated.
 
 \actentry{|prod|}{adjust target price and target rate}
 
+The feedback mechanism is updated through |prod|, which can be invoked
+at any time by keepers, but is also invoked as a side effect of any
+|cdp| act that uses |gaze| to assess the |cdp| risk.
+
 > prod = do
 >
+> -- Read all parameters relevant for feedback mechanism
 >   era0  <- use era
->   tau0  <- use (vat . tau)
->   fix0  <- use (vat . fix)
->   par0  <- use (vat . par)
->   how0  <- use (vat . how)
->   way0  <- use (vat . way)
+>   tau0  <- use (vat . vox . tau)
+>   fix0  <- use (vat . vox . fix)
+>   par0  <- use (vat . vox . par)
+>   how0  <- use (vat . vox . how)
+>   way0  <- use (vat . vox . way)
 >
 >   let
 >
@@ -827,9 +917,12 @@ been initiated.
 >     way1  = inj (  prj way0 +
 >                    if fix0 < par0 then wag else -wag)
 >
->   vat.par  .= par1
->   vat.way  .= way1
->   vat.tau  .= era0
+> -- Update target price
+>   vat.vox.par  .= par1
+> -- Update rate of price change
+>   vat.vox.way  .= way1
+> -- Record time of update
+>   vat.vox.tau  .= era0
 >
 >   where
 >
@@ -837,69 +930,93 @@ been initiated.
 >     prj x  = if x >= 1  then x - 1  else 1 - 1 / x
 >     inj x  = if x >= 0  then x + 1  else 1 / (1 - x)
 
+
+
 \clearpage
 \actentry{|drip|}{update debt unit and unprocessed fee revenue}
 
+The stability fee of a |cdp| type can change through governance.
+Due to the constraint that acts should run in constant time, the
+system cannot iterate over |cdp| records to effect such changes.
+Instead each |cdp| type has a single ``debt unit'' which accumulates
+the stability fee.  The |drip| act updates this unit.  It can be
+called at any time by keepers, but is also called as a side effect of
+every act that uses |gaze| to assess |cdp| risk.
+
 > drip id_ilk = do
 >
->   rho0  <- look (vat . ilks . ix id_ilk . rho)  -- Time stamp of previous |drip|
->   tax0  <- look (vat . ilks . ix id_ilk . tax)  -- Current stability fee
->   chi0  <- look (vat . ilks . ix id_ilk . chi)  -- Current debt unit value
->   rum0  <- look (vat . ilks . ix id_ilk . rum)  -- Current total debt in debt unit
->   joy0  <- look (vat . joy)                     -- Current unprocessed stability fee revenue
->   era0  <- use era                              -- Current time stamp
+> -- Time stamp of previous |drip|
+>   rho0  <- look (vat . ilks . ix id_ilk . rho)
+> -- Current stability fee
+>   tax0  <- look (vat . ilks . ix id_ilk . tax)
+> -- Current debt unit value
+>   chi0  <- look (vat . ilks . ix id_ilk . chi)
+> -- Current total debt in debt unit
+>   rum0  <- look (vat . ilks . ix id_ilk . rum)
+> -- Current unprocessed stability fee revenue
+>   joy0  <- look (vat . joy)
+> -- Current time stamp
+>   era0  <- use era
 >
 >   let
+>   -- Time difference in seconds
 >     age   = era0 - rho0
+>   -- Value of debt unit increased according to stability fee
 >     chi1  = chi0 * tax0 ^^ age
+>   -- Denominate stability fee revenue in new unit
 >     joy1  = joy0 + (cast (chi1 - chi0) :: Wad) * rum0
 >
->   vat . ilks . ix id_ilk . chi  .= chi1
+> -- Record time of update
 >   vat . ilks . ix id_ilk . rho  .= era0
+> -- Record new debt unit
+>   vat . ilks . ix id_ilk . chi  .= chi1
+> -- Record fee revenue denominated in new debt unit
 >   vat . joy  .= joy1
 >
+> -- Return the new debt unit
 >   return chi1
 
-\section{Feedback}
+\clearpage
+\section{Price feed input}
 
-\actentry{|mark|}{update market price of dai}
+\actentry{|mark|}{update market price of collateral token}The |mark|
+act records a new market price of a collateral token along with the
+expiration date of this price.
 
-> mark id_jar tag1 zzz1 =
->   auth $ do
->     vat . jars . ix id_jar . tag  .= tag1
->     vat . jars . ix id_jar . zzz  .= zzz1
+> mark id_gem tag1 zzz1 = auth $ do
+>     vat . gems . ix id_gem . tag  .= tag1
+>     vat . gems . ix id_gem . zzz  .= zzz1
 
-\actentry{|tell|}{update market price of collateral token}
+\actentry{|tell|}{update market price of dai}The |tell| act records a
+new market price of the |dai| token along with the expiration date of
+this price.
 
-> tell wad_gem =
->   auth $ do
->     vat . fix .= wad_gem
+> tell wad_gem = auth $ do vat . vox . fix .= wad_gem
 
 \section{Liquidation}
 
-\actentry{|bite|}{mark for liquidation}
+\actentry{|bite|}{mark for liquidation}When a |cdp|'s risk stage marks
+it as in need of liquidation, any account can invoke the |bite| act to
+trigger the liquidation process.  This records the |cdp|'s debt as bad
+debt in the |cdp| engine and enables the settler contract to later
+grab the collateral and begin auctioning.
 
 > bite id_urn = do
 >
->   -- Fail if |cdp| is not in need of liquidation
+>   -- Fail if |cdp| is not in the appropriate risk stage
 >     want (gaze id_urn) (== Panic)
 >
 >   -- Record the sender as the liquidation initiator
 >     id_cat              <- use sender
 >     vat . urns . ix id_urn . cat  .= Just id_cat
 >
->   -- Read current debt
->     art0    <- look (vat . urns . ix id_urn . art)
->
 >   -- Update debt unit
 >     id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >     chi1       <- drip id_ilk
 >
->   -- Read liquidation penalty ratio
->     id_ilk  <- look (vat . urns . ix id_urn  . ilk)
->     axe0    <- look (vat . ilks . ix id_ilk  . axe)
->
 >   -- Apply liquidation penalty to debt
+>     art0    <- look (vat . urns . ix id_urn . art)
+>     axe0    <- look (vat . ilks . ix id_ilk  . axe)
 >     let art1 = art0 * cast axe0
 >
 >   -- Update |cdp| debt
@@ -908,11 +1025,11 @@ been initiated.
 >   -- Record as bad debt
 >     increase (vat . sin) (art1 * cast chi1)
 
-\actentry{|grab|}{take tokens for liquidation}
+\actentry{|grab|}{take tokens for liquidation}After liquidation has
+been triggered, the designated settler contract invokes |grab| to
+receive the collateral tokens.
 
-> grab id_urn =
->
->   auth $ do
+> grab id_urn = auth $ do
 >
 >   -- Fail if |cdp| is not marked for liquidation
 >     want (gaze id_urn) (== Grief)
@@ -923,11 +1040,18 @@ been initiated.
 >
 >   -- Forget the |cdp|'s requester of liquidation
 >     vat . urns . ix id_urn . cat .= Nothing
+>
+>   -- Transfer the tokens to the settler
+>     jam0    <- look (vat . urns . ix id_urn . jam)
+>     id_ilk  <- look (vat . urns . ix id_urn . ilk)
+>     id_gem  <- look (vat . ilks . ix id_ilk . jar)
+>     push id_gem id_vow jam0
 
-\actentry{|plop|}{finish liquidation returning profit}
+\actentry{|plop|}{finish liquidation returning profit}When the settler
+has finished the process of liquidating a |cdp|'s collateral, it
+invokes |plop| on the |cdp| to give back any excess collateral gains.
 
-> plop id_urn wad_dai =
->   auth $ do
+> plop id_urn wad_dai = auth $ do
 >
 >   -- Fail unless |cdp| is in liquidation
 >     want (gaze id_urn) (== Dread)
@@ -936,96 +1060,120 @@ been initiated.
 >     vat . urns . ix id_urn . vow .= Nothing
 >
 >   -- Return some amount of excess auction gains
+>     id_vow  <- use sender
+>     id_ilk  <- look (vat . urns . ix id_urn . ilk)
+>     id_gem  <- look (vat . ilks . ix id_ilk . jar)
+>     pull id_gem id_vow wad_dai
+>
+>   -- Record the gains as the |cdp|'s collateral
 >     vat . urns . ix id_urn . jam .= wad_dai
 
-\actentry{|heal|}{process bad debt}
+\actentry{|heal|}{record bad debt as processed}When the settler has
+processed all the bad debt due to |cdp| liquidation, it invokes |heal|
+to reset the bad debt quantity.
 
-> heal wad_dai =
->   auth $ do
->     decrease (vat . sin) wad_dai
+> heal wad_dai = auth $ do vat . sin .= 0
 
-\actentry{|love|}{process stability fee revenue}
+\actentry{|love|}{record stability fee revenue as processed}When the
+settler has processed all the accrued stability fee revenue, it
+invokes |love| to reset the unprocessed stability fee quantity.
 
-> love wad_dai =
->   auth $ do
->     decrease (vat . joy) wad_dai
+> love wad_dai = auth $ do vat . joy .= 0
 
 \section{Governance}
 
-\actentry{|form|}{create a new |cdp| type}
+\actentry{|form|}{create a new |cdp| type}Governance uses |form| to
+create a new |cdp| type.  Since the new type is initialized with a
+zero debt ceiling, a separate transaction can safely set the risk
+parameters before any lending occurs.
 
-> form id_ilk id_jar =
->   auth $ do
->     initialize (vat . ilks . at id_ilk)
->        (defaultIlk id_jar)
+> form id_ilk id_gem = auth $ do
+>     initialize (vat . ilks . at id_ilk) (defaultIlk id_gem)
 
-\actentry{|frob|}{set the sensitivity parameter}
+\actentry{|frob|}{set the sensitivity parameter}Governance uses |frob|
+to alter the sensitivity factor, which is the only mutable parameter
+of the feedback mechanism.
 
-> frob how1 =
->   auth $ do
->     vat . how .= how1
+> frob how1 = auth $ do vat . vox . how .= how1
 
-\actentry{|chop|}{set liquidation penalty}
+\actentry{|chop|}{set liquidation penalty}\actentry{|cork|}{set debt ceiling}\actentry{|calm|}{set limbo duration}%
+\actentry{|cuff|}{set liquidation ratio}%
+Governance can alter the five risk parameters of a |cdp| type using
+|cuff| for the liquidation ratio; |chop| for the liquidation penalty;
+|cork| for the debt ceiling; |calm| for the duration of
+price limbo; and |crop| for the stability fee.
 
-> chop id_ilk axe1 =
->   auth $ do
->     vat . ilks . ix id_ilk . axe .= axe1
+> cuff id_ilk mat1  = auth $ do vat . ilks . ix id_ilk . mat  .= mat1
+> chop id_ilk axe1  = auth $ do vat . ilks . ix id_ilk . axe  .= axe1
+> cork id_ilk hat1  = auth $ do vat . ilks . ix id_ilk . hat  .= hat1
+> calm id_ilk lag1  = auth $ do vat . ilks . ix id_ilk . lag  .= lag1
 
-\actentry{|cork|}{set debt ceiling}
-
-> cork id_ilk hat1 =
->   auth $ do
->     vat . ilks . ix id_ilk . hat .= hat1
-
-\actentry{|calm|}{set limbo duration}
-
-> calm id_ilk lag1 =
->   auth $ do
->     vat . ilks . ix id_ilk . lag .= lag1
-
-\actentry{|cuff|}{set liquidation ratio}
-
-> cuff id_ilk mat1 =
->   auth $ do
->     vat . ilks . ix id_ilk . mat .= mat1
-
-\actentry{|crop|}{set stability fee}
+\actentry{|crop|}{set stability fee}%
+When altering the stability fee with |crop|, we ensure that the
+previous stability fee has been accounted for in the internal
+debt unit.
 
 > crop id_ilk tax1 =
 >   auth $ do
+>   -- Apply the current stability fee to the internal debt unit
 >     drip id_ilk
+>   -- Change the stability fee
 >     vat . ilks . ix id_ilk . tax .= tax1
 
-\section{Treasury}
+\section{Vaults}
+\actentry{|pull|}{transfer tokens to vault}%
+The internal act |pull| transfers tokens into a vault.
+It is used by |lock| to acquire collateral from a |cdp| owner;
+by |wipe| to acquire dai from a |cdp| owner;
+and by |plop| to acquire collateral from the settler contract.
 
-\actentry{|pull|}{transfer tokens to collateral vault}
+> pull id_gem id_lad wad_gem =
+>   transfer id_gem wad_gem (InAccount id_lad) (InVault id_gem)
 
-> pull id_jar id_lad wad_gem =
+\actentry{|push|}{transfer tokens from vault}%
+The internal act |push| transfers tokens out from a collateral vault.
+It is used by |draw| to send dai to a |cdp| owner;
+by |free| to send collateral to a |cdp| owner;
+and by |grab| to send collateral to the settler contract.
+
+> push id_gem id_lad wad_gem =
+>   transfer id_gem wad_gem (InVault id_gem) (InAccount id_lad)
+
+\section{Token manipulation}%
+We model the |erc20| transfer function in simplified form (omitting
+the concept of ``allowance'').
+
+> transfer id_gem wad src dst  =
 >
->   transfer id_jar wad_gem
->     (InAccount  id_lad)
->     (InVault    id_jar)
-
-\actentry{|push|}{transfer tokens from collateral vault}
-
-> push id_jar id_lad wad_gem =
+> -- Operate in the token's balance table
+>   zoom (vat . gems . ix id_gem . erc20 . balanceOf) $ do
 >
->   transfer  id_jar wad_gem
->     (InVault    id_jar)
->     (InAccount  id_lad)
+>   -- Fail if source balance insufficient
+>     balance <- look (ix src)
+>     aver (balance >= wad)
 >
+>   -- Update balances
+>     decrease    (ix src)  wad
+>     initialize  (at dst)  0
+>     increase    (ix dst)  wad
 
-\actentry{|mint|}{create tokens}
+\actentry{|mint|}{inflate token}%
+The internal act |mint| inflates the supply of a token.
+It is used by |draw| to create new |dai|, and by settlers to create new |mkr|.
 
-> mint id_jar wad0 =
->   zoom (vat . jars . ix id_jar . gem) $ do
->     increase (balanceOf . ix (InVault id_jar)) wad0
+> mint id_gem wad0 =
+>   zoom (vat . gems . ix id_gem . erc20) $ do
+>     increase (balanceOf . ix (InVault id_gem)) wad0
 
-\actentry{|burn|}{destroy tokens}
+\actentry{|burn|}{deflate token}%
+The internal act |burn| deflates the supply of a token.
+It is used by |wipe| to destroy |dai|, and by settlers to destroy |mkr|.
 
-> burn id_jar wad0 =
->   zoom (vat . jars . ix id_jar . gem) $ do
->     decrease (balanceOf . ix (InVault id_jar)) wad0
+> burn id_gem wad0 =
+>   zoom (vat . gems . ix id_gem . erc20) $ do
+>     decrease (balanceOf . ix (InVault id_gem)) wad0
+
+%if 0
 
 \section{Manipulation}
 
@@ -1035,18 +1183,18 @@ been initiated.
 
 \actentry{|mine|}{create toy token type}
 
-> mine id_jar = do
+> mine id_gem = do
 >
->     initialize (vat . jars . at id_jar)
->       (Jar {
->          _gem   = Gem (singleton InToy 1000000000000),
->          _tag  = Wad 0,
->          _zzz  = 0 })
+>     initialize (vat . gems . at id_gem)
+>       (Gem {
+>          _erc20  = ERC20 (singleton InToy 1000000000000),
+>          _tag    = Wad 0,
+>          _zzz    = 0 })
 
 \actentry{|hand|}{give toy tokens to account}
 
-> hand dst wad_gem id_jar = do
->   transfer id_jar wad_gem
+> hand dst wad_gem id_gem = do
+>   transfer id_gem wad_gem
 >     InToy (InAccount dst)
 
 \actentry{|sire|}{register a new toy account}
@@ -1080,106 +1228,77 @@ been initiated.
 >   sender  .= old
 >   return y
 
-> transfer id_jar wad src dst  =
->
-> -- Operate in the token's balance table
->   zoom (vat . jars . ix id_jar . gem . balanceOf) $ do
->
->   -- Fail if source balance insufficient
->     balance <- look (ix src)
->     aver (balance >= wad)
->
->   -- Decrease source balance
->     decrease    (ix src)  wad
->
->   -- Increase destination balance
->     initialize  (at dst)  0
->     increase    (ix dst)  wad
+%endif
 
 \chapter{Act framework}
 \label{chapter:monad}
 
+%if 0
+
 \section{Act descriptions}
 
-We define the Maker act vocabulary as a data type.
+We define the Maker act vocabulary as a data type to represent invocations.
 
 > data Act =
->      Bite     (Id Urn)
->   |  Draw     (Id Urn)  Wad
->   |  Form     (Id Ilk)  (Id Jar)
->   |  Free     (Id Urn)  Wad
->   |  Frob     Ray
->   |  Give     (Id Urn)  Address
->   |  Grab     (Id Urn)
->   |  Heal     Wad
->   |  Lock     (Id Urn)  Wad
->   |  Love     Wad
->   |  Mark     (Id Jar)  Wad       Sec
->   |  Open     (Id Urn)  (Id Ilk)
->   |  Prod
->   |  Pull     (Id Jar)  Address   Wad
->   |  Shut     (Id Urn)
->   |  Tell     Wad
->   |  Warp     Sec
->   |  Wipe     (Id Urn)  Wad
->   |  Mine     (Id Jar)
->   |  Hand     Address   Wad       (Id Jar)
->   |  Sire     Address
->
-> -- Test acts
->   |  Addr     Address
->
->   deriving (Eq, Show)
+>      Bite     (Id Urn)       |  Draw     (Id Urn)  Wad          |  Form     (Id Ilk)  (Id Gem)
+>   |  Free     (Id Urn)  Wad  |  Frob     Ray                    |  Give     (Id Urn)  Address
+>   |  Grab     (Id Urn)       |  Heal     Wad                    |  Lock     (Id Urn)  Wad
+>   |  Love     Wad            |  Mark     (Id Gem)  Wad  Sec     |  Open     (Id Urn)  (Id Ilk)
+>   |  Prod                    |  Pull     (Id Gem)  Address Wad  |  Shut     (Id Urn)
+>   |  Tell     Wad            |  Wipe     (Id Urn)  Wad
+>   |  Mine (Id Gem)  | Hand Address Wad (Id Gem) | Sire Address
+>   |  Addr Address    | Warp     Sec
+>  deriving (Eq, Show)
 
-Acts can fail.  We divide the failure modes into general assertion
-failures and authentication failures.
+%endif
 
-> data Error = AssertError Act | AuthError
->   deriving (Show, Eq)
+The reader does not need any abstract understanding of monads to
+understand the code.  They give us a nice syntax---the |do| block
+notation---for expressing exceptions and state in a way that is still
+purely functional.  Each line of such a block is interpreted by the
+monad to provide the semantics we want.
 
 \section{The |Maker| monad}
 \label{section:maker-monad}
 
-The reader does not need any abstract understanding of monads to
-understand the code.  What they give us is a nice syntax---the |do|
-notation---for expressing exceptions and state in a way that is still
-purely functional.
+This defines the |Maker| monad as a simple composition of a state
+monad and an error monad:
 
-> newtype Maker' s a =
->   Maker (StateT s (Except Error) a)
->
->   deriving
->     (  Functor, Applicative, Monad,
->        MonadError   Error,
->        MonadState   s)
+> type Maker a = StateT System (Except Error) a
 
-> type Maker a = Maker' System a
+We divide act failure modes into general assertion failures and
+authentication failures.
 
-> type instance Zoomed (Maker' s) = Focusing (Except Error)
-> instance Zoom (Maker' s) (Maker' t) s t where
->   zoom l (Maker m) = Maker (zoom l m)
+> data Error = AssertError Act | AuthError
+>   deriving (Show, Eq)
 
-> exec  ::  System
->       ->  Maker ()
->       ->  Either Error System
-> exec sys (Maker m) =
->   runExcept (execStateT m sys)
+An act can be executed on a given initial system state using |exec|.
+The result is either an error or a new state.  The |exec| function can
+also accept a sequence of acts, which will be interpreted as a
+single transaction.
+
+> exec :: System -> Maker () -> Either Error System
+> exec sys m = runExcept (execStateT m sys)
 
 \section{Asserting}
 
-> aver x = unless x (throwError (AssertError ?act))
+We now define a set of functions that fail unless some condition holds.
 
+> -- General assertion
+> aver x = unless x (throwError (AssertError ?act))
+>
+> -- Assert that an indexed value is not present
 > none x = preuse x >>= \case
 >   Nothing -> return ()
 >   Just _  -> throwError (AssertError ?act)
-
+>
+> -- Assert that an indexed value is present
 > look f = preuse f >>= \case
 >   Nothing -> throwError (AssertError ?act)
 >   Just x  -> return x
-
+>
+> -- Execute an act and assert a condition on its result
 > want m p = m >>= (aver . p)
-
-> notElem x xs = not (elem x xs)
 
 We define |owns id_urn id_lad| as an assertion that the given |cdp| is
 owned by the given account.
@@ -1188,17 +1307,15 @@ owned by the given account.
 > 
 >   want (look (vat . urns . ix id_urn . lad)) (== id_lad)
 
-
-\section{Modifiers}
-
-\actentry{|auth|}{authenticating actions}
+We define |auth k| as an act modifier that executes |k| only if the
+sender is authorized.
 
 > auth continue = do
 >   s <- use sender
->   unless (s == id_god)
->     (throwError AuthError)
+>   unless (s == id_god) (throwError AuthError)
 >   continue
 
+%if 0
 
 \chapter{Testing}
 
@@ -1236,16 +1353,18 @@ Sketches for property stuff...
 >   setter x (a, b) = set f a (set g b x)
 
 > keeps :: Parameter -> Maker () -> System -> Bool
-> keeps Fix  = maintains (vat . fix)
-> keeps Par  = maintains (vat . par)
-> keeps Way  = maintains (vat . way)
+> keeps Fix  = maintains (vat . vox . fix)
+> keeps Par  = maintains (vat . vox . par)
+> keeps Way  = maintains (vat . vox . way)
 
 Thus:
 
 > foo sys0 = all (\f -> f sys0)
->   [changesOnly (  (vat . par) `also`
->                   (vat . way))
+>   [changesOnly (  (vat . vox . par) `also`
+>                   (vat . vox . way))
 >      (perform Prod)]
+
+%endif
 
 \appendix
 

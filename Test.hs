@@ -31,12 +31,16 @@ import qualified Data.Map as Map
 import Control.Arrow ((>>>))
 import Control.Monad.Trans (MonadTrans, lift)
 import Control.Monad (sequence_, forM_)
+import Control.Monad.Writer hiding (fix)
+
+import qualified Control.Monad.Writer as Writer
 
 import Data.CReal
 import Data.Text.Lazy (Text, pack, intercalate)
 import Data.Text.IO (putStrLn)
 import Data.Foldable (toList, foldl')
 
+import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 
 import Test.Tasty
@@ -50,6 +54,8 @@ import Test.QuickCheck
   )
 
 import Text.PrettyPrint.Leijen.Text hiding ((<>))
+
+write = Writer.tell . Seq.singleton
 
 type Precise = CReal 256
 
@@ -135,15 +141,15 @@ forAllPairs x f = forM_ (pairs x) f
 
 dump :: System -> Writer (Seq Claim) ()
 dump sys = do
-  write . WadIs ("vox.fix()") $ Exactly (view (vat . fix) sys)
-  write . WadIs ("vox.par()") $ Exactly (view (vat . par) sys)
-  write . RayIs ("vox.way()") $ Exactly (view (vat . way) sys)
-  write . RayIs ("vox.how()") $ Exactly (view (vat . how) sys)
-  forAllPairs (view (vat . jars) sys) $ \(Id i, j) -> do
+  write . WadIs ("vox.fix()") $ Exactly (view (vat.vox.fix) sys)
+  write . WadIs ("vox.par()") $ Exactly (view (vat.vox.par) sys)
+  write . RayIs ("vox.way()") $ Exactly (view (vat.vox.way) sys)
+  write . RayIs ("vox.how()") $ Exactly (view (vat.vox.how) sys)
+  forAllPairs (view (vat . gems) sys) $ \(Id i, j) -> do
     write
       . WadIs    ("vat.tag(jars[" <> txt i <> "])")
       $ Exactly  (view tag j)
-    forAllPairs (view (gem . balanceOf) j) $ \(a, x) -> do
+    forAllPairs (view (erc20 . balanceOf) j) $ \(a, x) -> do
       let a' = case a of
                  InAccount (Address h) ->
                    "lads[" <> txt h <> "]"
