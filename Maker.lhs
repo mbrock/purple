@@ -63,21 +63,18 @@
 \par \vspace{0.5cm}
 
 {\large issuing a diversely collateralized stablecoin}
+\par \vspace{0.5cm}
+{\large\textit{formulated by}}
+\par \vspace{0.cm}
 
-\par \vspace{0.7cm}
-formulated by
 \addtolength{\tabcolsep}{-4pt}
 \addtolength{\extrarowheight}{4pt}
 {\sffamily
-\[ \left \{
 \begin{tabular}{ r l }
 Daniel & Brockman \\
 Mikael & Brockman \\
 Nikolai & Mushegian \\
-Rune & Christensen \\
-Rain & Clever \\
 \end{tabular}
-\right \} \]
 \addtolength{\extrarowheight}{-4pt}
 \addtolength{\tabcolsep}{4pt}}
 
@@ -413,7 +410,7 @@ held by each holder.
 \actentry{|axe|}{liquidation penalty ratio}
 \actentry{|hat|}{debt ceiling}
 \actentry{|tax|}{stability fee}
-\actentry{|lag|}{price feed limbo duration}
+\actentry{|lax|}{price feed limbo duration}
 \actentry{|rho|}{time of debt unit adjustment}
 \actentry{|din|}{total outstanding dai}
 \actentry{|chi|}{dai value of debt unit}
@@ -429,7 +426,7 @@ an overview.
 > data Ilk = Ilk {
 >
 >     _jar  :: Id Gem,  -- Collateral token identifier
->     _lag  :: Sec,     -- Maximum duration of price feed limbo
+>     _lax  :: Sec,     -- Maximum duration of price feed limbo
 > 
 >     _mat  :: Ray,     -- Collateral-to-debt ratio at which liquidation can be triggered
 >     _axe  :: Ray,     -- Penalty on liquidation as fraction of collateral value
@@ -547,7 +544,7 @@ contracts, which has the |Vat| record along with model state.
 >   _mat  = Ray 1,
 >   _tax  = Ray 1,
 >   _hat  = Wad 0,
->   _lag  = Sec 0,
+>   _lax  = Sec 0,
 >   _chi  = Ray 1,
 >   _rum  = Wad 0,
 >   _rho  = Sec 0
@@ -631,7 +628,7 @@ We define the function |analyze| that determines the risk stage of a
 >       | pro < min
 >         -- |cdp|'s collateralization below liquidation ratio
 >          -> Panic  
->       | view zzz jar0 + view lag ilk0 < era0
+>       | view zzz jar0 + view lax ilk0 < era0
 >         -- |cdp| type's price limbo exceeded limit
 >          -> Panic  
 >       | view zzz jar0 < era0
@@ -1105,7 +1102,7 @@ price limbo; and |crop| for the stability fee.
 > cuff id_ilk mat1  = auth $ do vat . ilks . ix id_ilk . mat  .= mat1
 > chop id_ilk axe1  = auth $ do vat . ilks . ix id_ilk . axe  .= axe1
 > cork id_ilk hat1  = auth $ do vat . ilks . ix id_ilk . hat  .= hat1
-> calm id_ilk lag1  = auth $ do vat . ilks . ix id_ilk . lag  .= lag1
+> calm id_ilk lax1  = auth $ do vat . ilks . ix id_ilk . lax  .= lax1
 
 \actentry{|crop|}{set stability fee}%
 When altering the stability fee with |crop|, we ensure that the
