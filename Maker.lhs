@@ -108,29 +108,30 @@ network of Ethereum contracts designed to issue the |dai| currency
 token and automatically adjust credit incentives in order to keep its
 market value stable relative to |sdr|\footnote{``Special Drawing
 Rights'' (ticker symbol |xdr|), the international reserve asset
-created by the International Monetary Fund, whose value is derives
+created by the International Monetary Fund, whose value is derived
 from a weighted basket of world currencies.} in the short and
 medium term.
 
 New dai enters the money supply when a borrower locks an excess of
-collateral in Maker's token vault and takes out a loan.  The debt and
+collateral in the system and takes out a loan.  The debt and
 collateral amounts are recorded in a \textit{collateralized debt
 position}, or |cdp|.  Thus all outstanding dai represents some |cdp|
 owner's claim on their collateral---until risk provokes a liquidation.
 
 Off-chain \textit{price feeds} give Maker knowledge of the market
 values of dai and the various tokens used as collateral, enabling the
-system to assess credit risk.  If the value of a |cdp|'s collateral
+system to assess credit risk. If the value of a |cdp|'s collateral
 drops below a certain multiple of its debt, a decentralized auction is
-triggered to liquidate the collateral for dai to be burned thus
-settling the debt.
+triggered which liquidates the collateral for dai in order to settle
+the debt.
 
 The system issues a separate token with symbol |mkr|, which behaves
 like a ``share'' in Maker itself.  Since collateral auctions may fail
 to recover the full value of liquidated debt, the |mkr| token can be
 diluted to back emergency debt. The value of |mkr|, though volatile by
-design, is backed by the revenue from a \textit{stability fee} imposed
-on all dai loans and used to buy |mkr| for burning.
+design, is backed by the revenue from \textit{stability fees} imposed
+on all dai loans. The |dai| raised from stability fees is used to buy
+|mkr| tokens from the market and destroy them.
 
 For more details on the economics of the system, as well as
 descriptions of governance, off-chain mechanisms that provide
@@ -366,7 +367,7 @@ We also have two predefined entity identifiers.
 %endif
 
 \section{|Gem| --- collateral price feed entry}
-\actentry{|jar|}{collateral token}
+\actentry{|jar|}{token vault}
 \actentry{|tag|}{market price of token}
 \actentry{|zzz|}{expiration time of token price feed}
 
@@ -407,35 +408,35 @@ held by each holder.
 \section{|Ilk| --- |cdp| type}
 \actentry{|jar|}{collateral token vault}
 \actentry{|mat|}{liquidation ratio}
-\actentry{|axe|}{liquidation penalty ratio}
+\actentry{|axe|}{liquidation penalty}
 \actentry{|hat|}{debt ceiling}
 \actentry{|tax|}{stability fee}
 \actentry{|lax|}{price feed limbo duration}
 \actentry{|rho|}{time of debt unit adjustment}
-\actentry{|din|}{total outstanding dai}
-\actentry{|chi|}{dai value of debt unit}
+\actentry{|rum|}{total outstanding debt units}
+\actentry{|chi|}{value of debt unit in |dai|}
 
-Each |cdp| belongs to a |cdp| type, specified by an |Ilk| record
-containing parameters for lending: the collateral token, the limit for
-the debt-to-collateral ratio, the penalty upon forced liquidation, and
-various other parameters.  These are defined by governance.
-The meaning of each parameter is defined by its interactions in the
-act definitions of Chapter~\ref{chapter:acts}; see the whitepaper for
-an overview.
+Each |cdp| belongs to a |cdp| type, specified by an |Ilk| record.
+Five parameters, |mat|, |axe|, |hat|, |tax| and |lax|, are set by
+governance and are known as the Risk Parameters. The rest of the
+values are used by the system to keep track of the current state.
+The meaning of each |ilk| parameter is defined by its interactions in
+the act definitions of Chapter~\ref{chapter:acts}; see the whitepaper
+for an overview.
 
 > data Ilk = Ilk {
 >
 >     _jar  :: Id Gem,  -- Collateral token identifier
->     _lax  :: Sec,     -- Maximum duration of price feed limbo
+>     _lax  :: Sec,     -- Grace period after price feed becomes unavailable
 > 
 >     _mat  :: Ray,     -- Collateral-to-debt ratio at which liquidation can be triggered
->     _axe  :: Ray,     -- Penalty on liquidation as fraction of collateral value
+>     _axe  :: Ray,     -- Penalty on liquidation as fraction of debt
 >     _hat  :: Wad,     -- Limit on total debt for |cdp| type (``debt ceiling'')
 >     _tax  :: Ray,     -- Stability fee as per-second fraction of debt value
 > 
->     _chi  :: Ray,     -- Dai value of internal debt unit
+>     _chi  :: Ray,     -- Value of internal debt unit in dai
 >     _rho  :: Sec,     -- Time of latest debt unit adjustment
->     _rum  :: Wad      -- Total debt denominated in debt unit
+>     _rum  :: Wad      -- Total debt in debt units
 >
 >   } deriving (Eq, Show)
 
@@ -465,11 +466,11 @@ relevant).
 >   } deriving (Eq, Show)
 
 \section{|Vox| --- feedback mechanism data}
-\actentry{|fix|}{market price of |dai| denominated in |sdr|}
+\actentry{|wut|}{market price of |dai| denominated in |sdr|}
 \actentry{|par|}{target price of |dai| denominated in |sdr|}
 \actentry{|how|}{sensitivity parameter}
 \actentry{|way|}{rate of target price change}
-\actentry{|tau|}{time of latest target update}
+\actentry{|tau|}{time of latest feedback cycle}
 
 The \emph{feedback mechanism} is the aspect of the |cdp| engine that
 adjusts the target price of dai based on market price, and its data is
@@ -477,12 +478,12 @@ kept in a singleton record called |Vox|.
 
 > data Vox = Vox {
 > 
->     _fix   :: Wad,    -- Market price of dai denominated in |sdr|
+>     _wut   :: Wad,    -- Market price of dai denominated in |sdr|
 >     _par   :: Wad,    -- Target price of dai denominated in |sdr|
 >     _way   :: Ray,    -- Current per-second change in target price
 > 
 >     _how   :: Ray,    -- Sensitivity parameter set by governance
->     _tau   :: Sec     -- Time of latest feedback update
+>     _tau   :: Sec     -- Time of latest feedback cycle
 > 
 >  } deriving (Eq, Show)
 
@@ -509,6 +510,23 @@ accounting quantities.
 >     _sin   :: Wad                 -- Bad debt from liquidated |cdp|s
 >
 >   } deriving (Eq, Show)
+
+\textbf{Changes as of March 13 not yet incorporated into the reference
+implementation:} The vat no longer has |joy| and |sin| directly;
+instead, it has a reference to a |Jug|, which is a two-token multivault
+holding dai and sin.
+
+For accounting purposes, sin is now made into an actual ERC20 token
+and redefined to mean all debt, not just bad debt. The only component
+authorized to |mint| and |burn| either dai or sin is the |Jug|, and it
+ensures that they are always created and destroyed one-for-one.
+
+Excess dai left in the |Jug| represents unprocessed stability fees and
+is available for the |Vow| to |loot|, whereas sin residing in the |Jug|
+represents collective |cdp| debt. There is no need to keep track of
+bad debt separately; instead, any debt found out to be bad is
+transferred immediately from the |Jug| to the |Vow| upon |grab| (along
+with the collateral tokens from the |Jar|).
 
 \section{System model}
 \actentry{|era|}{current time}
@@ -564,7 +582,7 @@ contracts, which has the |Vat| record along with model state.
 > initialVat how0 = Vat {
 >   _vox   = Vox {
 >     _tau   = 0,
->     _fix   = Wad 1,
+>     _wut   = Wad 1,
 >     _par   = Wad 1,
 >     _how   = how0,
 >     _way   = Ray 1
@@ -825,6 +843,8 @@ would not result in undercollateralization.
 >   mint id_dai wad_dai
 >   push id_dai id_lad wad_dai
 
+\textbf{Note: As of March 13, this should use the |Jug| instead.}
+
 \actentry{|wipe|}{repay debt and burn dai}A |cdp| owner who has
 previously loaned dai can use |wipe| to repay part of their debt as
 long as liquidation has not been triggered.
@@ -893,7 +913,7 @@ at any time by keepers, but is also invoked as a side effect of any
 > -- Read all parameters relevant for feedback mechanism
 >   era0  <- use era
 >   tau0  <- use (vat . vox . tau)
->   fix0  <- use (vat . vox . fix)
+>   wut0  <- use (vat . vox . wut)
 >   par0  <- use (vat . vox . par)
 >   how0  <- use (vat . vox . how)
 >   way0  <- use (vat . vox . way)
@@ -911,7 +931,7 @@ at any time by keepers, but is also invoked as a side effect of any
 >
 >   -- Target rate scaled up or down
 >     way1  = inj (  prj way0 +
->                    if fix0 < par0 then wag else -wag)
+>                    if wut0 < par0 then wag else -wag)
 >
 > -- Update target price
 >   vat.vox.par  .= par1
@@ -987,7 +1007,7 @@ expiration date of this price.
 new market price of the |dai| token along with the expiration date of
 this price.
 
-> tell wad_gem = auth $ do vat . vox . fix .= wad_gem
+> tell wad_gem = auth $ do vat . vox . wut .= wad_gem
 
 \section{Liquidation}
 
@@ -1064,17 +1084,11 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 >   -- Record the gains as the |cdp|'s collateral
 >     vat . urns . ix id_urn . jam .= wad_dai
 
-\actentry{|heal|}{record bad debt as processed}When the settler has
-processed all the bad debt due to |cdp| liquidation, it invokes |heal|
-to reset the bad debt quantity.
+\actentry{|loot|}{take unprocessed stability fees}The |Vow| can invoke
+|loot| at any time to have the stability fee revenue accrued so far
+sent to it. \textbf{Note: As of March 13, this should use the |Jug| instead.}
 
-> heal wad_dai = auth $ do vat . sin .= 0
-
-\actentry{|love|}{record stability fee revenue as processed}When the
-settler has processed all the accrued stability fee revenue, it
-invokes |love| to reset the unprocessed stability fee quantity.
-
-> love wad_dai = auth $ do vat . joy .= 0
+> loot wad_dai = auth $ do vat . joy .= 0
 
 \section{Governance}
 
@@ -1238,8 +1252,8 @@ We define the Maker act vocabulary as a data type to represent invocations.
 > data Act =
 >      Bite     (Id Urn)       |  Draw     (Id Urn)  Wad          |  Form     (Id Ilk)  (Id Gem)
 >   |  Free     (Id Urn)  Wad  |  Frob     Ray                    |  Give     (Id Urn)  Address
->   |  Grab     (Id Urn)       |  Heal     Wad                    |  Lock     (Id Urn)  Wad
->   |  Love     Wad            |  Mark     (Id Gem)  Wad  Sec     |  Open     (Id Urn)  (Id Ilk)
+>   |  Grab     (Id Urn)       |  Lock     (Id Urn)  Wad
+>   |  Loot     Wad            |  Mark     (Id Gem)  Wad  Sec     |  Open     (Id Urn)  (Id Ilk)
 >   |  Prod                    |  Pull     (Id Gem)  Address Wad  |  Shut     (Id Urn)
 >   |  Tell     Wad            |  Wipe     (Id Urn)  Wad
 >   |  Mine (Id Gem)  | Hand Address Wad (Id Gem) | Sire Address
@@ -1318,7 +1332,7 @@ sender is authorized.
 Sketches for property stuff...
 
 > data Parameter =
->      Fix | Par | Way
+>      Wut | Par | Way
 
 > maintains
 >   :: Eq a  => Lens' System a -> Maker ()
@@ -1349,7 +1363,7 @@ Sketches for property stuff...
 >   setter x (a, b) = set f a (set g b x)
 
 > keeps :: Parameter -> Maker () -> System -> Bool
-> keeps Fix  = maintains (vat . vox . fix)
+> keeps Wut  = maintains (vat . vox . wut)
 > keeps Par  = maintains (vat . vox . par)
 > keeps Way  = maintains (vat . vox . way)
 

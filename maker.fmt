@@ -47,14 +47,12 @@
 %format Chi = "\texttt{Chi}"
 %format con = "\texttt{con}"
 %format Con = "\texttt{Con}"
-%format cow = "\texttt{cow}"
-%format Cow = "\texttt{Cow}"
 %format din = "\texttt{din}"
 %format Din = "\texttt{Din}"
 %format era = "\texttt{era}"
 %format Era = "\texttt{Era}"
-%format fix = "\texttt{fix}"
-%format Fix = "\texttt{Fix}"
+%format wut = "\texttt{wut}"
+%format Wut = "\texttt{Wut}"
 %format gem = "\texttt{gem}"
 %format Gem = "\texttt{Gem}"
 %format hat = "\texttt{hat}"
@@ -65,12 +63,14 @@
 %format Ilk = "\texttt{Ilk}"
 %format jam = "\texttt{jam}"
 %format Jam = "\texttt{Jam}"
+%format jug = "\texttt{jug}"
+%format Jug = "\texttt{Jug}"
 %format jar = "\texttt{jar}"
 %format Jar = "\texttt{Jar}"
 %format lad = "\texttt{lad}"
 %format Lad = "\texttt{Lad}"
-%format lag = "\texttt{lag}"
-%format Lag = "\texttt{Lag}"
+%format lax = "\texttt{lax}"
+%format Lax = "\texttt{Lax}"
 %format mat = "\texttt{mat}"
 %format Mat = "\texttt{Mat}"
 %format min = "\texttt{min}"
@@ -79,8 +79,6 @@
 %format Sec = "\texttt{Sec}"
 %format par = "\texttt{par}"
 %format Par = "\texttt{Par}"
-%format phi = "\texttt{phi}"
-%format Phi = "\texttt{Phi}"
 %format joy = "\texttt{joy}"
 %format Joy = "\texttt{Joy}"
 %format rum = "\texttt{rum}"
@@ -135,7 +133,7 @@
 %format cow0
 %format cow1
 %format era0
-%format fix0
+%format wut0
 %format hat0
 %format hat1
 %format how0
@@ -255,6 +253,8 @@
 %format Lock = "\texttt{Lock}"
 %format love = "\texttt{love}"
 %format Love = "\texttt{Love}"
+%format loot = "\texttt{loot}"
+%format Loot = "\texttt{Loot}"
 %format mark = "\texttt{mark}"
 %format Mark = "\texttt{Mark}"
 %format tell = "\texttt{tell}"
@@ -314,7 +314,7 @@
 %format _ilk = "\texttt{$\bullet$ ilk}"
 %format _art = "\texttt{$\bullet$ art}"
 %format _jam = "\texttt{$\bullet$ jam}"
-%format _fix = "\texttt{$\bullet$ fix}"
+%format _wut = "\texttt{$\bullet$ wut}"
 %format _how = "\texttt{$\bullet$ how}"
 %format _par = "\texttt{$\bullet$ par}"
 %format _way = "\texttt{$\bullet$ way}"
