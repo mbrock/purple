@@ -1,4 +1,4 @@
-\documentclass[twoside,12pt]{report}
+\documentclass[twoside,10pt]{report}
 
 \usepackage[a4paper]{geometry}
 \usepackage{polyglossia}
@@ -580,18 +580,18 @@ contracts, which has the |Vat| record along with model state.
 
 > initialVat :: Ray -> Vat
 > initialVat how0 = Vat {
->   _vox   = Vox {
+>   vatVox   = Vox {
 >     _tau   = 0,
 >     _wut   = Wad 1,
 >     _par   = Wad 1,
 >     _how   = how0,
 >     _way   = Ray 1
 >   },
->   _joy   = Wad 0,
->   _sin   = Wad 0,
->   _ilks  = empty,
->   _urns  = empty,
->   _gems  = singleton id_dai Gem {
+>   vatJoy   = Wad 0,
+>   vatSin   = Wad 0,
+>   vatIlks  = empty,
+>   vatUrns  = empty,
+>   vatGems  = singleton id_dai Gem {
 >     _erc20  = ERC20 { _balanceOf = empty },
 >     _tag    = Wad 0,
 >     _zzz    = 0
@@ -600,10 +600,10 @@ contracts, which has the |Vat| record along with model state.
 
 > initialSystem :: Ray -> System
 > initialSystem how0 = System {
->   _vat       = initialVat how0,
->   _era       = 0,
->   _sender    = id_god,
->   _accounts  = mempty
+>   systemVat       = initialVat how0,
+>   systemEra       = 0,
+>   systemSender    = id_god,
+>   systemAccounts  = mempty
 > }
 
 \chapter{Acts}
@@ -1331,9 +1331,10 @@ sender is authorized.
 
 Sketches for property stuff...
 
+> {-
 > data Parameter =
 >      Wut | Par | Way
-
+>
 > maintains
 >   :: Eq a  => Lens' System a -> Maker ()
 >            -> System -> Bool
@@ -1344,7 +1345,7 @@ Sketches for property stuff...
 >     Right sys1  -> view p sys0 == view p sys1
 >   -- On rollback, data is maintained by definition
 >     Left _      -> True
-
+>
 > changesOnly
 >   ::  Lens' System a -> Maker ()
 >   ->  System -> Bool
@@ -1355,24 +1356,25 @@ Sketches for property stuff...
 >     Right sys1  -> set p (view p sys1) sys0 == sys1
 >   -- On rollback, data is maintained by definition
 >     Left _      -> True
-
+>
 > also :: Lens' s a -> Lens' s b -> Lens' s (a, b)
 > also f g = lens getter setter
 >   where
 >   getter x = (view f x, view g x)
 >   setter x (a, b) = set f a (set g b x)
-
+>
 > keeps :: Parameter -> Maker () -> System -> Bool
 > keeps Wut  = maintains (vat . vox . wut)
 > keeps Par  = maintains (vat . vox . par)
 > keeps Way  = maintains (vat . vox . way)
+> -}
 
 Thus:
 
-> foo sys0 = all (\f -> f sys0)
+> {- foo sys0 = all (\f -> f sys0)
 >   [changesOnly (  (vat . vox . par) `also`
 >                   (vat . vox . way))
->      (perform Prod)]
+>      (perform Prod)] -}
 
 %endif
 
