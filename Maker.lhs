@@ -1,4 +1,4 @@
-\documentclass[twoside,10pt]{report}
+\documentclass[twoside,12pt]{report}
 
 \usepackage[a4paper]{geometry}
 \usepackage{polyglossia}
@@ -63,7 +63,7 @@
 \par \vspace{0.5cm}
 
 {\large issuing a diversely collateralized stablecoin}
-\par \vspace{0.5cm}
+\par \vspace{1.0cm}
 {\large\textit{formulated by}}
 \par \vspace{0.cm}
 
@@ -125,13 +125,13 @@ drops below a certain multiple of its debt, a decentralized auction is
 triggered which liquidates the collateral for dai in order to settle
 the debt.
 
-The system issues a separate token with symbol |mkr|, which behaves
-like a ``share'' in Maker itself.  Since collateral auctions may fail
-to recover the full value of liquidated debt, the |mkr| token can be
-diluted to back emergency debt. The value of |mkr|, though volatile by
-design, is backed by the revenue from \textit{stability fees} imposed
-on all dai loans. The |dai| raised from stability fees is used to buy
-|mkr| tokens from the market and destroy them.
+The system issues a separate token with symbol |mkr|.
+Since collateral auctions may fail to recover the full value of
+liquidated debt, the |mkr| token can be diluted to back emergency
+debt. The value of |mkr|, though volatile by design, is backed by the
+revenue from \textit{stability fees} imposed on all dai loans. The
+|dai| raised from stability fees is used to buy |mkr| tokens from the
+market and destroy them.
 
 For more details on the economics of the system, as well as
 descriptions of governance, off-chain mechanisms that provide
@@ -351,10 +351,13 @@ We define another type for representing Ethereum account addresses.
 
 > newtype Address = Address String deriving (Eq, Ord, Show)
 
-We also have two predefined entity identifiers.
+We also have predefined entity identifiers.
 
-> -- The |dai| token vault address
+> -- The |dai| token identifier
 > id_dai = Id "DAI"
+>
+> -- The internal debt token identifier
+> id_sin = Id "SIN"
 >
 > -- A test account with ultimate authority
 > id_god = Address "GOD"
@@ -404,7 +407,6 @@ held by each holder.
 > data ERC20 = ERC20 { _balanceOf    :: Map Holder Wad }
 >   deriving (Eq, Show)
 
-
 \section{|Ilk| --- |cdp| type}
 \actentry{|jar|}{collateral token vault}
 \actentry{|mat|}{liquidation ratio}
@@ -442,15 +444,14 @@ for an overview.
 
 \section{|Urn| --- collateralized debt position (|cdp|)}
 \actentry{|cat|}{address of liquidation initiator}
-\actentry{|vow|}{address of liquidation contract}
 \actentry{|lad|}{|cdp| owner}
 \actentry{|ilk|}{|cdp| type}
 \actentry{|art|}{debt denominated in debt unit}
 \actentry{|jam|}{collateral denominated in debt unit}
 For each |cdp| we maintain an |Urn| record identifying its type and
 specifying ownership, quantities of debt and collateral denominated in
-the |cdp| type's debt unit, along with the progress of liquidation (if
-relevant).
+the |cdp| type's debt unit, along with who triggered liquidation (if
+applicable).
 
 > data Urn = Urn {
 >
@@ -460,8 +461,7 @@ relevant).
 >     _art  :: Wad,            -- Outstanding debt in debt unit
 >     _jam  :: Wad,            -- Collateral amount in debt unit
 > 
->     _cat  :: Maybe Address,  -- Address that triggered liquidation, if relevant
->     _vow  :: Maybe Address   -- Address of settling contract, if relevant
+>     _cat  :: Maybe Address   -- Address that triggered liquidation, if applicable
 >
 >   } deriving (Eq, Show)
 
@@ -490,13 +490,10 @@ kept in a singleton record called |Vox|.
 Keeping the feedback data separate allows us to more easily upgrade
 the mechanism in the future.
 
-\section{|Vat| --- |cdp| engine data}
-\actentry{|joy|}{unprocessed stability fee revenue}
-\actentry{|sin|}{bad debt from liquidated |cdp|s}
+\section{|Vat| --- |cdp| engine aggregate}
 
-The |Vat| record aggregates the records of |cdp|s, |cdp| types, and
-price feeds, along with the data of the feedback mechanism, and two
-accounting quantities.
+The |Vat| record aggregates the records of tokens, |cdp|s, |cdp|
+types, and price feeds, along with the data of the feedback mechanism.
 
 > data Vat = Vat {
 > 
@@ -504,29 +501,9 @@ accounting quantities.
 >     _ilks  :: Map (Id Ilk) Ilk,   -- |cdp| type records
 >     _urns  :: Map (Id Urn) Urn,   -- |cdp| records
 > 
->     _vox   :: Vox,                -- Data of feedback mechanism
+>     _vox   :: Vox                 -- Data of feedback mechanism
 > 
->     _joy   :: Wad,                -- Unprocessed stability fees
->     _sin   :: Wad                 -- Bad debt from liquidated |cdp|s
->
 >   } deriving (Eq, Show)
-
-\textbf{Changes as of March 13 not yet incorporated into the reference
-implementation:} The vat no longer has |joy| and |sin| directly;
-instead, it has a reference to a |Jug|, which is a two-token multivault
-holding dai and sin.
-
-For accounting purposes, sin is now made into an actual ERC20 token
-and redefined to mean all debt, not just bad debt. The only component
-authorized to |mint| and |burn| either dai or sin is the |Jug|, and it
-ensures that they are always created and destroyed one-for-one.
-
-Excess dai left in the |Jug| represents unprocessed stability fees and
-is available for the |Vow| to |loot|, whereas sin residing in the |Jug|
-represents collective |cdp| debt. There is no need to keep track of
-bad debt separately; instead, any debt found out to be bad is
-transferred immediately from the |Jug| to the |Vow| upon |grab| (along
-with the collateral tokens from the |Jar|).
 
 \section{System model}
 \actentry{|era|}{current time}
@@ -570,7 +547,6 @@ contracts, which has the |Vat| record along with model state.
 
 > emptyUrn :: Id Ilk -> Address -> Urn
 > emptyUrn id_ilk id_lad = Urn {
->   _vow  = Nothing,
 >   _cat  = Nothing,
 >   _lad  = id_lad,
 >   _ilk  = id_ilk,
@@ -580,19 +556,20 @@ contracts, which has the |Vat| record along with model state.
 
 > initialVat :: Ray -> Vat
 > initialVat how0 = Vat {
->   vatVox   = Vox {
+>   _vox   = Vox {
 >     _tau   = 0,
 >     _wut   = Wad 1,
 >     _par   = Wad 1,
 >     _how   = how0,
 >     _way   = Ray 1
 >   },
->   vatJoy   = Wad 0,
->   vatSin   = Wad 0,
->   vatIlks  = empty,
->   vatUrns  = empty,
->   vatGems  = singleton id_dai Gem {
->     _erc20  = ERC20 { _balanceOf = empty },
+>   _ilks  = empty,
+>   _urns  = empty,
+>   _gems  = singleton id_dai Gem {
+>     _erc20  = ERC20 {
+>       _balanceOf = fromList [  (InVault id_dai, 0),
+>                                (InVault id_sin, 0)]
+>     },
 >     _tag    = Wad 0,
 >     _zzz    = 0
 >   }
@@ -600,10 +577,10 @@ contracts, which has the |Vat| record along with model state.
 
 > initialSystem :: Ray -> System
 > initialSystem how0 = System {
->   systemVat       = initialVat how0,
->   systemEra       = 0,
->   systemSender    = id_god,
->   systemAccounts  = mempty
+>   _vat       = initialVat how0,
+>   _era       = 0,
+>   _sender    = id_god,
+>   _accounts  = mempty
 > }
 
 \chapter{Acts}
@@ -637,8 +614,8 @@ We define the function |analyze| that determines the risk stage of a
 |cdp|.
 
 > analyze era0 par0 urn0 ilk0 jar0 =
->   if  | view vow  urn0  /= Nothing
->         -- |cdp| liquidation in progress
+>   if  | view cat  urn0  /= Nothing && view jam urn0 == 0
+>         -- |cdp| liquidation triggered and started
 >          -> Dread
 >       | view cat  urn0  /= Nothing
 >         -- |cdp| liquidation triggered
@@ -839,11 +816,11 @@ would not result in undercollateralization.
 > -- Roll back on any risk problem
 >   want (feel id_urn) (== Pride)
 >
-> -- Mint dai and transfer to |cdp| owner
->   mint id_dai wad_dai
+> -- Mint both dai and debt tokens
+>   lend wad_dai
+>
+> -- Transfer dai to |cdp| owner
 >   push id_dai id_lad wad_dai
-
-\textbf{Note: As of March 13, this should use the |Jug| instead.}
 
 \actentry{|wipe|}{repay debt and burn dai}A |cdp| owner who has
 previously loaned dai can use |wipe| to repay part of their debt as
@@ -874,8 +851,8 @@ long as liquidation has not been triggered.
 > -- Transfer dai from |cdp| owner to dai vault
 >   pull id_dai id_lad wad_dai
 >
-> -- Destroy reclaimed dai
->   burn id_dai wad_dai
+> -- Destroy dai and corresponding debt tokens
+>   mend wad_dai
 
 \actentry{|shut|}{wipe, free, and delete |cdp|}A |cdp| owner can use
 |shut| to close their account---repaying all debt and reclaiming all
@@ -969,8 +946,6 @@ every act that uses |feel| to assess |cdp| risk.
 >   chi0  <- look (vat . ilks . ix id_ilk . chi)
 > -- Current total debt in debt unit
 >   rum0  <- look (vat . ilks . ix id_ilk . rum)
-> -- Current unprocessed stability fee revenue
->   joy0  <- look (vat . joy)
 > -- Current time stamp
 >   era0  <- use era
 >
@@ -979,15 +954,16 @@ every act that uses |feel| to assess |cdp| risk.
 >     age   = era0 - rho0
 >   -- Value of debt unit increased according to stability fee
 >     chi1  = chi0 * tax0 ^^ age
->   -- Denominate stability fee revenue in new unit
->     joy1  = joy0 + (cast (chi1 - chi0) :: Wad) * rum0
+>   -- Stability fee revenue denominated in new unit
+>     dew   = (cast (chi1 - chi0) :: Wad) * rum0
+>
+> -- Mint dai and internal debt tokens for marginal stability fee
+>   lend dew
 >
 > -- Record time of update
 >   vat . ilks . ix id_ilk . rho  .= era0
 > -- Record new debt unit
 >   vat . ilks . ix id_ilk . chi  .= chi1
-> -- Record fee revenue denominated in new debt unit
->   vat . joy  .= joy1
 >
 > -- Return the new debt unit
 >   return chi1
@@ -1011,11 +987,15 @@ this price.
 
 \section{Liquidation}
 
-\actentry{|bite|}{mark for liquidation}When a |cdp|'s risk stage marks
-it as in need of liquidation, any account can invoke the |bite| act to
-trigger the liquidation process.  This records the |cdp|'s debt as bad
-debt in the |cdp| engine and enables the settler contract to later
-grab the collateral and begin auctioning.
+\actentry{|bite|}{mark for liquidation}%
+When a |cdp|'s risk stage marks it
+  as in need of liquidation,
+ any account can invoke the |bite| act
+  to trigger the liquidation process.
+This enables the settler contract
+ to grab the collateral for auctioning
+ and take over the debt tokens
+  representing ``bad debt.''
 
 > bite id_urn = do
 >
@@ -1023,45 +1003,48 @@ grab the collateral and begin auctioning.
 >     want (feel id_urn) (== Panic)
 >
 >   -- Record the sender as the liquidation initiator
->     id_cat              <- use sender
+>     id_cat     <- use sender
 >     vat . urns . ix id_urn . cat  .= Just id_cat
 >
->   -- Update debt unit
->     id_ilk     <- look (vat . urns . ix id_urn . ilk)
->     chi1       <- drip id_ilk
->
 >   -- Apply liquidation penalty to debt
+>     id_ilk  <- look (vat . urns . ix id_urn . ilk)
+>     axe0    <- look (vat . ilks . ix id_ilk . axe)
 >     art0    <- look (vat . urns . ix id_urn . art)
->     axe0    <- look (vat . ilks . ix id_ilk  . axe)
 >     let art1 = art0 * cast axe0
->
->   -- Update |cdp| debt
+> 
+>   -- Update debt
 >     vat . urns . ix id_urn . art   .=  art1
->
->   -- Record as bad debt
->     increase (vat . sin) (art1 * cast chi1)
 
-\actentry{|grab|}{take tokens for liquidation}After liquidation has
-been triggered, the designated settler contract invokes |grab| to
-receive the collateral tokens.
+\clearpage
+
+\actentry{|grab|}{take tokens for liquidation}%
+After liquidation has been triggered,
+the designated settler contract invokes |grab|
+to receive both the |cdp|'s collateral tokens
+and the internal debt tokens
+corresponding to the |cdp|'s debt.
 
 > grab id_urn = auth $ do
 >
 >   -- Fail if |cdp| is not marked for liquidation
 >     want (feel id_urn) (== Grief)
 >
->   -- Record the sender as the |cdp|'s settler
->     id_vow <- use sender
->     vat . urns . ix id_urn . vow .= Just id_vow
->
->   -- Forget the |cdp|'s requester of liquidation
->     vat . urns . ix id_urn . cat .= Nothing
->
->   -- Transfer the tokens to the settler
->     jam0    <- look (vat . urns . ix id_urn . jam)
+>   -- Transfer the collateral to the settler
+>     id_vow  <- use sender
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >     id_gem  <- look (vat . ilks . ix id_ilk . jar)
+>     jam0    <- look (vat . urns . ix id_urn . jam)
 >     push id_gem id_vow jam0
+> 
+>   -- Update the debt unit and stability fee
+>     chi1    <- drip id_ilk
+>
+>   -- Denominate the debt in dai
+>     art0    <- look (vat . urns . ix id_urn . art)
+>     let con = art0 * cast chi1
+>
+>   -- Transfer the debt tokens to the settler
+>     push id_dai id_vow con
 
 \actentry{|plop|}{finish liquidation returning profit}When the settler
 has finished the process of liquidating a |cdp|'s collateral, it
@@ -1072,8 +1055,8 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 >   -- Fail unless |cdp| is in liquidation
 >     want (feel id_urn) (== Dread)
 >
->   -- Forget the |cdp|'s settler
->     vat . urns . ix id_urn . vow .= Nothing
+>   -- Forget the |cdp|'s requester of liquidation
+>     vat . urns . ix id_urn . cat .= Nothing
 >
 >   -- Return some amount of excess auction gains
 >     id_vow  <- use sender
@@ -1084,11 +1067,23 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 >   -- Record the gains as the |cdp|'s collateral
 >     vat . urns . ix id_urn . jam .= wad_dai
 
-\actentry{|loot|}{take unprocessed stability fees}The |Vow| can invoke
-|loot| at any time to have the stability fee revenue accrued so far
-sent to it. \textbf{Note: As of March 13, this should use the |Jug| instead.}
+\clearpage
 
-> loot wad_dai = auth $ do vat . joy .= 0
+\actentry{|loot|}{take unprocessed stability fees}%
+The settler can invoke |loot| at any time
+to claim all uncollected stability fee revenue
+(for use in the |mkr| buy and burn auction).
+
+> loot = auth $ do
+>
+> -- The dai vault's balance is the uncollected stability fee revenue
+>   wad_dai  <- look (vat . gems . ix id_dai . erc20 . balanceOf . ix (InVault id_dai))
+>
+> -- Transfer the entire dai vault balance to sender
+>   id_vow   <- use sender
+>   push id_dai id_vow wad_dai
+
+
 
 \section{Governance}
 
@@ -1169,7 +1164,8 @@ the concept of ``allowance'').
 
 \actentry{|mint|}{inflate token}%
 The internal act |mint| inflates the supply of a token.
-It is used by |draw| to create new |dai|, and by settlers to create new |mkr|.
+It is used by |lend| to create new |dai| and debt tokens,
+and by the settler to create new |mkr|.
 
 > mint id_gem wad0 =
 >   zoom (vat . gems . ix id_gem . erc20) $ do
@@ -1177,11 +1173,35 @@ It is used by |draw| to create new |dai|, and by settlers to create new |mkr|.
 
 \actentry{|burn|}{deflate token}%
 The internal act |burn| deflates the supply of a token.
-It is used by |wipe| to destroy |dai|, and by settlers to destroy |mkr|.
+It is used by |mend| to destroy |dai| and debt tokens,
+and by the settler to destroy |mkr|.
 
 > burn id_gem wad0 =
 >   zoom (vat . gems . ix id_gem . erc20) $ do
 >     decrease (balanceOf . ix (InVault id_gem)) wad0
+
+\actentry{|lend|}{mint dai and debt token}%
+The internal act |lend| mints identical amounts
+of both dai and the internal debt token.
+It is used by |draw| to issue dai to a lender;
+it is also used by |drip| to issue dai
+representing revenue from stability fees,
+which stays in the dai vault until collected.
+
+> lend wad_dai = auth $ do
+>
+>   mint id_dai wad_dai
+>   mint id_sin wad_dai
+
+\actentry{|mend|}{burn dai and debt token}%
+The internal act |mend| destroys identical amounts
+of both dai and the internal debt token.
+Its use via |wipe| is how the dai supply is reduced.
+
+> mend wad_dai = auth $ do
+>
+>   burn id_dai wad_dai
+>   burn id_sin wad_dai
 
 %if 0
 

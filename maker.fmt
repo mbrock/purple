@@ -279,8 +279,11 @@
 %format Warp = "\texttt{Warp}"
 %format Addr = "\texttt{addr}"
 %format aver = "\texttt{aver}"
+%format lend = "\texttt{lend}"
+%format mend = "\texttt{mend}"
 
 %format id_urn
+%format id_sin
 %format id_ilk
 %format id_jar
 %format id_gem

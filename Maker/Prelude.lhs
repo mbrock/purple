@@ -141,7 +141,8 @@ hash collisions are impossible.}.
 > import Data.Map as X (
 >   Map,         -- Type constructor for mappings
 >   empty,       -- Polymorphic empty mapping
->   singleton)   -- Creates a mapping with a single key--value pair
+>   singleton,   -- Creates a mapping with a single key--value pair
+>   fromList)    -- Creates a mapping with several key--value pairs
 
 %if 0
 
