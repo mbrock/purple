@@ -1183,7 +1183,7 @@ and by the settler to destroy |mkr|.
 \actentry{|lend|}{mint dai and debt token}%
 The internal act |lend| mints identical amounts
 of both dai and the internal debt token.
-It is used by |draw| to issue dai to a lender;
+It is used by |draw| to issue dai to a borrower;
 it is also used by |drip| to issue dai
 representing revenue from stability fees,
 which stays in the dai vault until collected.
