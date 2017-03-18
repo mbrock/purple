@@ -63,7 +63,7 @@ new symbols of its own.
 >   (+), (-), (*), (/), (^), (^^), div,
 >
 > -- Utilities
->   all, not, elem,
+>   all, not, elem, (&&),
 >
 > -- Constants
 >   mempty, undefined, otherwise)

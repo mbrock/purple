@@ -398,13 +398,13 @@ same simple way.  We also omit the notion of ``allowance.''
 Tokens can be held by |cdp| owners, by token vaults, or by the test
 driver.  We model this distinction with a data type.
 
-> data Holder = InAccount Address | InVault (Id Gem) |  InToy
+> data Entity = Account Address | Vault (Id Gem) | TheToy
 >   deriving (Eq, Ord, Show)
 
 We now define an |ERC20| instance as a map tracking the token quantity
 held by each holder.
 
-> data ERC20 = ERC20 { _balanceOf    :: Map Holder Wad }
+> data ERC20 = ERC20 { _balanceOf :: Map Entity Wad }
 >   deriving (Eq, Show)
 
 \section{|Ilk| --- |cdp| type}
@@ -567,8 +567,8 @@ contracts, which has the |Vat| record along with model state.
 >   _urns  = empty,
 >   _gems  = singleton id_dai Gem {
 >     _erc20  = ERC20 {
->       _balanceOf = fromList [  (InVault id_dai, 0),
->                                (InVault id_sin, 0)]
+>       _balanceOf = fromList [  (Vault id_dai, 0),
+>                                (Vault id_sin, 0)]
 >     },
 >     _tag    = Wad 0,
 >     _zzz    = 0
@@ -1077,7 +1077,7 @@ to claim all uncollected stability fee revenue
 > loot = auth $ do
 >
 > -- The dai vault's balance is the uncollected stability fee revenue
->   wad_dai  <- look (vat . gems . ix id_dai . erc20 . balanceOf . ix (InVault id_dai))
+>   wad_dai  <- look (vat . gems . ix id_dai . erc20 . balanceOf . ix (Vault id_dai))
 >
 > -- Transfer the entire dai vault balance to sender
 >   id_vow   <- use sender
@@ -1133,7 +1133,7 @@ by |wipe| to acquire dai from a |cdp| owner;
 and by |plop| to acquire collateral from the settler contract.
 
 > pull id_gem id_lad wad_gem =
->   transfer id_gem wad_gem (InAccount id_lad) (InVault id_gem)
+>   transfer id_gem wad_gem (Account id_lad) (Vault id_gem)
 
 \actentry{|push|}{transfer tokens from vault}%
 The internal act |push| transfers tokens out from a collateral vault.
@@ -1142,7 +1142,7 @@ by |free| to send collateral to a |cdp| owner;
 and by |grab| to send collateral to the settler contract.
 
 > push id_gem id_lad wad_gem =
->   transfer id_gem wad_gem (InVault id_gem) (InAccount id_lad)
+>   transfer id_gem wad_gem (Vault id_gem) (Account id_lad)
 
 \section{Token manipulation}%
 We model the |erc20| transfer function in simplified form (omitting
@@ -1169,7 +1169,7 @@ and by the settler to create new |mkr|.
 
 > mint id_gem wad0 =
 >   zoom (vat . gems . ix id_gem . erc20) $ do
->     increase (balanceOf . ix (InVault id_gem)) wad0
+>     increase (balanceOf . ix (Vault id_gem)) wad0
 
 \actentry{|burn|}{deflate token}%
 The internal act |burn| deflates the supply of a token.
@@ -1178,7 +1178,7 @@ and by the settler to destroy |mkr|.
 
 > burn id_gem wad0 =
 >   zoom (vat . gems . ix id_gem . erc20) $ do
->     decrease (balanceOf . ix (InVault id_gem)) wad0
+>     decrease (balanceOf . ix (Vault id_gem)) wad0
 
 \actentry{|lend|}{mint dai and debt token}%
 The internal act |lend| mints identical amounts
@@ -1217,7 +1217,7 @@ Its use via |wipe| is how the dai supply is reduced.
 >
 >     initialize (vat . gems . at id_gem)
 >       (Gem {
->          _erc20  = ERC20 (singleton InToy 1000000000000),
+>          _erc20  = ERC20 (singleton TheToy 1000000000000),
 >          _tag    = Wad 0,
 >          _zzz    = 0 })
 
@@ -1225,7 +1225,7 @@ Its use via |wipe| is how the dai supply is reduced.
 
 > hand dst wad_gem id_gem = do
 >   transfer id_gem wad_gem
->     InToy (InAccount dst)
+>     TheToy (Account dst)
 
 \actentry{|sire|}{register a new toy account}
 
