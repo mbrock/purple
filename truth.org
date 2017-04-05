@@ -1,0 +1,42 @@
+* jar
+** tag
+    - A jar's tag is set only on mark.
+    - An urn's ink times that urn's jar's tag is that urn's SDR valuation.
+** zzz
+    - A jar's zzz is set only on mark.
+    - When the era exceeds an ilk's lax plus that ilk's jar's zzz,
+      that ilk's urns can be bit.
+    - When the era exceeds an ilk's jar's zzz,
+      that ilk's urns cannot free or draw.
+* ilk
+** axe
+    - An ilk's initial axe is 1.
+    - An ilk's axe is set only on chop.
+    - When an urn is bit, its art is multiplied by its ilk's axe.
+** hat
+    - An ilk's initial hat is 0.
+    - An ilk's hat is set only on cork.
+    - When an ilk's din exceeds its hat, that ilk's urns cannot draw.
+** lax
+    - An ilk's initial lax is 0.
+    - An ilk's lax is set only on calm.
+** mat
+    - An ilk's initial mat is 1.
+    - An ilk's mat is set only on cuff.
+    - The factors of an urn's minimum SDR valuation are:
+         a. the urn's art;
+         b. the urn's ilk's chi;
+         c. the par; and
+         d. the mat.
+    - When an urn's SDR valuation is below the urn's minimum SDR valuation,
+      that urn cannot free or draw.
+** tax
+    - An ilk's initial tax is 1.
+    - An ilk's tax is set only on crop.
+    - An ilk's chi is multiplied by that ilk's tax every second.
+** chi
+    - An ilk's initial chi is 1.
+    - Every second, for each ilk with positive rum,
+      dai is created according to that ilk's rum times that ilk's chi
+      and used for flap.
+    - Dai created in that way is accounted for by increased lad debt.

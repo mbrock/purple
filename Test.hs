@@ -123,6 +123,12 @@ solidityAct = \case
     "this.lock(" <> txt x <> ", " </>
       indent 4 (comment (txt z) </>
                 txt (unwad z) <> ");")
+  (Address x, Draw _ y) ->
+    "this.draw(" <> txt x <> ", " </>
+      indent 4 (comment (txt y) </>
+                txt (unwad y) <> ");")
+  (Address x, Cork (Id y) z) ->
+    "this.cork(" <> txt y <> ", " <> txt (unwad z) <> ");"
 
 actsCode :: Seq (Address, Act) -> Doc
 actsCode = vsep . toList . fmap solidityAct
@@ -141,21 +147,21 @@ forAllPairs x f = forM_ (pairs x) f
 
 dump :: System -> Writer (Seq Claim) ()
 dump sys = do
-  write . WadIs ("vox.fix()") $ Exactly (view (vat.vox.fix) sys)
+  write . WadIs ("vox.wut()") $ Exactly (view (vat.vox.wut) sys)
   write . WadIs ("vox.par()") $ Exactly (view (vat.vox.par) sys)
   write . RayIs ("vox.way()") $ Exactly (view (vat.vox.way) sys)
   write . RayIs ("vox.how()") $ Exactly (view (vat.vox.how) sys)
-  forAllPairs (view (vat . gems) sys) $ \(Id i, j) -> do
+  forAllPairs (view (vat . jars) sys) $ \(Id i, j) -> do
     write
       . WadIs    ("vat.tag(jars[" <> txt i <> "])")
       $ Exactly  (view tag j)
-    forAllPairs (view (erc20 . balanceOf) j) $ \(a, x) -> do
+    forAllPairs (view (gem . balanceOf) j) $ \(a, x) -> do
       let a' = case a of
-                 InAccount (Address h) ->
+                 Account (Address h) ->
                    "lads[" <> txt h <> "]"
-                 InVault (Id h) ->
+                 Vault (Id h) ->
                    "jars[" <> txt h <> "]"
-                 InToy ->
+                 Toy ->
                    "this"
       write .
         WadIs ("jars[" <> txt i <> "].token().balanceOf(" <>
@@ -169,7 +175,7 @@ dump sys = do
       $ Exactly (view hat x)
     write
       . SecIs ("vat.lax(id(" <> txt i <> "))")
-      $ Exactly (view lag x)
+      $ Exactly (view lax x)
     write
       . RayIs ("vat.mat(id(" <> txt i <> "))")
       $ Exactly (view mat x)
@@ -184,8 +190,8 @@ dump sys = do
       . WadIs ("vat.art(lads[" <> txt i <> "].urn())")
       $ Exactly (view art x)
     write
-      . WadIs ("vat.jam(lads[" <> txt i <> "].urn())")
-      $ Exactly (view jam x)
+      . WadIs ("vat.ink(lads[" <> txt i <> "].urn())")
+      $ Exactly (view ink x)
 
 soliditySystem = 
   dump  >>> execWriter  >>> fmap solidityClaim
@@ -200,18 +206,19 @@ testCaseX = do
   write (id_god, Frob x)
   write (id_god, Tell y)
   write (id_god, Warp (Sec 100))
-  write (id_god, Prod)
   write (id_god, Mine (Id "DGX"))
   write (id_god, Sire (Address "Bob"))
   write (id_god, Hand (Address "Bob") (Wad 1) (Id "DGX"))
   write (id_god, Form (Id "DGX1") (Id "DGX"))
+  write (id_god, Cork (Id "DGX1") 0.3)
   write (Address "Bob", Open (Id "Bob") (Id "DGX1"))
-  -- write (Address "Bob", Lock (Id "Bob") 0.5)
+  write (Address "Bob", Lock (Id "Bob") 0.5)
+  write (Address "Bob", Draw (Id "Bob") 0.001)
 
 crossExamine :: Seq (Address, Act) -> (Bool, Doc)
 crossExamine acts =
   case exec (initialSystem 1.0)
-        (sequence_ (fmap (\(x, y) -> y `being` x) acts)) of
+        (sequence_ (fmap (\(x, y) -> perform y `being` (Account x)) acts)) of
     Left x ->
       (False,  solidityTest "testFail_x" (pack (show x)) (actsCode acts))
     Right x ->
