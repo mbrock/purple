@@ -1,6 +1,6 @@
 { mkDerivation, aeson, base, bytestring, containers, ghci-pretty
-, HUnit, lens, mtl, QuickCheck, random, stdenv, tasty, tasty-hunit
-, tasty-quickcheck, text, wl-pprint-text
+, HUnit, lens, mtl, optparse-generic, QuickCheck, random, stdenv
+, tasty, tasty-hunit, tasty-quickcheck, text, wl-pprint-text
 }:
 mkDerivation {
   pname = "mkrfuzz";
@@ -10,12 +10,13 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     aeson base bytestring containers ghci-pretty HUnit lens mtl
-    QuickCheck random tasty tasty-hunit tasty-quickcheck text
-    wl-pprint-text
+    optparse-generic QuickCheck random tasty tasty-hunit
+    tasty-quickcheck text wl-pprint-text
   ];
   executableHaskellDepends = [
-    aeson base bytestring containers ghci-pretty lens mtl QuickCheck
-    random tasty tasty-hunit tasty-quickcheck text wl-pprint-text
+    aeson base bytestring containers ghci-pretty lens mtl
+    optparse-generic QuickCheck random tasty tasty-hunit
+    tasty-quickcheck text wl-pprint-text
   ];
   license = stdenv.lib.licenses.gpl3;
 }

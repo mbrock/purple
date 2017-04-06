@@ -9,6 +9,8 @@ ghci:
 
 default.nix: mkrfuzz.cabal; cabal2nix . > default.nix;
 
+dai:; cabal build dai
+
 docker:
 	docker build -t makerdao/faker .
 	docker run -it --rm makerdao/faker

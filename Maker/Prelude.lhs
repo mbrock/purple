@@ -31,7 +31,7 @@ new symbols of its own.
 > import Prelude as X (
 >
 > -- Conversions to and from strings
->   Read (..), Show (..),
+>   Read (..), Show (..), read,
 >
 > -- Comparisons
 >   Eq (..), Ord (..),
@@ -152,7 +152,7 @@ hash collisions are impossible.}.
 > import GHC.Generics as X
 > import Data.Aeson as X (ToJSON (..), FromJSON (..))
 > import Data.Aeson as X (FromJSONKey (..), ToJSONKey (..))
-> import Data.Aeson as X (encode, decode)
+> import Data.Aeson as X (encode, decode, eitherDecode)
 
 %endif
 

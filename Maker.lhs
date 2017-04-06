@@ -495,7 +495,13 @@ contracts, which has the |Vat| record along with model state.
 >   toJSON (D (MkFixed x)) = toJSON (show x)
 > 
 > instance HasResolution a => FromJSON (Decimal a) where
->   parseJSON v = fmap (D . MkFixed) (parseJSON v)
+>   parseJSON v = fmap (D . MkFixed . read) (parseJSON v)
+>
+> instance ToJSON Sec where
+>   toJSON (Sec x) = toJSON (show x)
+> 
+> instance FromJSON Sec where
+>   parseJSON v = fmap (Sec . read) (parseJSON v)
 >
 > instance ToJSONKey Gem    ; instance FromJSONKey Gem
 > instance ToJSONKey Entity ; instance FromJSONKey Entity
@@ -503,7 +509,6 @@ contracts, which has the |Vat| record along with model state.
 > 
 > instance ToJSON Wad       ; instance FromJSON Wad
 > instance ToJSON Ray       ; instance FromJSON Ray
-> instance ToJSON Sec       ; instance FromJSON Sec
 > instance ToJSON Address   ; instance FromJSON Address
 > instance ToJSON (Id a)    ; instance FromJSON (Id a)
 > instance ToJSON Entity    ; instance FromJSON Entity
