@@ -149,7 +149,10 @@ hash collisions are impossible.}.
 > import Data.Monoid as X (First, (<>))
 > import Control.Monad as X (unless)
 > import Control.Arrow as X (first)
->
+> import GHC.Generics as X
+> import Data.Aeson as X (ToJSON (..), FromJSON (..))
+> import Data.Aeson as X (FromJSONKey (..), ToJSONKey (..))
+> import Data.Aeson as X (encode, decode)
 
 %endif
 

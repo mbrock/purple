@@ -28,13 +28,17 @@
 %format cdp = "\textsc{cdp}"
 %format sin = "\textsc{sin}"
 %format dai = "\textsc{dai}"
-%format eth = "\textsc{eth}"
 %format mkr = "\textsc{mkr}"
+%format eth = "\textsc{eth}"
 %format sdr = "\textsc{sdr}"
 %format xdr = "\textsc{xdr}"
 %format imf = "\textsc{imf}"
 %format erc20 = "\texttt{ERC20}"
 %format ERC20 = "\texttt{ERC20}"
+
+%format SIN = "\texttt{SIN}"
+%format DAI = "\texttt{DAI}"
+%format MKR = "\texttt{MKR}"
 
 %format Art = "\texttt{Art}"
 %format Axe = "\texttt{Axe}"

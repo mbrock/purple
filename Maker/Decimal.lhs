@@ -16,7 +16,7 @@ intermediate results.
 
 %endif
 
-> module Maker.Decimal (Decimal, E18, E36, Epsilon (..)) where
+> module Maker.Decimal (Decimal (..), E18, E36, Epsilon (..)) where
 >
 > import Data.Fixed
 >

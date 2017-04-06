@@ -186,6 +186,7 @@ this document will include formal statements of these properties.
 
 > {-# Language AllowAmbiguousTypes #-}
 > {-# Language ConstraintKinds #-}
+> {-# Language DeriveGeneric #-}
 > {-# Language DuplicateRecordFields #-}
 > {-# Language FlexibleContexts #-}
 > {-# Language FlexibleInstances #-}
@@ -294,70 +295,61 @@ There are several kinds of identifiers used in the system, and we use
 types to distinguish them.  The type parameter |a| creates distinct
 types; e.g., |Id Foo| and |Id Bar| are incompatible.
 
-> newtype Id a = Id String deriving (Eq, Ord, Show)
+> newtype Id a = Id String
+>   deriving (Eq, Ord, Show)
 
 We define another type for representing Ethereum account addresses.
 
-> newtype Address = Address String deriving (Eq, Ord, Show)
+> newtype Address = Address String
+>   deriving (Eq, Ord, Show)
+
+We also define the different tokens used by the system.
+
+> data Gem  = Gem String  -- Some collateral token
+>           | DAI         -- The stablecoin token
+>           | SIN         -- The token representing |dai| debt
+>           | MKR         -- The risk-absorbing governance token
+>
+>   deriving (Eq, Ord, Show)
 
 We also have predefined entity identifiers.
-
-> -- The |dai| token identifier
-> id_dai = Id "DAI"
->
-> -- The internal debt token identifier
-> id_sin = Id "SIN"
->
-> -- The |mkr| token identifier
-> id_mkr = Id "MKR"
->
-> -- A test account with ultimate authority
-> id_god = Address "GOD"
 
 %if 0
 
 > instance Read (Id a) where
 >   readsPrec n s = fmap (first Id) (readsPrec n s)
 
+> deriving instance Generic Wad
+> deriving instance Generic Ray
+> deriving instance Generic Sec
+> deriving instance Generic (Id a)
+> deriving instance Generic Address
+> deriving instance Generic Gem
+
+
 %endif
 
 \section{|Jar| --- collateral vault}
-\actentry{|gem|}{collateral token}
 \actentry{|tag|}{market price of token}
 \actentry{|zzz|}{expiration time of token price feed}
 
 The data received from price feeds is categorized by token and stored
-in |Jar| records.  Our model also has the token balances embedded in
-these records; in reality\footnote{We use ``reality'' to denote the
-actual state of the consensus Ethereum blockchain.}, the balances are
-in separate |ERC20| contracts.
+in |Jar| records.
 
 > data Jar = Jar {
 >
->     _gem  :: Gem,  -- Token balances
 >     _tag  :: Wad,  -- Market price denominated in |SDR|
 >     _zzz  :: Sec   -- Time of price expiration
 >
 >   } deriving (Eq, Show)
 
-\section{|Gem| --- token model}
+\section{|Entity| --- token balance holder}
 
-In reality, token semantics can differ, despite nominally following
-the |erc20| interface.  Governance therefore involves reviewing the
-behaviors of collateral tokens.  In our model, tokens behave in the
-same simple way.  We also omit the notion of ``allowance.''
+We use a data type to explicitly distinguish the different entities
+that can hold a token balance.
 
-We define a |Gem| record as a map tracking the token quantity held
-by each holding entity.
-
-> data Gem = Gem { _balanceOf :: Map Entity Wad }
->   deriving (Eq, Show)
-
-For clarity, we use a data type to distinguish the different entities
-that can hold a token balance.  
-
-> data Entity  =  Account Address  -- External account or contract
->              |  Vault (Id Jar)   -- Vault for collateral token
+> data Entity  =  Account Address  -- External holder
+>              |  Vault            -- Token vault
 >              |  Joy              -- Spawning account for dai
 >              |  Woe              -- Spawning account for debt
 >              |  Ice              -- Holding account for debt
@@ -366,10 +358,12 @@ that can hold a token balance.
 >              |  Flapper          -- Revenue auctioneer
 >              |  Flopper          -- Debt auctioneer
 >              |  Toy              -- Test driver
+>              |  God              -- Omnipotent actor
+> 
 >   deriving (Eq, Ord, Show)
 
 \section{|Ilk| --- |cdp| type}
-\actentry{|jar|}{collateral token vault}
+\actentry{|gem|}{collateral token identifier}
 \actentry{|mat|}{liquidation ratio}
 \actentry{|axe|}{liquidation penalty}
 \actentry{|hat|}{debt ceiling}
@@ -389,7 +383,7 @@ for an overview.
 
 > data Ilk = Ilk {
 >
->     _jar  :: Id Jar,  -- Collateral token identifier
+>     _gem  :: Gem,     -- Collateral token identifier
 > 
 >     _lax  :: Sec,     -- Grace period after price feed becomes unavailable
 >     _mat  :: Ray,     -- Collateral-to-debt ratio at which liquidation can be triggered
@@ -458,7 +452,7 @@ types, and price feeds, along with the data of the feedback mechanism.
 
 > data Vat = Vat {
 > 
->     _jars  :: Map (Id Jar) Jar,   -- Collateral vaults
+>     _jars  :: Map Gem Jar,        -- Token vaults
 >     _ilks  :: Map (Id Ilk) Ilk,   -- |cdp| type records
 >     _urns  :: Map (Id Urn) Urn,   -- |cdp| records
 > 
@@ -474,11 +468,12 @@ contracts, which has the |Vat| record along with model state.
 
 > data System =  System {
 >
->     _vat       :: Vat,        -- Root Maker entity
->     _era       :: Sec,        -- Current time stamp
->     _sender    :: Entity,     -- Sender of current act
->     _accounts  :: [Address],  -- For test suites
->     _mode      :: Mode        -- Vow operation mode
+>     _balances  :: Map (Entity, Gem) Wad,  -- Token balances
+>     _vat       :: Vat,                    -- Root Maker entity
+>     _era       :: Sec,                    -- Current time stamp
+>     _sender    :: Entity,                 -- Sender of current act
+>     _accounts  :: [Address],              -- For test suites
+>     _mode      :: Mode                    -- Vow operation mode
 >
 >   } deriving (Eq, Show)
 
@@ -487,22 +482,55 @@ contracts, which has the |Vat| record along with model state.
 
 %if 0
 
+> deriving instance Generic Jar
+> deriving instance Generic Entity
+> deriving instance Generic Ilk
+> deriving instance Generic Urn
+> deriving instance Generic Vox
+> deriving instance Generic Vat
+> deriving instance Generic System
+> deriving instance Generic Mode
+
+> instance HasResolution a => ToJSON (Decimal a) where
+>   toJSON (D (MkFixed x)) = toJSON (show x)
+> 
+> instance HasResolution a => FromJSON (Decimal a) where
+>   parseJSON v = fmap (D . MkFixed) (parseJSON v)
+>
+> instance ToJSONKey Gem    ; instance FromJSONKey Gem
+> instance ToJSONKey Entity ; instance FromJSONKey Entity
+> instance ToJSONKey (Id a) ; instance FromJSONKey (Id a)
+> 
+> instance ToJSON Wad       ; instance FromJSON Wad
+> instance ToJSON Ray       ; instance FromJSON Ray
+> instance ToJSON Sec       ; instance FromJSON Sec
+> instance ToJSON Address   ; instance FromJSON Address
+> instance ToJSON (Id a)    ; instance FromJSON (Id a)
+> instance ToJSON Entity    ; instance FromJSON Entity
+> instance ToJSON Gem       ; instance FromJSON Gem
+> instance ToJSON Jar       ; instance FromJSON Jar
+> instance ToJSON Ilk       ; instance FromJSON Ilk
+> instance ToJSON Urn       ; instance FromJSON Urn
+> instance ToJSON Vox       ; instance FromJSON Vox
+> instance ToJSON Vat       ; instance FromJSON Vat
+> instance ToJSON Mode      ; instance FromJSON Mode
+> instance ToJSON System    ; instance FromJSON System
+
 \section*{Lens fields}
 
-> makeLenses ''Gem  ; makeLenses ''Jar  ; makeLenses ''Ilk
+> makeLenses ''Jar  ; makeLenses ''Ilk
 > makeLenses ''Urn    ; makeLenses ''Vox  ; makeLenses ''Vat
 > makeLenses ''System
 
-> balance id_gem entity =
->   vat . jars . ix id_gem . gem . balanceOf . ix entity
+> balance id_gem entity = balances . ix (entity, id_gem)
 
 %endif
 
 \section{Default data}
 
-> defaultIlk :: Id Jar -> Ilk
-> defaultIlk id_jar = Ilk {
->   _jar  = id_jar,
+> defaultIlk :: Gem -> Ilk
+> defaultIlk id_gem = Ilk {
+>   _gem  = id_gem,
 >   _axe  = Ray 1,
 >   _mat  = Ray 1,
 >   _tax  = Ray 1,
@@ -522,9 +550,8 @@ contracts, which has the |Vat| record along with model state.
 >   _ink  = Wad 0
 > }
 
-> initialJar :: Id Jar -> Jar
-> initialJar id_jar = Jar {
->   _gem  = Gem { _balanceOf = singleton (Vault id_jar) 0 },
+> initialJar :: Jar
+> initialJar = Jar {
 >   _tag  = Wad 0,
 >   _zzz  = 0
 > }
@@ -540,18 +567,15 @@ contracts, which has the |Vat| record along with model state.
 >   },
 >   _ilks  = empty,
 >   _urns  = empty,
->   _jars  = fromList [
->     (id_dai, initialJar id_dai),
->     (id_sin, initialJar id_sin),
->     (id_mkr, initialJar id_mkr)
->   ]
+>   _jars  = empty
 > }
 
 > initialSystem :: Ray -> System
 > initialSystem how0 = System {
+>   _balances  = empty,
 >   _vat       = initialVat how0,
 >   _era       = 0,
->   _sender    = Account id_god,
+>   _sender    = God,
 >   _accounts  = mempty,
 >   _mode      = Dummy
 > }
@@ -582,6 +606,12 @@ five stages of risk.
 > data Stage  =  Pride |  Anger |  Worry |  Panic |  Grief |  Dread
 > 
 >   deriving (Eq, Show)
+
+%if 0
+
+> deriving instance Generic Stage
+
+%endif
 
 We define the function |analyze| that determines the risk stage of a
 |cdp|.
@@ -676,7 +706,7 @@ Now we define the internal act |feel| which returns the value of
 >   par0    <- use   (vat . vox . par)
 >   urn0    <- look  (vat . urns . ix id_urn)
 >   ilk0    <- look  (vat . ilks . ix (view ilk urn0  ))
->   jar0    <- look  (vat . jars . ix (view jar ilk0  ))
+>   jar0    <- look  (vat . jars . ix (view gem ilk0  ))
 >
 > -- Return risk stage of |cdp|
 >   return (analyze era0 par0 urn0 ilk0 jar0)
@@ -728,10 +758,10 @@ collateral.
 >
 > -- Identify collateral type
 >   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
->   id_jar  <- look (vat . ilks . ix id_ilk  . jar)
+>   id_gem  <- look (vat . ilks . ix id_ilk  . gem)
 >
 > -- Transfer tokens from owner to collateral vault
->   pull id_jar id_lad wad_gem
+>   transfer id_gem wad_gem id_lad Vault
 >
 > -- Record an increase in collateral
 >   increase (vat . urns . ix id_urn . ink) wad_gem
@@ -758,8 +788,8 @@ liquidation ratio.
 >
 > -- Transfer tokens from collateral vault to owner
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
->   id_jar  <- look (vat . ilks . ix id_ilk . jar)
->   push id_jar id_lad wad_gem
+>   id_gem  <- look (vat . ilks . ix id_ilk . gem)
+>   transfer id_gem wad_gem Vault id_lad
 
 \actentry{|draw|}{issue dai as debt}When a |cdp| has no risk problems,
 its owner can can use |draw| to take out a loan of newly minted dai,
@@ -792,10 +822,10 @@ would not result in undercollateralization.
 >   lend wad_dai
 >
 > -- Transfer dai to |cdp| owner
->   transfer id_dai wad_dai Joy id_lad
+>   transfer DAI wad_dai Joy id_lad
 >
 > -- Transfer sin into debt vault
->   transfer id_sin wad_dai Woe Ice 
+>   transfer SIN wad_dai Woe Ice 
 
 \actentry{|wipe|}{repay debt and burn dai}A |cdp| owner who has
 previously loaned dai can use |wipe| to repay part of their debt as
@@ -824,7 +854,7 @@ long as liquidation has not been triggered.
 >   decrease (vat . ilks . ix id_ilk . rum) wad_chi
 >
 > -- Transfer dai from |cdp| owner to dai vault
->   pull id_dai id_lad wad_dai
+>   transfer DAI wad_dai id_lad Vault
 >
 > -- Destroy dai and corresponding debt tokens
 >   mend wad_dai
@@ -950,15 +980,15 @@ every act that uses |feel| to assess |cdp| risk.
 act records a new market price of a collateral token along with the
 expiration date of this price.
 
-> mark id_jar tag1 zzz1 = auth $ do
->     vat . jars . ix id_jar . tag  .= tag1
->     vat . jars . ix id_jar . zzz  .= zzz1
+> mark id_gem tag1 zzz1 = auth $ do
+>     vat . jars . ix id_gem . tag  .= tag1
+>     vat . jars . ix id_gem . zzz  .= zzz1
 
 \actentry{|tell|}{update market price of dai}The |tell| act records a
 new market price of the |dai| token along with the expiration date of
 this price.
 
-> tell wad_gem = auth $ do vat . vox . wut .= wad_gem
+> tell wad = auth $ do vat . vox . wut .= wad
 
 \section{Liquidation}
 
@@ -1007,7 +1037,7 @@ corresponding to the |cdp|'s debt.
 >     ink0    <- look (vat . urns . ix id_urn . ink)
 >     art0    <- look (vat . urns . ix id_urn . art)
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
->     id_jar  <- look (vat . ilks . ix id_ilk . jar)
+>     id_gem  <- look (vat . ilks . ix id_ilk . gem)
 > 
 >   -- Update the debt unit and stability fee
 >     chi1    <- drip id_ilk
@@ -1015,11 +1045,9 @@ corresponding to the |cdp|'s debt.
 >   -- Denominate the debt in dai
 >     let con = art0 * cast chi1
 >
->   -- Transfer debt to settler
->     push id_sin Vow con
->
->   -- Transfer collateral to settler
->     push id_jar Vow ink0
+>   -- Transfer collateral and debt to settler
+>     transfer id_gem  ink0  Vault Vow
+>     transfer SIN     con   Vault Vow
 > 
 >   -- Nullify |cdp|'s collateral and debt quantities
 >     vat . urns . ix id_urn . ink .= 0
@@ -1043,8 +1071,8 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 >   -- Return some amount of excess auction gains
 >     id_vow  <- use sender
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
->     id_jar  <- look (vat . ilks . ix id_ilk . jar)
->     pull id_jar id_vow wad_dai
+>     id_gem  <- look (vat . ilks . ix id_ilk . gem)
+>     transfer id_gem wad_dai id_vow Vault
 >
 >   -- Record the gains as the |cdp|'s collateral
 >     vat . urns . ix id_urn . ink .= wad_dai
@@ -1059,11 +1087,11 @@ to claim all uncollected stability fee revenue
 > loot = auth $ do
 >
 > -- The dai vault's balance is the uncollected stability fee revenue
->   wad_dai  <- look (balance id_dai (Vault id_dai))
+>   wad  <- look (balance DAI Vault)
 >
 > -- Transfer the entire dai vault balance to sender
 >   id_vow   <- use sender
->   transfer id_dai wad_dai (Vault id_dai) Vow
+>   transfer DAI wad Vault Vow
 
 \section{Auctioning}
 \actentry{|flip|}{put collateral up for auction}%
@@ -1095,19 +1123,19 @@ to claim all uncollected stability fee revenue
 > tidy who = auth $ do
 >
 > -- Find the |dai| and |sin| balances of the entity
->   awe  <- look (balance id_dai  who)
->   woe  <- look (balance id_sin  who)
+>   awe  <- look (balance DAI  who)
+>   woe  <- look (balance SIN  who)
 >
 > -- We can burn at most the smallest of the two balances
 >   let x = min awe woe
 >
 > -- Transfer both |dai| and |sin| into the vow accounts
->   transfer  id_dai  x who  Vow
->   transfer  id_sin  x who  Vow
+>   transfer  DAI  x who  Vow
+>   transfer  SIN  x who  Vow
 >
 > -- Burn both |dai| and |sin|
->   burn      id_dai  x      Vow
->   burn      id_sin  x      Vow
+>   burn      DAI  x      Vow
+>   burn      SIN  x      Vow
 
 \actentry{|kick|}{flap, flop, and whatnot}
 
@@ -1120,11 +1148,11 @@ to claim all uncollected stability fee revenue
 >   tidy Vow
 >
 > -- Assign any remaining revenue to the |mkr|-deflating fee auction
->   transferAll id_dai Vow Flapper
+>   transferAll DAI Vow Flapper
 >   flap
 >
 > -- Assign any remaining debt to the |mkr|-inflating debt auction
->   transferAll id_sin Vow Flopper
+>   transferAll SIN Vow Flopper
 >   flop
 
 \section{Governance}
@@ -1134,8 +1162,8 @@ create a new |cdp| type.  Since the new type is initialized with a
 zero debt ceiling, a separate transaction can safely set the risk
 parameters before any lending occurs.
 
-> form id_ilk id_jar = auth $ do
->     initialize (vat . ilks . at id_ilk) (defaultIlk id_jar)
+> form id_ilk id_gem = auth $ do
+>     initialize (vat . ilks . at id_ilk) (defaultIlk id_gem)
 
 \actentry{|frob|}{set the sensitivity parameter}Governance uses |frob|
 to alter the sensitivity factor, which is the only mutable parameter
@@ -1160,71 +1188,50 @@ When altering the stability fee with |crop|, we ensure that the
 previous stability fee has been accounted for in the internal
 debt unit.
 
-> crop id_ilk tax1 =
->   auth $ do
+> crop id_ilk tax1 = auth $ do
+> 
 >   -- Apply the current stability fee to the internal debt unit
 >     drip id_ilk
 >   -- Change the stability fee
 >     vat . ilks . ix id_ilk . tax .= tax1
 
-\section{Vaults}
-\actentry{|pull|}{transfer tokens to vault}%
-The internal act |pull| transfers tokens into a vault.
-It is used by |lock| to acquire collateral from a |cdp| owner;
-by |wipe| to acquire dai from a |cdp| owner;
-and by |plop| to acquire collateral from the settler contract.
-
-> pull id_jar src wad_gem =
->   transfer id_jar wad_gem src (Vault id_jar)
-
-\actentry{|push|}{transfer tokens from vault}%
-The internal act |push| transfers tokens out from a collateral vault.
-It is used by |draw| to send dai to a |cdp| owner;
-by |free| to send collateral to a |cdp| owner;
-and by |grab| to send collateral to the settler contract.
-
-> push id_jar dst wad_gem =
->   transfer id_jar wad_gem (Vault id_jar) dst
-
 \section{Token manipulation}%
 We model the |erc20| transfer function in simplified form (omitting
 the concept of ``allowance'').
 
-> transfer id_jar wad src dst  =
+> transfer id_gem wad src dst  =
 >
 > -- Operate in the token's balance table
->   zoom (vat . jars . ix id_jar . gem . balanceOf) $ do
+>   zoom balances $ do
 >
 >   -- Fail if source balance insufficient
->     balance <- look (ix src)
+>     balance <- look (ix (src, id_gem))
 >     aver (balance >= wad)
 >
 >   -- Update balances
->     decrease    (ix src)  wad
->     initialize  (at dst)  0
->     increase    (ix dst)  wad
+>     decrease    (ix (src, id_gem))  wad
+>     initialize  (at (dst, id_gem))  0
+>     increase    (ix (dst, id_gem))  wad
 
-> transferAll id_jar src dst = do
->   wad <- look (balance id_jar src)
->   transfer id_jar wad src dst
+> transferAll id_gem src dst = do
+>   wad <- look (balance id_gem src)
+>   transfer id_gem wad src dst
 
 \actentry{|mint|}{inflate token}%
 The internal act |mint| inflates the supply of a token.
 It is used by |lend| to create new |dai| and debt tokens,
 and by the settler to create new |mkr|.
 
-> mint id_jar wad0 dst =
->   zoom (vat . jars . ix id_jar . gem) $ do
->     increase (balanceOf . ix dst) wad0
+> mint id_gem wad dst = do
+>   increase (balances . ix (dst, id_gem)) wad
 
 \actentry{|burn|}{deflate token}%
 The internal act |burn| deflates the supply of a token.
 It is used by |mend| to destroy |dai| and debt tokens,
 and by the settler to destroy |mkr|.
 
-> burn id_jar wad0 src =
->   zoom (vat . jars . ix id_jar . gem) $ do
->     decrease (balanceOf . ix src) wad0
+> burn id_gem wad src =
+>   decrease (balances . ix (src, id_gem)) wad
 
 \actentry{|lend|}{mint dai and debt token}%
 The internal act |lend| mints identical amounts
@@ -1236,8 +1243,8 @@ which stays in the dai vault until collected.
 
 > lend wad_dai = do
 >
->   mint id_dai wad_dai Joy
->   mint id_sin wad_dai Woe
+>   mint DAI wad_dai Joy
+>   mint SIN wad_dai Woe
 
 \actentry{|mend|}{burn dai and debt token}%
 The internal act |mend| destroys identical amounts
@@ -1246,8 +1253,8 @@ Its use via |wipe| is how the dai supply is reduced.
 
 > mend wad_dai = do
 >
->   burn id_dai wad_dai (Vault id_dai)
->   burn id_sin wad_dai Ice
+>   burn DAI wad_dai Vault
+>   burn SIN wad_dai Ice
 
 %if 0
 
@@ -1259,18 +1266,14 @@ Its use via |wipe| is how the dai supply is reduced.
 
 \actentry{|mine|}{create toy token type}
 
-> mine id_jar = do
+> mine id_gem = do
 >
->     initialize (vat . jars . at id_jar)
->       (Jar {
->          _gem  = Gem (singleton Toy 1000000000000),
->          _tag  = Wad 0,
->          _zzz  = 0 })
+>     initialize (balances . at (Toy, id_gem)) 1000000000000
 
 \actentry{|hand|}{give toy tokens to account}
 
-> hand dst wad_gem id_jar = do
->   transfer id_jar wad_gem
+> hand dst wad_gem id_gem = do
+>   transfer id_gem wad_gem
 >     Toy (Account dst)
 
 \actentry{|sire|}{register a new toy account}
@@ -1282,18 +1285,17 @@ Its use via |wipe| is how the dai supply is reduced.
 > perform :: Act -> Maker ()
 > perform x =
 >   let ?act = x in case x of
->     Form id jar      -> form id jar
->     Mark jar tag zzz -> mark jar tag zzz
+>     Form id gem      -> form id gem
+>     Mark gem tag zzz -> mark gem tag zzz
 >     Open id ilk      -> open id ilk
 >     Tell wad         -> tell wad
 >     Frob ray         -> frob ray
 >     Prod             -> prod
 >     Warp t           -> warp t
 >     Give urn lad     -> give urn lad
->     Pull jar lad wad -> pull jar lad wad
 >     Lock urn wad     -> lock urn wad
 >     Mine id          -> mine id
->     Hand lad wad jar -> hand lad wad jar
+>     Hand lad wad gem -> hand lad wad gem
 >     Sire lad         -> sire lad
 >     Draw lad wad     -> draw lad wad
 >     Cork urn wad     -> cork urn wad
@@ -1318,13 +1320,13 @@ Its use via |wipe| is how the dai supply is reduced.
 We define the Maker act vocabulary as a data type to represent invocations.
 
 > data Act =
->      Bite     (Id Urn)       |  Draw     (Id Urn)  Wad          |  Form     (Id Ilk)  (Id Jar)
+>      Bite     (Id Urn)       |  Draw     (Id Urn)  Wad          |  Form     (Id Ilk)  (Gem)
 >   |  Free     (Id Urn)  Wad  |  Frob     Ray                    |  Give     (Id Urn)  Entity
 >   |  Grab     (Id Urn)       |  Lock     (Id Urn)  Wad
->   |  Loot     Wad            |  Mark     (Id Jar)  Wad  Sec     |  Open     (Id Urn)  (Id Ilk)
->   |  Prod                    |  Pull     (Id Jar)  Entity Wad  |  Shut     (Id Urn)
+>   |  Loot     Wad            |  Mark     (Gem)  Wad  Sec     |  Open     (Id Urn)  (Id Ilk)
+>   |  Prod                    |  Pull     (Gem)  Entity Wad  |  Shut     (Id Urn)
 >   |  Tell     Wad            |  Wipe     (Id Urn)  Wad
->   |  Mine (Id Jar)  | Hand Address Wad (Id Jar) | Sire Address
+>   |  Mine (Gem)  | Hand Address Wad (Gem) | Sire Address
 >   |  Addr Address    | Warp     Sec
 >   |  Cork (Id Ilk) Wad
 >  deriving (Eq, Show)
@@ -1391,7 +1393,7 @@ sender is authorized.
 
 > auth continue = do
 >   s <- use sender
->   unless (s == Account id_god) (throwError AuthError)
+>   unless (s == God) (throwError AuthError)
 >   continue
 
 %if 0
