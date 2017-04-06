@@ -1000,22 +1000,29 @@ corresponding to the |cdp|'s debt.
 >   -- Fail if |cdp| is not marked for liquidation
 >     want (feel id_urn) (== Grief)
 >
->   -- Transfer the collateral to the settler
->     id_vow  <- use sender
+>     ink0    <- look (vat . urns . ix id_urn . ink)
+>     art0    <- look (vat . urns . ix id_urn . art)
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >     id_jar  <- look (vat . ilks . ix id_ilk . jar)
->     ink0    <- look (vat . urns . ix id_urn . ink)
->     push id_jar id_vow ink0
 > 
 >   -- Update the debt unit and stability fee
 >     chi1    <- drip id_ilk
 >
 >   -- Denominate the debt in dai
->     art0    <- look (vat . urns . ix id_urn . art)
 >     let con = art0 * cast chi1
 >
->   -- Transfer the debt tokens to the settler
->     push id_dai id_vow con
+>   -- Transfer debt to settler
+>     push id_sin Vow con
+>
+>   -- Transfer collateral to settler
+>     push id_jar Vow ink0
+> 
+>   -- Nullify |cdp|'s collateral and debt quantities
+>     vat . urns . ix id_urn . ink .= 0
+>     vat . urns . ix id_urn . art .= 0
+>
+>   -- Decrease the |cdp| type's total debt quantity
+>     decrease (vat . ilks . ix id_ilk . rum) art0
 
 \actentry{|plop|}{finish liquidation returning profit}When the settler
 has finished the process of liquidating a |cdp|'s collateral, it
@@ -1080,23 +1087,41 @@ to claim all uncollected stability fee revenue
 \section{Settlement}
 \actentry{|tidy|}{burn equal quantities of |dai| and |sin|}%
 
-> tidy = do
+
+> tidy who = auth $ do
 >
-> -- Find the |dai| and |sin| balances of the sender
->   who <- use sender
->   awe <- look (balance id_dai who)
->   woe <- look (balance id_sin who)
+> -- Find the |dai| and |sin| balances of the entity
+>   awe  <- look (balance id_dai  who)
+>   woe  <- look (balance id_sin  who)
 >
-> -- We can burn at most the minimum of the two balances
+> -- We can burn at most the smallest of the two balances
 >   let x = min awe woe
 >
-> -- Burn the |dai| and |sin| after moving them to the vow account
+> -- Transfer both |dai| and |sin| into the vow accounts
 >   transfer  id_dai  x who  Vow
 >   transfer  id_sin  x who  Vow
+>
+> -- Burn both |dai| and |sin|
 >   burn      id_dai  x      Vow
 >   burn      id_sin  x      Vow
 
 \actentry{|kick|}{flap, flop, and whatnot}
+
+> kick = do
+>
+> -- Transfer unprocessed stability fee revenue to vow account
+>   loot
+> 
+> -- Cancel fee revenue against bad debt; vow keeps either a |dai| balance \emph{or} a |sin| balance.
+>   tidy Vow
+>
+> -- Assign any remaining revenue to the |mkr|-deflating fee auction
+>   transferAll id_dai Vow Flapper
+>   flap
+>
+> -- Assign any remaining debt to the |mkr|-inflating debt auction
+>   transferAll id_sin Vow Flopper
+>   flop
 
 \section{Governance}
 
@@ -1265,8 +1290,8 @@ Its use via |wipe| is how the dai supply is reduced.
 >     Draw lad wad     -> draw lad wad
 >     Cork urn wad     -> cork urn wad
 
-> being :: Maker () -> Entity -> Maker ()
-> being x who = do
+> being :: Entity -> Maker () -> Maker ()
+> being who x = do
 >   old     <- use sender
 >   sender  .= who
 >   y       <- x
