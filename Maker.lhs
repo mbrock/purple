@@ -362,6 +362,9 @@ that can hold a token balance.
 >              |  Woe              -- Spawning account for debt
 >              |  Ice              -- Holding account for debt
 >              |  Vow              -- Settler
+>              |  Flipper          -- Collateral auctioneer
+>              |  Flapper          -- Revenue auctioneer
+>              |  Flopper          -- Debt auctioneer
 >              |  Toy              -- Test driver
 >   deriving (Eq, Ord, Show)
 
@@ -549,7 +552,8 @@ contracts, which has the |Vat| record along with model state.
 >   _vat       = initialVat how0,
 >   _era       = 0,
 >   _sender    = Account id_god,
->   _accounts  = mempty
+>   _accounts  = mempty,
+>   _mode      = Dummy
 > }
 
 \chapter{Acts}
@@ -1199,6 +1203,10 @@ the concept of ``allowance'').
 >     decrease    (ix src)  wad
 >     initialize  (at dst)  0
 >     increase    (ix dst)  wad
+
+> transferAll id_jar src dst = do
+>   wad <- look (balance id_jar src)
+>   transfer id_jar wad src dst
 
 \actentry{|mint|}{inflate token}%
 The internal act |mint| inflates the supply of a token.

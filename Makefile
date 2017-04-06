@@ -5,7 +5,7 @@ doc/maker.pdf: Maker.lhs
 nix: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal configure'
 ghci:
-	cabal repl --ghc-options="-fobject-code -O2 -Wall -fno-warn-name-shadowing"
+	cabal repl --ghc-options="-fobject-code -O2 -Wall -fno-warn-name-shadowing -fno-warn-missing-signatures"
 
 default.nix: mkrfuzz.cabal; cabal2nix . > default.nix;
 
