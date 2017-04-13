@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+let parseURL = require("url").parse
+let spawn = require("child_process").spawn
+require("http").createServer((req, res) => {
+  if (req.method == "POST") {
+    let args = req.url.replace(/\/$/, "").split("/").slice(1)
+    let child = spawn("./dcs", args.map(decodeURIComponent), {
+      stdio: ["pipe", "pipe", process.stderr]
+    }).on("close", code => {
+      res.headersSent || res.writeHead(code ? 500 : 200)
+      res.end()
+      console.warn([res.statusCode, req.method, req.url].join(" "))
+    })
+    res.setHeader("Content-Type", "application/json")
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    req.pipe(child.stdin)
+    child.stdout.pipe(res, { end: false })
+  } else {
+    res.writeHead(400)
+    res.end()
+  }
+}).listen(process.env.PORT || 80)

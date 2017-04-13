@@ -10,6 +10,8 @@ build-type:
   Simple
 
 library
+  ghc-options: -optl-fuse-ld=gold
+  ld-options:  -fuse-ld=gold
   exposed-modules:
     Maker,
     Maker.Prelude,
@@ -35,6 +37,8 @@ library
     Haskell2010
 
 executable dai
+  ghc-options: -optl-fuse-ld=gold
+  ld-options:  -fuse-ld=gold
   default-language:
     Haskell2010
   build-depends:

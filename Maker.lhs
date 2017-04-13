@@ -228,6 +228,8 @@ in Appendix~\ref{appendix:numbers}.
 %if 0
 
 > import Debug.Trace
+> import Data.Aeson.Types (fieldLabelModifier, defaultOptions, genericParseJSON, genericToJSON)
+> import Prelude (drop)
 
 %endif
 Now we proceed to define the specifics of the Maker system.
@@ -329,14 +331,14 @@ We also have predefined entity identifiers.
 
 %endif
 
-\section{|Jar| --- collateral vault}
+\section{|Tag| --- collateral vault}
 \actentry{|tag|}{market price of token}
 \actentry{|zzz|}{expiration time of token price feed}
 
 The data received from price feeds is categorized by token and stored
-in |Jar| records.
+in |Tag| records.
 
-> data Jar = Jar {
+> data Tag = Tag {
 >
 >     _tag  :: Wad,  -- Market price denominated in |SDR|
 >     _zzz  :: Sec   -- Time of price expiration
@@ -349,7 +351,7 @@ We use a data type to explicitly distinguish the different entities
 that can hold a token balance.
 
 > data Entity  =  Account Address  -- External holder
->              |  Vault            -- Token vault
+>              |  Jar              -- Token vault
 >              |  Joy              -- Spawning account for dai
 >              |  Woe              -- Spawning account for debt
 >              |  Ice              -- Holding account for debt
@@ -452,7 +454,7 @@ types, and price feeds, along with the data of the feedback mechanism.
 
 > data Vat = Vat {
 > 
->     _jars  :: Map Gem Jar,        -- Token vaults
+>     _tags  :: Map Gem Tag,        -- Token price feeds
 >     _ilks  :: Map (Id Ilk) Ilk,   -- |cdp| type records
 >     _urns  :: Map (Id Urn) Urn,   -- |cdp| records
 > 
@@ -482,7 +484,7 @@ contracts, which has the |Vat| record along with model state.
 
 %if 0
 
-> deriving instance Generic Jar
+> deriving instance Generic Tag
 > deriving instance Generic Entity
 > deriving instance Generic Ilk
 > deriving instance Generic Urn
@@ -492,10 +494,10 @@ contracts, which has the |Vat| record along with model state.
 > deriving instance Generic Mode
 
 > instance HasResolution a => ToJSON (Decimal a) where
->   toJSON (D (MkFixed x)) = toJSON (show x)
+>   toJSON (D x) = toJSON (show x)
 > 
 > instance HasResolution a => FromJSON (Decimal a) where
->   parseJSON v = fmap (D . MkFixed . read) (parseJSON v)
+>   parseJSON v = fmap (D . read) (parseJSON v)
 >
 > instance ToJSON Sec where
 >   toJSON (Sec x) = toJSON (show x)
@@ -507,23 +509,36 @@ contracts, which has the |Vat| record along with model state.
 > instance ToJSONKey Entity ; instance FromJSONKey Entity
 > instance ToJSONKey (Id a) ; instance FromJSONKey (Id a)
 > 
-> instance ToJSON Wad       ; instance FromJSON Wad
-> instance ToJSON Ray       ; instance FromJSON Ray
-> instance ToJSON Address   ; instance FromJSON Address
-> instance ToJSON (Id a)    ; instance FromJSON (Id a)
-> instance ToJSON Entity    ; instance FromJSON Entity
-> instance ToJSON Gem       ; instance FromJSON Gem
-> instance ToJSON Jar       ; instance FromJSON Jar
-> instance ToJSON Ilk       ; instance FromJSON Ilk
-> instance ToJSON Urn       ; instance FromJSON Urn
-> instance ToJSON Vox       ; instance FromJSON Vox
-> instance ToJSON Vat       ; instance FromJSON Vat
-> instance ToJSON Mode      ; instance FromJSON Mode
-> instance ToJSON System    ; instance FromJSON System
+> instance ToJSON Wad
+> instance FromJSON Wad
+> instance ToJSON Ray
+> instance FromJSON Ray
+> instance ToJSON Address
+> instance FromJSON Address
+> instance ToJSON (Id a)
+> instance FromJSON (Id a)
+> instance ToJSON Entity
+> instance FromJSON Entity
+> instance ToJSON Gem
+> instance FromJSON Gem
+> instance ToJSON Tag where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance FromJSON Tag where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance ToJSON Ilk where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance FromJSON Ilk where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance ToJSON Urn where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance FromJSON Urn where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance ToJSON Vox where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance FromJSON Vox where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance ToJSON Vat where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance FromJSON Vat where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance ToJSON Mode
+> instance FromJSON Mode
+> instance ToJSON System where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
+> instance FromJSON System where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
 
 \section*{Lens fields}
 
-> makeLenses ''Jar  ; makeLenses ''Ilk
+> makeLenses ''Tag  ; makeLenses ''Ilk
 > makeLenses ''Urn    ; makeLenses ''Vox  ; makeLenses ''Vat
 > makeLenses ''System
 
@@ -555,8 +570,8 @@ contracts, which has the |Vat| record along with model state.
 >   _ink  = Wad 0
 > }
 
-> initialJar :: Jar
-> initialJar = Jar {
+> initialTag :: Tag
+> initialTag = Tag {
 >   _tag  = Wad 0,
 >   _zzz  = 0
 > }
@@ -572,7 +587,7 @@ contracts, which has the |Vat| record along with model state.
 >   },
 >   _ilks  = empty,
 >   _urns  = empty,
->   _jars  = empty
+>   _tags  = empty
 > }
 
 > initialSystem :: Ray -> System
@@ -621,7 +636,7 @@ five stages of risk.
 We define the function |analyze| that determines the risk stage of a
 |cdp|.
 
-> analyze era0 par0 urn0 ilk0 jar0 =
+> analyze era0 par0 urn0 ilk0 tag0 =
 >   if  | view cat  urn0  /= Nothing && view ink urn0 == 0
 >         -- |cdp| liquidation triggered and started
 >          -> Dread
@@ -631,10 +646,10 @@ We define the function |analyze| that determines the risk stage of a
 >       | pro < min
 >         -- |cdp|'s collateralization below liquidation ratio
 >          -> Panic  
->       | view zzz jar0 + view lax ilk0 < era0
+>       | view zzz tag0 + view lax ilk0 < era0
 >         -- |cdp| type's price limbo exceeded limit
 >          -> Panic  
->       | view zzz jar0 < era0
+>       | view zzz tag0 < era0
 >         -- |cdp| type's price feed in limbo
 >          -> Worry  
 >       | cap  > view hat ilk0
@@ -646,7 +661,7 @@ We define the function |analyze| that determines the risk stage of a
 >
 >   where
 >   -- |cdp|'s collateral value in |sdr|:
->     pro  = view ink urn0  * view tag jar0
+>     pro  = view ink urn0  * view tag tag0
 >
 >   -- |cdp| type's total debt in |dai|:
 >     cap  = view rum ilk0  * cast (view chi ilk0)
@@ -711,10 +726,10 @@ Now we define the internal act |feel| which returns the value of
 >   par0    <- use   (vat . vox . par)
 >   urn0    <- look  (vat . urns . ix id_urn)
 >   ilk0    <- look  (vat . ilks . ix (view ilk urn0  ))
->   jar0    <- look  (vat . jars . ix (view gem ilk0  ))
+>   tag0    <- look  (vat . tags . ix (view gem ilk0  ))
 >
 > -- Return risk stage of |cdp|
->   return (analyze era0 par0 urn0 ilk0 jar0)
+>   return (analyze era0 par0 urn0 ilk0 tag0)
 
 Acts on |cdp|s use |feel| to prohibit increasing risk when already
 risky, and to freeze debt and collateral during liquidation; see
@@ -731,6 +746,9 @@ identifier and a |cdp| type.
 >
 > -- Fail if account identifier is taken
 >   none (vat . urns . ix id_urn)
+>
+> -- Fail if |cdp| type is not present
+>   _ <- look (vat . ilks . ix id_ilk)
 >
 > -- Create a |cdp| record with the sender as owner
 >   id_lad <- use sender
@@ -766,10 +784,11 @@ collateral.
 >   id_gem  <- look (vat . ilks . ix id_ilk  . gem)
 >
 > -- Transfer tokens from owner to collateral vault
->   transfer id_gem wad_gem id_lad Vault
+>   transfer id_gem wad_gem id_lad Jar
 >
 > -- Record an increase in collateral
 >   increase (vat . urns . ix id_urn . ink) wad_gem
+>   return ()
 
 \clearpage
 
@@ -794,7 +813,7 @@ liquidation ratio.
 > -- Transfer tokens from collateral vault to owner
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   id_gem  <- look (vat . ilks . ix id_ilk . gem)
->   transfer id_gem wad_gem Vault id_lad
+>   transfer id_gem wad_gem Jar id_lad
 
 \actentry{|draw|}{issue dai as debt}When a |cdp| has no risk problems,
 its owner can can use |draw| to take out a loan of newly minted dai,
@@ -859,7 +878,7 @@ long as liquidation has not been triggered.
 >   decrease (vat . ilks . ix id_ilk . rum) wad_chi
 >
 > -- Transfer dai from |cdp| owner to dai vault
->   transfer DAI wad_dai id_lad Vault
+>   transfer DAI wad_dai id_lad Jar
 >
 > -- Destroy dai and corresponding debt tokens
 >   mend wad_dai
@@ -986,8 +1005,10 @@ act records a new market price of a collateral token along with the
 expiration date of this price.
 
 > mark id_gem tag1 zzz1 = auth $ do
->     vat . jars . ix id_gem . tag  .= tag1
->     vat . jars . ix id_gem . zzz  .= zzz1
+>     initialize (vat . tags . at id_gem) Tag {
+>       _tag  = tag1,
+>       _zzz  = zzz1
+>       }
 
 \actentry{|tell|}{update market price of dai}The |tell| act records a
 new market price of the |dai| token along with the expiration date of
@@ -1051,8 +1072,8 @@ corresponding to the |cdp|'s debt.
 >     let con = art0 * cast chi1
 >
 >   -- Transfer collateral and debt to settler
->     transfer id_gem  ink0  Vault Vow
->     transfer SIN     con   Vault Vow
+>     transfer id_gem  ink0  Jar Vow
+>     transfer SIN     con   Jar Vow
 > 
 >   -- Nullify |cdp|'s collateral and debt quantities
 >     vat . urns . ix id_urn . ink .= 0
@@ -1077,7 +1098,7 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 >     id_vow  <- use sender
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >     id_gem  <- look (vat . ilks . ix id_ilk . gem)
->     transfer id_gem wad_dai id_vow Vault
+>     transfer id_gem wad_dai id_vow Jar
 >
 >   -- Record the gains as the |cdp|'s collateral
 >     vat . urns . ix id_urn . ink .= wad_dai
@@ -1092,11 +1113,11 @@ to claim all uncollected stability fee revenue
 > loot = auth $ do
 >
 > -- The dai vault's balance is the uncollected stability fee revenue
->   wad  <- look (balance DAI Vault)
+>   wad  <- look (balance DAI Jar)
 >
 > -- Transfer the entire dai vault balance to sender
 >   id_vow   <- use sender
->   transfer DAI wad Vault Vow
+>   transfer DAI wad Jar Vow
 
 \section{Auctioning}
 \actentry{|flip|}{put collateral up for auction}%
@@ -1228,7 +1249,8 @@ It is used by |lend| to create new |dai| and debt tokens,
 and by the settler to create new |mkr|.
 
 > mint id_gem wad dst = do
->   increase (balances . ix (dst, id_gem)) wad
+>   initialize  (balances . at (dst, id_gem))  0
+>   increase    (balances . ix (dst, id_gem))  wad
 
 \actentry{|burn|}{deflate token}%
 The internal act |burn| deflates the supply of a token.
@@ -1258,7 +1280,7 @@ Its use via |wipe| is how the dai supply is reduced.
 
 > mend wad_dai = do
 >
->   burn DAI wad_dai Vault
+>   burn DAI wad_dai Jar
 >   burn SIN wad_dai Ice
 
 %if 0
@@ -1303,7 +1325,11 @@ Its use via |wipe| is how the dai supply is reduced.
 >     Hand lad wad gem -> hand lad wad gem
 >     Sire lad         -> sire lad
 >     Draw lad wad     -> draw lad wad
->     Cork urn wad     -> cork urn wad
+>     Cuff ilk ray     -> cuff ilk ray
+>     Chop ilk ray     -> chop ilk ray
+>     Cork ilk wad     -> cork ilk wad
+>     Calm ilk sec     -> calm ilk sec
+>     Mint gem wad lad -> mint gem wad lad
 
 > being :: Entity -> Maker () -> Maker ()
 > being who x = do
@@ -1333,7 +1359,12 @@ We define the Maker act vocabulary as a data type to represent invocations.
 >   |  Tell     Wad            |  Wipe     (Id Urn)  Wad
 >   |  Mine (Gem)  | Hand Address Wad (Gem) | Sire Address
 >   |  Addr Address    | Warp     Sec
+>   |  Cuff (Id Ilk) Ray
+>   |  Chop (Id Ilk) Ray
 >   |  Cork (Id Ilk) Wad
+>   |  Calm (Id Ilk) Sec
+>
+>   |  Mint Gem Wad Entity
 >  deriving (Eq, Show)
 
 %endif
