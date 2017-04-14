@@ -16,7 +16,9 @@ let transform = ({
     jars, ilks, urns,
   } 
 }) => ({
-  balances,
+  balances: balances.map(([[lad, gem], wad]) => [
+    [lad, gem], dec(wad)
+  ]),
   vat: {
     vox: {
       way: dec(way),
@@ -26,8 +28,27 @@ let transform = ({
       tau: dec(tau),
     },
     jars,
-    ilks,
-    urns,
+    ilks: ilks.map(([id, {
+      axe, hat, lax, mat, tax, chi, rho, rum
+    }]) => [id, {
+      axe: dec(axe),
+      hat: dec(hat),
+      lax: dec(lax),
+      mat: dec(mat),
+      tax: dec(tax),
+      chi: dec(chi),
+      rho: dec(rho),
+      rum: dec(rum),
+    }]),
+    urns: urns.map(([id, {
+      lad, ilk, art, ink, cat
+    }]) => [id, {
+      lad: lad.contents,
+      ilk,
+      art: dec(art),
+      ink: dec(ink),
+      cat,
+    }])
   }
 })
 
@@ -38,48 +59,44 @@ let renderSystem = ({
     jars, ilks, urns,
   }
 }) => tag("div", null, [
-  ...(urns.length ? [tag("table", { className: "box" }, [
-    tag("thead", null, [
-      tag("tr", null, [
-        tag("th", null, "urn"),
-        tag("th", null, "lad"),
-        tag("th", null, "ilk"),
-        tag("th", null, "ink"),
-        tag("th", null, "art"),
-        tag("th", null, "cat"),
-      ])
-    ]),
-    tag("tbody", null, urns.map(([id, urn]) =>
-      tag("tr", null, [
-        tag("td", null, id),
-        tag("td", null, urn.lad.contents),
-        tag("td", null, urn.ilk),
-        tag("td", null, urn.ink),
-        tag("td", null, urn.art),
-        tag("td", null, urn.cat),
-      ])
-    )),
-  ])] : []),
-  ...(balances.length ? [tag("table", { className: "box" }, [
-    tag("thead", null, [
-      tag("tr", null, [
-        tag("th", null, "lad"),
-        tag("th", null, "gem"),
-        tag("th", null, "wad"),
-      ]),
-    ]),
-    tag("tbody", null, [
-      ...balances.map(x => tag("tr", null, [
-        tag("td", {
-          className: x[0][0].contents ? null : "special"
-        }, x[0][0].contents || x[0][0].tag),
-        tag("td", null, x[0][1].contents || x[0][1].tag),
-        tag("td", null, x[1]),
-      ]))
-    ]),
-  ])] : [])
+  ...renderTable(
+    ilks,
+    "ilk axe hat lax mat tax chi rho rum".split(" "),
+    ([id, ilk]) => [
+      tag("td", null, id),
+      tag("td", null, ilk.axe.toString()),
+      tag("td", null, ilk.hat.toString()),
+      tag("td", null, ilk.lax.toString()),
+      tag("td", null, ilk.mat.toString()),
+      tag("td", null, ilk.tax.toString()),
+      tag("td", null, ilk.chi.toString()),
+      tag("td", null, ilk.rho.toString()),
+      tag("td", null, ilk.rum.toString()),
+    ]
+  ),
+  ...renderTable(urns, "urn lad ilk ink art cat".split(" "), ([id, urn]) => [
+    tag("td", null, id),
+    tag("td", null, urn.lad),
+    tag("td", null, urn.ilk.toString()),
+    tag("td", null, urn.ink.toString()),
+    tag("td", null, urn.art.toString()),
+    tag("td", null, urn.cat),
+  ]),
+  ...renderTable(balances, ["lad", "gem", "wad"], x => [
+    tag("td", {
+      className: x[0][0].contents ? null : "special"
+    }, x[0][0].contents || x[0][0].tag),
+    tag("td", null, x[0][1].contents || x[0][1].tag),
+    tag("td", null, x[1].toString()),
+  ]),
 ])
 
+let renderTable = (xs, ths, f) => !xs.length ? [] : [
+  tag("table", { className: "box" }, [
+    tag("thead", null, [tag("tr", null, ths.map(s => tag("th", null, s)))]),
+    tag("tbody", null, xs.map(x => tag("tr", null, f(x))))
+  ])
+]
 
 let render = ({
   saga,
