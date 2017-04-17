@@ -1,6 +1,6 @@
 const url = "http://localhost:1988"
 
-let tag = React.createElement
+let $ = React.createElement
 let dec = s => new Decimal(s)
 let unray = x => x.toFixed(36)
 let unwad = x => x.toFixed(18)
@@ -8,12 +8,13 @@ let unwad = x => x.toFixed(18)
 let yearSecs = dec("3.154e7")
 let wayYearPps = way => way.pow(yearSecs).sub(1).mul(dec(100))
 let showWay = way => `${wayYearPps(way).toFixed(5)} pp/year`
+let showHow = how => `${showWay(how)}²`
 
 let transform = ({
   balances,
   vat: {
     vox: { way, par, wut, how, tau },
-    jars, ilks, urns,
+    tags, ilks, urns,
   } 
 }) => ({
   balances: balances.map(([[lad, gem], wad]) => [
@@ -27,7 +28,12 @@ let transform = ({
       how: dec(how),
       tau: dec(tau),
     },
-    jars,
+    tags: tags.map(([id, {
+      tag, zzz
+    }]) => [id, {
+      tag: dec(tag),
+      zzz: dec(zzz),
+    }]),
     ilks: ilks.map(([id, {
       axe, hat, lax, mat, tax, chi, rho, rum
     }]) => [id, {
@@ -56,53 +62,81 @@ let renderSystem = ({
   balances,
   vat: {
     vox: { way, par, wut, how, tau },
-    jars, ilks, urns,
+    tags, ilks, urns,
   }
-}) => tag("div", null, [
+}) => $("div", null, [
   ...renderTable(
+    "vox",
+    [null],
+    "par wut way how tau".split(" "),
+    _ => [
+      $("td", null, par.toString()),
+      $("td", null, wut.toString()),
+      $("td", null, showWay(way)),
+      $("td", null, showHow(how)),
+      $("td", null, tau.toString()),
+    ]
+  ),
+  ...renderTable(
+    "ilks",
     ilks,
     "ilk axe hat lax mat tax chi rho rum".split(" "),
     ([id, ilk]) => [
-      tag("td", null, id),
-      tag("td", null, ilk.axe.toString()),
-      tag("td", null, ilk.hat.toString()),
-      tag("td", null, ilk.lax.toString()),
-      tag("td", null, ilk.mat.toString()),
-      tag("td", null, ilk.tax.toString()),
-      tag("td", null, ilk.chi.toString()),
-      tag("td", null, ilk.rho.toString()),
-      tag("td", null, ilk.rum.toString()),
+      $("td", null, id),
+      $("td", null, ilk.axe.toString()),
+      $("td", null, ilk.hat.toString()),
+      $("td", null, ilk.lax.toString()),
+      $("td", null, ilk.mat.toString()),
+      $("td", null, ilk.tax.toString()),
+      $("td", null, ilk.chi.toString()),
+      $("td", null, ilk.rho.toString()),
+      $("td", null, ilk.rum.toString()),
     ]
   ),
-  ...renderTable(urns, "urn lad ilk ink art cat".split(" "), ([id, urn]) => [
-    tag("td", null, id),
-    tag("td", null, urn.lad),
-    tag("td", null, urn.ilk.toString()),
-    tag("td", null, urn.ink.toString()),
-    tag("td", null, urn.art.toString()),
-    tag("td", null, urn.cat),
+  ...renderTable("urns", urns, "urn lad ilk ink art cat".split(" "), ([id, urn]) => [
+    $("td", null, id),
+    $("td", null, urn.lad),
+    $("td", null, urn.ilk.toString()),
+    $("td", null, urn.ink.toString()),
+    $("td", null, urn.art.toString()),
+    $("td", null, urn.cat),
   ]),
-  ...renderTable(balances, ["lad", "gem", "wad"], x => [
-    tag("td", {
+  ...renderTable("tags", tags, ["gem", "tag", "zzz"], ([id, { tag, zzz }]) => [
+    $("td", null, id.tag == "Gem" ? id.contents : id.tag),
+    $("td", null, tag.toString()),
+    $("td", null, zzz.toString()),
+  ]),
+  ...renderTable("wads", balances, ["lad", "gem", "wad"], x => [
+    $("td", {
       className: x[0][0].contents ? null : "special"
     }, x[0][0].contents || x[0][0].tag),
-    tag("td", null, x[0][1].contents || x[0][1].tag),
-    tag("td", null, x[1].toString()),
+    $("td", null, x[0][1].contents || x[0][1].tag),
+    $("td", null, x[1].toString()),
   ]),
 ])
 
-let renderTable = (xs, ths, f) => !xs.length ? [] : [
-  tag("table", { className: "box" }, [
-    tag("thead", null, [tag("tr", null, ths.map(s => tag("th", null, s)))]),
-    tag("tbody", null, xs.map(x => tag("tr", null, f(x))))
+let renderTable = (title, xs, ths, f) => !xs.length ? [] : [
+  $("div", { className: "box" }, [
+    $("table", null, [
+      $("thead", null, [
+        $("tr", null, [
+          $("th", null, title),
+          ...ths.map(s => $("th", null, s))
+        ])
+      ]),
+      $("tbody", null, xs.map(x => $("tr", null, [
+        $("td", null, ""),
+        ...f(x)
+      ])))
+    ])
   ])
 ]
 
 let render = ({
   saga,
-}) => tag("ol", null, [
+}) => $("ol", null, [
   saga.map(([act, system]) =>
-    tag("li", null, [
+    $("li", null, [
       renderAct(act),
       renderSystem(system),
     ])
@@ -112,12 +146,28 @@ let render = ({
 let opts = args =>
   Object.keys(args).map(k => `--${k}/${args[k]}`).join("/")
 
+// let explainAct = act => {
+//   let parts = act.split("/")
+//   let verb = parts[0]
+//   let arg = s => parts[parts.indexOf(`--${s}`) + 1]
+//   let cases = {
+//     init: () => `Initialize the system.`,
+//     frob: () => `Set sensitivity to ${arg("how")}.`,
+//     mint: () => `Create ${arg("wad")} ${arg("gem")} in account of ${arg("lad")}.`,
+//     form: () => `Create ilk ${arg("ilk")} with gem ${arg("gem")}.`,
+//     cork: () => `Set hat of ilk ${arg("ilk")} to ${arg("hat")}.`,
+//     mark: () =>
+//       `Mark gem ${arg("gem")} with price ${arg("tag")} XDR, valid ${arg("zzz")}s.`,
+//   }
+//   return cases[verb] ? cases[verb]() : ""
+// }
+
 let renderAct = act => {
   let parts = act.split("/")
-  return tag("span", { className: "act" }, [
-    tag("b", null, parts[0]),
+  return $("span", { className: "act" }, [
+    $("b", null, parts[0]),
     ...(parts.slice(1).map(
-      x => tag(
+      x => $(
         "span", { className: x.startsWith("--") ? "param" : null },
         x.replace(/^--/, "")
       )
