@@ -2,43 +2,17 @@
 
 \chapter{Introduction}
 
-The \textsc{dai credit system}, henceforth also ``Maker,'' is a
-network of Ethereum contracts designed to issue the |dai| currency
-token and automatically adjust credit incentives in order to keep its
-market value stable relative to |sdr|\footnote{``Special Drawing
-Rights'' (ticker symbol |xdr|), the international reserve asset
-created by the International Monetary Fund, whose value is derived
-from a weighted basket of world currencies.} in the short and
-medium term.
+The \textsc{dai system}, henceforth also ``Maker,'' is a network of
+Ethereum contracts defining a token that is subject to a decentralized
+price stability mechanism.  The token is named |dai|.
 
-New dai enters the money supply when a borrower locks an excess of
-collateral in the system and takes out a loan.  The debt and
-collateral amounts are recorded in a \textit{collateralized debt
-position}, or |cdp|.  Thus all outstanding dai represents some |cdp|
-owner's claim on their collateral---until risk provokes a liquidation.
+For an overview of the economics of the system, as well as
+descriptions of governance, off-chain mechanisms, and so on, see the
+white\-paper.
 
-Off-chain \textit{price feeds} give Maker knowledge of the market
-values of dai and the various tokens used as collateral, enabling the
-system to assess credit risk. If the value of a |cdp|'s collateral
-drops below a certain multiple of its debt, a decentralized auction is
-triggered which liquidates the collateral for dai in order to settle
-the debt.
-
-The system issues a separate token with symbol |mkr|.
-Since collateral auctions may fail to recover the full value of
-liquidated debt, the |mkr| token can be diluted to back emergency
-debt. The value of |mkr|, though volatile by design, is backed by the
-revenue from \textit{stability fees} imposed on all dai loans. The
-|dai| raised from stability fees is used to buy |mkr| tokens from the
-market and destroy them.
-
-For more details on the economics of the system, as well as
-descriptions of governance, off-chain mechanisms that provide
-efficiency, and so on, see the white\-paper.
-
-This document is an executable technical specification of the of the
-Maker smart contracts.  It is a draft; be aware that the contents
-will certainly change before launch.
+This document is an executable technical specification of the Maker
+smart contracts.  It is a draft; be aware that the contents will
+certainly change before launch.
 
 \section{Naming}
 
@@ -171,8 +145,8 @@ entire state.  Other key properties include
 
 \begin{itemize}
 \item that the target price changes only according to the target rate;
-\item that the total dai supply is fully accounted for by |cdp| debts;
-\item that |cdp| acts are restricted with respect to risk stage;
+\item that the total dai supply is fully accounted for;
+\item that acts are restricted with respect to risk stage;
 \end{itemize}
 
 along with similar invariants and conditions.  A future revision of
@@ -305,16 +279,14 @@ We define another type for representing Ethereum account addresses.
 > newtype Address = Address String
 >   deriving (Eq, Ord, Show)
 
-We also define the different tokens used by the system.
+We also define the different kinds of tokens used by the system.
 
-> data Gem  = Gem String  -- Some collateral token
->           | DAI         -- The stablecoin token
->           | SIN         -- The token representing |dai| debt
->           | MKR         -- The risk-absorbing governance token
+> data Gem  =  Gem String  -- External token
+>           |  DAI         -- Stablecoin
+>           |  SIN         -- Anticoin
+>           |  MKR         -- Countercoin
 >
 >   deriving (Eq, Ord, Show)
-
-We also have predefined entity identifiers.
 
 %if 0
 
@@ -331,7 +303,7 @@ We also have predefined entity identifiers.
 
 %endif
 
-\section{|Tag| --- collateral vault}
+\section{|Tag| --- external token price data}
 \actentry{|tag|}{market price of token}
 \actentry{|zzz|}{expiration time of token price feed}
 
@@ -340,7 +312,7 @@ in |Tag| records.
 
 > data Tag = Tag {
 >
->     _tag  :: Wad,  -- Market price denominated in |SDR|
+>     _tag  :: Wad,  -- Market price denominated in |sdr|
 >     _zzz  :: Sec   -- Time of price expiration
 >
 >   } deriving (Eq, Show)
@@ -348,34 +320,37 @@ in |Tag| records.
 \section{|Entity| --- token balance holder}
 
 We use a data type to explicitly distinguish the different entities
-that can hold a token balance.
+that can hold a token balance or invoke acts.
 
 > data Entity  =  Account Address  -- External holder
 >              |  Jar              -- Token vault
->              |  Joy              -- Spawning account for dai
->              |  Woe              -- Spawning account for debt
->              |  Ice              -- Holding account for debt
+> 
+>              |  Joy              -- Spawning account for stablecoin
+>              |  Woe              -- Spawning account for anticoin
+>              |  Ice              -- Holding account for anticoin
+> 
 >              |  Vow              -- Settler
->              |  Flipper          -- Collateral auctioneer
->              |  Flapper          -- Revenue auctioneer
->              |  Flopper          -- Debt auctioneer
+>              |  Flipper          -- Assetcoin auctioneer
+>              |  Flapper          -- Stablecoin auctioneer
+>              |  Flopper          -- Countercoin auctioneer
+> 
 >              |  Toy              -- Test driver
 >              |  God              -- Omnipotent actor
 > 
 >   deriving (Eq, Ord, Show)
 
-\section{|Ilk| --- |cdp| type}
-\actentry{|gem|}{collateral token identifier}
+\section{|Ilk| --- urn type}
+\actentry{|gem|}{assetcoin identifier}
 \actentry{|mat|}{liquidation ratio}
 \actentry{|axe|}{liquidation penalty}
-\actentry{|hat|}{debt ceiling}
-\actentry{|tax|}{stability fee}
+\actentry{|hat|}{issuance ceiling}
+\actentry{|tax|}{stability fee factor}
 \actentry{|lax|}{price feed limbo duration}
-\actentry{|rho|}{time of debt unit adjustment}
-\actentry{|rum|}{total outstanding debt units}
-\actentry{|chi|}{value of debt unit in |dai|}
+\actentry{|rho|}{timestamp of fee unit adjustment}
+\actentry{|rum|}{total outstanding art in fee unit}
+\actentry{|chi|}{value of fee unit in stablecoin}
 
-Each |cdp| belongs to a |cdp| type, specified by an |Ilk| record.
+Each urn belongs to an urn type, specified by an |Ilk| record.
 Five parameters, |mat|, |axe|, |hat|, |tax| and |lax|, are set by
 governance and are known as the \emph{risk parameters}. The rest of
 the values are used by the system to keep track of the current state.
@@ -385,53 +360,53 @@ for an overview.
 
 > data Ilk = Ilk {
 >
->     _gem  :: Gem,     -- Collateral token identifier
+>     _gem  :: Gem,     -- Assetcoin identifier
 > 
 >     _lax  :: Sec,     -- Grace period after price feed becomes unavailable
->     _mat  :: Ray,     -- Collateral-to-debt ratio at which liquidation can be triggered
->     _axe  :: Ray,     -- Penalty on liquidation as fraction of debt
->     _hat  :: Wad,     -- Limit on total dai debt for |cdp| type (``debt ceiling'')
->     _tax  :: Ray,     -- Stability fee as per-second fraction of debt value
+>     _mat  :: Ray,     -- Riddance ratio of assetcoin to stablecoin
+>     _axe  :: Ray,     -- Riddance penalty as fraction of art
+>     _hat  :: Wad,     -- Maximum total stablecoin for ilk (``ceiling'')
+>     _tax  :: Ray,     -- Stability fee as per-second fraction of an urn's stablecoin
 > 
->     _chi  :: Ray,     -- Value of internal debt unit in dai
->     _rho  :: Sec,     -- Time of latest debt unit adjustment
->     _rum  :: Wad      -- Total debt in debt units
+>     _chi  :: Ray,     -- Value of fee unit in dai
+>     _rho  :: Sec,     -- Time of latest fee unit adjustment
+>     _rum  :: Wad      -- Total stablecoin for ilk denominated in fee unit
 >
 >   } deriving (Eq, Show)
 
-\section{|Urn| --- collateralized debt position (|cdp|)}
-\actentry{|cat|}{address of liquidation initiator}
-\actentry{|lad|}{|cdp| owner}
-\actentry{|ilk|}{|cdp| type}
-\actentry{|art|}{debt denominated in debt unit}
-\actentry{|ink|}{collateral denominated in debt unit}
-For each |cdp| we maintain an |Urn| record identifying its type and
-specifying ownership, quantities of debt and collateral denominated in
-the |cdp| type's debt unit, along with who triggered liquidation (if
-applicable).
+\section{|Urn| --- stablecoin issuance account}
+\actentry{|cat|}{address of riddance initiator} \actentry{|lad|}{urn
+owner} \actentry{|ilk|}{urn type} \actentry{|art|}{amount of issued
+stablecoin in fee unit} \actentry{|ink|}{amount of locked assetcoin in
+fee unit} An |urn| record defines a basic entity through which users
+interact with the system to issue stablecoin.  Each urn belongs to an
+ilk.  The urn records an amount of locked assetcoin along with the
+amount of stablecoin created for this particular urn.  When riddance
+is initiated on an urn, the identity of the triggering entity is
+also recorded.
 
 > data Urn = Urn {
 >
->     _ilk  :: Id Ilk,         -- Identifier of |cdp| type
->     _lad  :: Entity,         -- Owner of |cdp|
+>     _ilk  :: Id Ilk,         -- Urn type
+>     _lad  :: Entity,         -- Urn owner
 > 
->     _art  :: Wad,            -- Outstanding debt in debt unit
->     _ink  :: Wad,            -- Collateral amount in debt unit
+>     _art  :: Wad,            -- Issued stablecoin in fee unit
+>     _ink  :: Wad,            -- Locked assetcoin in fee unit
 > 
->     _cat  :: Maybe Entity    -- Entity that triggered liquidation, if applicable
+>     _cat  :: Maybe Entity    -- Entity that triggered riddance, if applicable
 >
 >   } deriving (Eq, Show)
 
 \section{|Vox| --- feedback mechanism data}
-\actentry{|wut|}{market price of |dai| denominated in |sdr|}
-\actentry{|par|}{target price of |dai| denominated in |sdr|}
+\actentry{|wut|}{|sdr| market price of stablecoin}
+\actentry{|par|}{|sdr| target price of stablecoin}
 \actentry{|how|}{sensitivity parameter}
 \actentry{|way|}{rate of target price change}
 \actentry{|tau|}{time of latest feedback cycle}
 
-The \emph{feedback mechanism} is the aspect of the |cdp| engine that
-adjusts the target price of dai based on market price, and its data is
-kept in a singleton record called |Vox|.
+The \emph{feedback mechanism} is the aspect of the system that adjusts
+the target price of dai based on market price. Its data is grouped in
+a record called |Vox|.
 
 > data Vox = Vox {
 > 
@@ -444,21 +419,18 @@ kept in a singleton record called |Vox|.
 > 
 >  } deriving (Eq, Show)
 
-Keeping the feedback data separate allows us to more easily upgrade
-the mechanism in the future.
+\section{|Vat| --- system root}
 
-\section{|Vat| --- |cdp| engine aggregate}
-
-The |Vat| record aggregates the records of tokens, |cdp|s, |cdp|
-types, and price feeds, along with the data of the feedback mechanism.
+The |Vat| record aggregates the records of tokens, urns, ilks, and
+price feeds, along with the data of the feedback mechanism.
 
 > data Vat = Vat {
 > 
 >     _tags  :: Map Gem Tag,        -- Token price feeds
->     _ilks  :: Map (Id Ilk) Ilk,   -- |cdp| type records
->     _urns  :: Map (Id Urn) Urn,   -- |cdp| records
+>     _ilks  :: Map (Id Ilk) Ilk,   -- Urn type records
+>     _urns  :: Map (Id Urn) Urn,   -- Urn records
 > 
->     _vox   :: Vox                 -- Data of feedback mechanism
+>     _vox   :: Vox                 -- Feedback mechanism data
 > 
 >   } deriving (Eq, Show)
 
@@ -618,10 +590,10 @@ chapter~\ref{chapter:monad}.
 \newpage
 \section{Assessment}
 
-\actentry{|feel|}{identify |cdp| risk stage}
+\actentry{|feel|}{identify urn risk stage}
 
-In order to prohibit |cdp| acts based on risk situation, we define
-five stages of risk.
+In order to prohibit urn acts based on risk situation, we define
+these stages of risk.
 
 > data Stage  =  Pride |  Anger |  Worry |  Panic |  Grief |  Dread
 > 
@@ -633,43 +605,42 @@ five stages of risk.
 
 %endif
 
-We define the function |analyze| that determines the risk stage of a
-|cdp|.
+We define the function |analyze| that determines the risk stage of an urn.
 
 > analyze era0 par0 urn0 ilk0 tag0 =
 >   if  | view cat  urn0  /= Nothing && view ink urn0 == 0
->         -- |cdp| liquidation triggered and started
+>         -- Riddance triggered and started
 >          -> Dread
 >       | view cat  urn0  /= Nothing
->         -- |cdp| liquidation triggered
+>         -- Riddance triggered
 >          -> Grief  
 >       | pro < min
->         -- |cdp|'s collateralization below liquidation ratio
+>         -- Value ratio of assetcoin to stablecoin below minimum
 >          -> Panic  
 >       | view zzz tag0 + view lax ilk0 < era0
->         -- |cdp| type's price limbo exceeded limit
+>         -- Gem price limbo exceeded limit
 >          -> Panic  
 >       | view zzz tag0 < era0
->         -- |cdp| type's price feed in limbo
+>         -- Gem price feed in limbo
 >          -> Worry  
 >       | cap  > view hat ilk0
->         -- |cdp| type's debt ceiling exceeded
+>         -- Ilk ceiling exceeded
 >          -> Anger
 >       | otherwise   
 >         -- No problems
 >          -> Pride
 >
 >   where
->   -- |cdp|'s collateral value in |sdr|:
+>   -- Urn's assetcoin value in |sdr|:
 >     pro  = view ink urn0  * view tag tag0
 >
->   -- |cdp| type's total debt in |dai|:
+>   -- Ilk's total stablecoin issuance in |dai|:
 >     cap  = view rum ilk0  * cast (view chi ilk0)
 >
->   -- |cdp|'s debt in |sdr|:
+>   -- Urn's stablecoin issuance denominated in |sdr|:
 >     con  = view art urn0  * cast (view chi ilk0) * par0
 >
->   -- Required collateral as per liquidation ratio:
+>   -- Required assetcoin as per riddance ratio:
 >     min  = con * cast (view mat ilk0)
 >
 
@@ -682,7 +653,7 @@ We define the function |analyze| that determines the risk stage of a
 \newcommand{\woo}{\faHandPaperO}
 \newcommand{\nah}{---}
 \begin{table}[t]
-\caption{|cdp| acts in the five stages of risk}\label{table:stages}
+\caption{Urn acts and risk stages}\label{table:stages}
 \vspace{0.25cm}
 %\resizebox{\textwidth}{!}{%
 \begin{tabular}{ r c c c c c c c c c }
@@ -703,8 +674,8 @@ We define the function |analyze| that determines the risk stage of a
 \begin{tabular} { c l }
 \woo & allowed for anyone \\
 \yah & allowed for owner unconditionally \\
-\yep & allowed for owner if able to repay \\
-\meh & allowed for owner if collateralized \\
+\yep & allowed for owner if able to pay \\
+\meh & allowed for owner if above riddance ratio \\
 \hey & allowed for settler contract \\
 \end{tabular}
 }
@@ -717,7 +688,7 @@ Now we define the internal act |feel| which returns the value of
 > -- Adjust target price and target rate
 >   prod
 >
-> -- Update debt unit and unprocessed fee revenue
+> -- Update fee unit and unprocessed fee revenue
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   drip id_ilk
 >
@@ -728,181 +699,178 @@ Now we define the internal act |feel| which returns the value of
 >   ilk0    <- look  (vat . ilks . ix (view ilk urn0  ))
 >   tag0    <- look  (vat . tags . ix (view gem ilk0  ))
 >
-> -- Return risk stage of |cdp|
+> -- Return risk stage of urn
 >   return (analyze era0 par0 urn0 ilk0 tag0)
 
-Acts on |cdp|s use |feel| to prohibit increasing risk when already
-risky, and to freeze debt and collateral during liquidation; see
+Urn acts use |feel| to prohibit increasing risk when already risky,
+and to freeze stablecoin and assetcoin during riddance; see
 Table~\ref{table:stages}.
 
 \clearpage
-\section{Lending}
+\section{Issuance}
 
-\actentry{|open|}{create |cdp|} Any user can open one or more accounts
+\actentry{|open|}{create urn} Any user can open one or more accounts
 with the system using |open|, specifying a self-chosen account
-identifier and a |cdp| type.
+identifier and an ilk.
 
 > open id_urn id_ilk = do
 >
 > -- Fail if account identifier is taken
 >   none (vat . urns . ix id_urn)
 >
-> -- Fail if |cdp| type is not present
+> -- Fail if ilk type is not present
 >   _ <- look (vat . ilks . ix id_ilk)
 >
-> -- Create a |cdp| record with the sender as owner
+> -- Create an urn with the sender as owner
 >   id_lad <- use sender
 >   initialize (vat . urns . at id_urn) (emptyUrn id_ilk id_lad)
 
-\actentry{|give|}{transfer |cdp| account} The owner of a |cdp| can
+\actentry{|give|}{transfer urn ownership} The owner of an urn can
 transfer its ownership at any time using |give|.
 
 > give id_urn id_lad = do
 >
-> -- Fail if sender is not the |cdp| owner
+> -- Fail if sender is not the urn owner
 >   id_sender <- use sender
 >   owns id_urn id_sender
 >
-> -- Transfer ownership
+> -- Transfer urn ownership
 >   vat . urns . ix id_urn . lad .= id_lad
 
-\actentry{|lock|}{deposit collateral}Unless liquidation has been
-triggered for a |cdp|, its owner can use |lock| to deposit more
-collateral.
+\actentry{|lock|}{lock assetcoin}Unless urn is in riddance, its owner
+can use |lock| to lock more assetcoin.
 
 > lock id_urn wad_gem = do
 >
-> -- Fail if sender is not the |cdp| owner
+> -- Fail if sender is not the urn owner
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Fail if liquidation triggered or initiated
+> -- Fail if riddance in process
 >   want (feel id_urn) (`notElem` [Grief, Dread])
 >
-> -- Identify collateral type
+> -- Identify assetcoin
 >   id_ilk  <- look (vat . urns . ix id_urn  . ilk)
 >   id_gem  <- look (vat . ilks . ix id_ilk  . gem)
 >
-> -- Transfer tokens from owner to collateral vault
+> -- Take custody of assetcoin
 >   transfer id_gem wad_gem id_lad Jar
 >
-> -- Record an increase in collateral
+> -- Record an assetcoin balance increase
 >   increase (vat . urns . ix id_urn . ink) wad_gem
->   return ()
 
 \clearpage
 
-\actentry{|free|}{withdraw collateral}When a |cdp| has no risk
-problems (except that its |cdp| type's debt ceiling may be exceeded),
-its owner can use |free| to withdraw some amount of collateral, as
-long as the withdrawal would not reduce collateralization below the
-liquidation ratio.
+\actentry{|free|}{reclaim assetcoin}When an urn has no risk
+problems (except that its ilk's ceiling may be exceeded),
+its owner can use |free| to reclaim some amount of assetcoin, as
+long as this would not take the urn below its riddance ratio.
 
 > free id_urn wad_gem = do
 >
-> -- Fail if sender is not the |cdp| owner
+> -- Fail if sender is not the urn owner
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Record a decrease in collateral
+> -- Record an assetcoin balance decrease
 >   decrease (vat . urns . ix id_urn . ink) wad_gem
 >
-> -- Roll back on any risk problem except debt ceiling excess
+> -- Roll back on any risk problem except ilk ceiling excess
 >   want (feel id_urn) (`elem` [Pride, Anger])
 >
-> -- Transfer tokens from collateral vault to owner
+> -- Release custody of assetcoin quantity
 >   id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >   id_gem  <- look (vat . ilks . ix id_ilk . gem)
 >   transfer id_gem wad_gem Jar id_lad
 
-\actentry{|draw|}{issue dai as debt}When a |cdp| has no risk problems,
-its owner can can use |draw| to take out a loan of newly minted dai,
-as long as the |cdp| type's debt ceiling is not reached and the loan
-would not result in undercollateralization.
+\actentry{|draw|}{issue stablecoin}When an urn has no risk problems,
+its owner can can use |draw| to issue fresh stablecoin,
+as long as the ilk ceiling is not exceeded and the issuance
+would not take the urn below its riddance ratio.
 
 > draw id_urn wad_dai = do
 >
-> -- Fail if sender is not the |cdp| owner
+> -- Fail if sender is not the urn owner
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Update debt unit and unprocessed fee revenue
+> -- Update fee unit and unprocessed fee revenue
 >   id_ilk     <- look (vat . urns . ix id_urn . ilk)
 >   chi1       <- drip id_ilk
 >
-> -- Denominate loan in debt unit
+> -- Denominate issuance quantity in fee unit
 >   let  wad_chi = wad_dai / cast chi1
 >
-> -- Increase |cdp| debt
+> -- Record increase of urn's stablecoin issuance
 >   increase (vat . urns . ix id_urn . art) wad_chi
 >
-> -- Increase total debt of |cdp| type
+> -- Record increase of ilk's stablecoin issuance
 >   increase (vat . ilks . ix id_ilk . rum) wad_chi
 >
 > -- Roll back on any risk problem
 >   want (feel id_urn) (== Pride)
 >
-> -- Mint both dai and debt tokens
+> -- Mint both stablecoin and anticoin
 >   lend wad_dai
 >
-> -- Transfer dai to |cdp| owner
+> -- Transfer stablecoin to urn owner
 >   transfer DAI wad_dai Joy id_lad
 >
-> -- Transfer sin into debt vault
+> -- Transfer anticoin to anticoin holding account
 >   transfer SIN wad_dai Woe Ice 
 
-\actentry{|wipe|}{repay debt and burn dai}A |cdp| owner who has
-previously loaned dai can use |wipe| to repay part of their debt as
-long as liquidation has not been triggered.
+\actentry{|wipe|}{reverse stablecoin issuance}An urn owner who has
+previously issued stablecoin can use |wipe| to send back dai and
+reduce the urn's issuance.
 
 > wipe id_urn wad_dai = do
 >
-> -- Fail if sender is not the |cdp| owner
+> -- Fail if sender is not the urn owner
 >   id_lad <- use sender
 >   owns id_urn id_lad
 >
-> -- Fail if liquidation triggered or initiated
+> -- Fail if urn is in riddance
 >   want (feel id_urn) (`notElem` [Grief, Dread])
 >
-> -- Update debt unit and unprocessed fee revenue
+> -- Update fee unit and unprocessed fee revenue
 >   id_ilk <- look (vat . urns . ix id_urn . ilk)
 >   chi1   <- drip id_ilk
 >
-> -- Denominate dai amount in debt unit
+> -- Denominate stablecoin amount in fee unit
 >   let  wad_chi = wad_dai / cast chi1
 >
-> -- Decrease |cdp| debt
+> -- Record decrease of urn issuance
 >   decrease (vat . urns . ix id_urn . art) wad_chi
 >
-> -- Decrease total |cdp| type debt
+> -- Record decrease of ilk total issuance
 >   decrease (vat . ilks . ix id_ilk . rum) wad_chi
 >
-> -- Transfer dai from |cdp| owner to dai vault
+> -- Take custody of stablecoin from urn owner
 >   transfer DAI wad_dai id_lad Jar
 >
-> -- Destroy dai and corresponding debt tokens
+> -- Destroy stablecoin and anticoin
 >   mend wad_dai
 
-\actentry{|shut|}{wipe, free, and delete |cdp|}A |cdp| owner can use
-|shut| to close their account---repaying all debt and reclaiming all
-collateral---if the price feed is up to date and liquidation has not
-been initiated.
+\actentry{|shut|}{wipe, free, and delete urn}An urn owner can use
+|shut| to close their account---reversing all issuance plus fee and
+reclaiming all assetcoin---if the price feed is up to date and the urn
+is not in riddance.
 
 > shut id_urn = do
 >
->   -- Update debt unit and unprocessed fee revenue
+>   -- Update fee unit and unprocessed fee revenue
 >     id_ilk <- look (vat . urns . ix id_urn . ilk)
 >     chi1   <- drip id_ilk
 >
->   -- Reclaim all outstanding dai
+>   -- Reverse all issued stablecoin plus fee
 >     art0 <- look (vat . urns . ix id_urn . art)
 >     wipe id_urn (art0 * cast chi1)
 >
->   -- Reclaim all collateral
+>   -- Reclaim all locked assetcoin
 >     ink0 <- look (vat . urns . ix id_urn . ink)
 >     free id_urn ink0
 >
->   -- Nullify |cdp| record
+>   -- Nullify urn record
 >     vat . urns . at id_urn .= Nothing
 
 \clearpage
@@ -912,7 +880,7 @@ been initiated.
 
 The feedback mechanism is updated through |prod|, which can be invoked
 at any time by keepers, but is also invoked as a side effect of any
-|cdp| act that uses |feel| to assess the |cdp| risk.
+urn act that uses |feel| to assess risk.
 
 > prod = do
 >
@@ -955,15 +923,15 @@ at any time by keepers, but is also invoked as a side effect of any
 
 
 \clearpage
-\actentry{|drip|}{update debt unit and unprocessed fee revenue}
+\actentry{|drip|}{update fee unit and unprocessed fee revenue}
 
-The stability fee of a |cdp| type can change through governance.
-Due to the constraint that acts should run in constant time, the
-system cannot iterate over |cdp| records to effect such changes.
-Instead each |cdp| type has a single ``debt unit'' which accumulates
-the stability fee.  The |drip| act updates this unit.  It can be
-called at any time by keepers, but is also called as a side effect of
-every act that uses |feel| to assess |cdp| risk.
+The stability fee of an ilk can change through governance.  Due to the
+constraint that acts should run in constant time, the system cannot
+iterate over urns to effect such changes.  Instead each ilk has a
+single ``fee unit'' which accumulates the stability fee.  The |drip|
+act updates this unit.  It can be called at any time by keepers, but
+is also called as a side effect of every act that uses |feel| to
+assess urn risk.
 
 > drip id_ilk = do
 >
@@ -971,9 +939,9 @@ every act that uses |feel| to assess |cdp| risk.
 >   rho0  <- look (vat . ilks . ix id_ilk . rho)
 > -- Current stability fee
 >   tax0  <- look (vat . ilks . ix id_ilk . tax)
-> -- Current debt unit value
+> -- Current fee unit value
 >   chi0  <- look (vat . ilks . ix id_ilk . chi)
-> -- Current total debt in debt unit
+> -- Current total issuance in fee unit
 >   rum0  <- look (vat . ilks . ix id_ilk . rum)
 > -- Current time stamp
 >   era0  <- use era
@@ -981,27 +949,27 @@ every act that uses |feel| to assess |cdp| risk.
 >   let
 >   -- Time difference in seconds
 >     age   = era0 - rho0
->   -- Value of debt unit increased according to stability fee
+>   -- Value of fee unit increased according to stability fee
 >     chi1  = chi0 * tax0 ^^ age
 >   -- Stability fee revenue denominated in new unit
 >     dew   = (cast (chi1 - chi0) :: Wad) * rum0
 >
-> -- Mint dai and internal debt tokens for marginal stability fee
+> -- Mint stablecoin and anticoin for marginally accrued fee
 >   lend dew
 >
 > -- Record time of update
 >   vat . ilks . ix id_ilk . rho  .= era0
-> -- Record new debt unit
+> -- Record new fee unit
 >   vat . ilks . ix id_ilk . chi  .= chi1
 >
-> -- Return the new debt unit
+> -- Return the new fee unit
 >   return chi1
 
 \clearpage
 \section{Price feed input}
 
-\actentry{|mark|}{update market price of collateral token}The |mark|
-act records a new market price of a collateral token along with the
+\actentry{|mark|}{update market price of assetcoin}The |mark|
+act records a new market price of an assetcoin along with the
 expiration date of this price.
 
 > mark id_gem tag1 zzz1 = auth $ do
@@ -1010,54 +978,53 @@ expiration date of this price.
 >       _zzz  = zzz1
 >       }
 
-\actentry{|tell|}{update market price of dai}The |tell| act records a
-new market price of the |dai| token along with the expiration date of
-this price.
+\actentry{|tell|}{update market price of stablecoin}The |tell| act
+records a new market price of the |dai| token along with the
+expiration date of this price.
 
 > tell wad = auth $ do vat . vox . wut .= wad
 
-\section{Liquidation}
+\section{Riddance}
 
-\actentry{|bite|}{mark for liquidation}%
-When a |cdp|'s risk stage marks it
-  as in need of liquidation,
+\actentry{|bite|}{mark for riddance}%
+When an urn's stage marks it
+  as in need of riddance,
  any account can invoke the |bite| act
-  to trigger the liquidation process.
+  to trigger the riddance process.
 This enables the settler contract
- to grab the collateral for auctioning
- and take over the debt tokens
-  representing ``bad debt.''
+ to grab the assetcoin for auctioning
+ and take over the anticoin.
 
 > bite id_urn = do
 >
->   -- Fail if |cdp| is not in the appropriate risk stage
+>   -- Fail if urn is not in the appropriate stage
 >     want (feel id_urn) (== Panic)
 >
->   -- Record the sender as the liquidation initiator
+>   -- Record the sender as the riddance initiator
 >     id_cat     <- use sender
 >     vat . urns . ix id_urn . cat  .= Just id_cat
 >
->   -- Apply liquidation penalty to debt
+>   -- Apply riddance penalty to urn issuance
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >     axe0    <- look (vat . ilks . ix id_ilk . axe)
 >     art0    <- look (vat . urns . ix id_urn . art)
 >     let art1 = art0 * cast axe0
 > 
->   -- Update debt
+>   -- Update urn issuance to include penalty
 >     vat . urns . ix id_urn . art   .=  art1
 
 \clearpage
 
-\actentry{|grab|}{take tokens for liquidation}%
-After liquidation has been triggered,
+\actentry{|grab|}{take stablecoin and anticoin for riddance}%
+After riddance has been triggered,
 the designated settler contract invokes |grab|
-to receive both the |cdp|'s collateral tokens
-and the internal debt tokens
-corresponding to the |cdp|'s debt.
+to receive both the urn's assetcoin
+and the anticoins
+corresponding to the urn's issuance.
 
 > grab id_urn = auth $ do
 >
->   -- Fail if |cdp| is not marked for liquidation
+>   -- Fail if urn is not marked for riddance
 >     want (feel id_urn) (== Grief)
 >
 >     ink0    <- look (vat . urns . ix id_urn . ink)
@@ -1065,42 +1032,42 @@ corresponding to the |cdp|'s debt.
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >     id_gem  <- look (vat . ilks . ix id_ilk . gem)
 > 
->   -- Update the debt unit and stability fee
+>   -- Update the fee unit and unprocessed fee revenue
 >     chi1    <- drip id_ilk
 >
->   -- Denominate the debt in dai
+>   -- Denominate the issuance in dai
 >     let con = art0 * cast chi1
 >
->   -- Transfer collateral and debt to settler
+>   -- Transfer assetcoin and anticoin to settler
 >     transfer id_gem  ink0  Jar Vow
 >     transfer SIN     con   Jar Vow
 > 
->   -- Nullify |cdp|'s collateral and debt quantities
+>   -- Nullify urn's assetcoin and anticoin quantities
 >     vat . urns . ix id_urn . ink .= 0
 >     vat . urns . ix id_urn . art .= 0
 >
->   -- Decrease the |cdp| type's total debt quantity
+>   -- Decrease the ilk's total issuance
 >     decrease (vat . ilks . ix id_ilk . rum) art0
 
-\actentry{|plop|}{finish liquidation returning profit}When the settler
-has finished the process of liquidating a |cdp|'s collateral, it
-invokes |plop| on the |cdp| to give back any excess collateral gains.
+\actentry{|plop|}{finish riddance returning profit}When the settler
+has finished the riddance of an urn, it invokes |plop| to give back
+any assetcoin it did not need to sell and restore the urn.
 
 > plop id_urn wad_dai = auth $ do
 >
->   -- Fail unless |cdp| is in liquidation
+>   -- Fail unless urn is in the proper stage
 >     want (feel id_urn) (== Dread)
 >
->   -- Forget the |cdp|'s requester of liquidation
+>   -- Forget the urn's initiator of riddance
 >     vat . urns . ix id_urn . cat .= Nothing
 >
->   -- Return some amount of excess auction gains
+>   -- Take excess assetcoin from settler to vault
 >     id_vow  <- use sender
 >     id_ilk  <- look (vat . urns . ix id_urn . ilk)
 >     id_gem  <- look (vat . ilks . ix id_ilk . gem)
 >     transfer id_gem wad_dai id_vow Jar
 >
->   -- Record the gains as the |cdp|'s collateral
+>   -- Record the excess assetcoin as belonging to the urn
 >     vat . urns . ix id_urn . ink .= wad_dai
 
 \clearpage
@@ -1108,7 +1075,7 @@ invokes |plop| on the |cdp| to give back any excess collateral gains.
 \actentry{|loot|}{take unprocessed stability fees}%
 The settler can invoke |loot| at any time
 to claim all uncollected stability fee revenue
-(for use in the |mkr| buy and burn auction).
+for use in the countercoin buy-and-burn auction.
 
 > loot = auth $ do
 >
@@ -1120,21 +1087,21 @@ to claim all uncollected stability fee revenue
 >   transfer DAI wad Jar Vow
 
 \section{Auctioning}
-\actentry{|flip|}{put collateral up for auction}%
+\actentry{|flip|}{put assetcoin up for riddance auction}%
 
 > flip id_gem wad_jam wad_tab id_urn = do
 >   vow <- look mode
 >   case vow of
 >     Dummy -> return ()
 
-\actentry{|flap|}{put fee revenue up for auction}%
+\actentry{|flap|}{put fee revenue stablecoin up for auction}%
 
 > flap = do
 >   vow <- look mode
 >   case vow of
 >     Dummy -> return ()
 
-\actentry{|flop|}{put |mkr| up for auction}%
+\actentry{|flop|}{inflate countercoin for auction}%
 
 > flop = do
 >   vow <- look mode
@@ -1143,23 +1110,22 @@ to claim all uncollected stability fee revenue
 
 \clearpage
 \section{Settlement}
-\actentry{|tidy|}{burn equal quantities of |dai| and |sin|}%
-
+\actentry{|tidy|}{burn equal quantities of stablecoin and anticoin}%
 
 > tidy who = auth $ do
 >
-> -- Find the |dai| and |sin| balances of the entity
+> -- Find the entity's stablecoin and anticoin balances
 >   awe  <- look (balance DAI  who)
 >   woe  <- look (balance SIN  who)
 >
 > -- We can burn at most the smallest of the two balances
 >   let x = min awe woe
 >
-> -- Transfer both |dai| and |sin| into the vow accounts
+> -- Transfer stablecoin and anticoin to the settler
 >   transfer  DAI  x who  Vow
 >   transfer  SIN  x who  Vow
 >
-> -- Burn both |dai| and |sin|
+> -- Burn both stablecoin and anticoin
 >   burn      DAI  x      Vow
 >   burn      SIN  x      Vow
 
@@ -1170,23 +1136,23 @@ to claim all uncollected stability fee revenue
 > -- Transfer unprocessed stability fee revenue to vow account
 >   loot
 > 
-> -- Cancel fee revenue against bad debt; vow keeps either a |dai| balance \emph{or} a |sin| balance.
+> -- Cancel stablecoin against anticoin
 >   tidy Vow
 >
-> -- Assign any remaining revenue to the |mkr|-deflating fee auction
+> -- Assign any remaining stablecoin to countercoin-deflating auction
 >   transferAll DAI Vow Flapper
 >   flap
 >
-> -- Assign any remaining debt to the |mkr|-inflating debt auction
+> -- Assign any remaining anticoin to countercoin-inflating auction
 >   transferAll SIN Vow Flopper
 >   flop
 
 \section{Governance}
 
-\actentry{|form|}{create a new |cdp| type}Governance uses |form| to
-create a new |cdp| type.  Since the new type is initialized with a
-zero debt ceiling, a separate transaction can safely set the risk
-parameters before any lending occurs.
+\actentry{|form|}{create a new ilk}Governance uses |form| to create a
+new ilk.  Since the new type is initialized with a zero ceiling, a
+separate transaction can safely set the risk parameters before any
+issuance occurs.
 
 > form id_ilk id_gem = auth $ do
 >     initialize (vat . ilks . at id_ilk) (defaultIlk id_gem)
@@ -1197,11 +1163,13 @@ of the feedback mechanism.
 
 > frob how1 = auth $ do vat . vox . how .= how1
 
-\actentry{|chop|}{set liquidation penalty}\actentry{|cork|}{set debt ceiling}\actentry{|calm|}{set limbo duration}%
-\actentry{|cuff|}{set liquidation ratio}%
-Governance can alter the five risk parameters of a |cdp| type using
-|cuff| for the liquidation ratio; |chop| for the liquidation penalty;
-|cork| for the debt ceiling; |calm| for the duration of
+\actentry{|chop|}{set riddance penalty}%
+\actentry{|cork|}{set ilk ceiling}%
+\actentry{|calm|}{set limbo duration}%
+\actentry{|cuff|}{set riddance ratio}%
+Governance can alter the five risk parameters of an ilk using
+|cuff| for the riddance ratio; |chop| for the riddance penalty;
+|cork| for the ilk ceiling; |calm| for the duration of
 price limbo; and |crop| for the stability fee.
 
 > cuff id_ilk mat1  = auth $ do vat . ilks . ix id_ilk . mat  .= mat1
@@ -1212,11 +1180,11 @@ price limbo; and |crop| for the stability fee.
 \actentry{|crop|}{set stability fee}%
 When altering the stability fee with |crop|, we ensure that the
 previous stability fee has been accounted for in the internal
-debt unit.
+fee unit.
 
 > crop id_ilk tax1 = auth $ do
 > 
->   -- Apply the current stability fee to the internal debt unit
+>   -- Apply the current stability fee to the internal fee unit
 >     drip id_ilk
 >   -- Change the stability fee
 >     vat . ilks . ix id_ilk . tax .= tax1
@@ -1245,8 +1213,8 @@ the concept of ``allowance'').
 
 \actentry{|mint|}{inflate token}%
 The internal act |mint| inflates the supply of a token.
-It is used by |lend| to create new |dai| and debt tokens,
-and by the settler to create new |mkr|.
+It is used by |lend| to create new stablecoin and anticoin,
+and by the settler to create new countercoin.
 
 > mint id_gem wad dst = do
 >   initialize  (balances . at (dst, id_gem))  0
@@ -1254,19 +1222,19 @@ and by the settler to create new |mkr|.
 
 \actentry{|burn|}{deflate token}%
 The internal act |burn| deflates the supply of a token.
-It is used by |mend| to destroy |dai| and debt tokens,
-and by the settler to destroy |mkr|.
+It is used by |mend| to destroy stablecoin and anticoin,
+and by the settler to destroy countercoin.
 
 > burn id_gem wad src =
 >   decrease (balances . ix (src, id_gem)) wad
 
-\actentry{|lend|}{mint dai and debt token}%
+\actentry{|lend|}{mint stablecoin and anticoin}%
 The internal act |lend| mints identical amounts
-of both dai and the internal debt token.
-It is used by |draw| to issue dai to a borrower;
-it is also used by |drip| to issue dai
+of both stablecoin and anticoin.
+It is used by |draw| to issue stablecoin;
+it is also used by |drip| to issue stablecoin
 representing revenue from stability fees,
-which stays in the dai vault until collected.
+which stays in the vault until collected.
 
 > lend wad_dai = do
 >
@@ -1276,7 +1244,7 @@ which stays in the dai vault until collected.
 \actentry{|mend|}{burn dai and debt token}%
 The internal act |mend| destroys identical amounts
 of both dai and the internal debt token.
-Its use via |wipe| is how the dai supply is reduced.
+Its use via |wipe| is how the stablecoin supply is reduced.
 
 > mend wad_dai = do
 >

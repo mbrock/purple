@@ -127,6 +127,7 @@
 %format urns = "\texttt{urns}"
 %format jars = "\texttt{jars}"
 %format ilks = "\texttt{ilks}"
+%format tags = "\texttt{tags}"
 %format gems = "\texttt{gems}"
 
 %format art0
@@ -345,10 +346,13 @@
 %format _jars = "\texttt{· jars}"
 %format _gems = "\texttt{· gems}"
 %format _ilks = "\texttt{· ilks}"
+%format _tags = "\texttt{· tags}"
 %format _urns = "\texttt{· urns}"
 %format _vat = "\texttt{· vat}"
 %format _vox = "\texttt{· vox}"
 %format _era = "\texttt{· era}"
 %format _sender = "\texttt{· sender}"
 %format _accounts = "\texttt{· accounts}"
-%format _balanceOf = "\texttt{· balanceOf}"
+%format _balances = "\texttt{· balances}"
+%format _mode = "\texttt{· mode}"
+%format mode = "\texttt{mode}"
