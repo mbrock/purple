@@ -281,7 +281,7 @@ We define another type for representing Ethereum account addresses.
 
 We also define the different kinds of tokens used by the system.
 
-> data Gem  =  Gem String  -- External token
+> data Gem  =  Gem String  -- Some assetcoin
 >           |  DAI         -- Stablecoin
 >           |  SIN         -- Anticoin
 >           |  MKR         -- Countercoin
@@ -363,26 +363,26 @@ for an overview.
 >     _gem  :: Gem,     -- Assetcoin identifier
 > 
 >     _lax  :: Sec,     -- Grace period after price feed becomes unavailable
->     _mat  :: Ray,     -- Riddance ratio of assetcoin to stablecoin
->     _axe  :: Ray,     -- Riddance penalty as fraction of art
->     _hat  :: Wad,     -- Maximum total stablecoin for ilk (``ceiling'')
->     _tax  :: Ray,     -- Stability fee as per-second fraction of an urn's stablecoin
+>     _mat  :: Ray,     -- Urn riddance ratio of locked value to issued value
+>     _axe  :: Ray,     -- Urn riddance penalty as fraction of urn issuance
+>     _hat  :: Wad,     -- Maximum total issuance for ilk (``issuance ceiling'')
+>     _tax  :: Ray,     -- Stability fee as per-second fraction of urn issuance
 > 
->     _chi  :: Ray,     -- Value of fee unit in dai
+>     _chi  :: Ray,     -- Value of fee unit in stablecoin
 >     _rho  :: Sec,     -- Time of latest fee unit adjustment
->     _rum  :: Wad      -- Total stablecoin for ilk denominated in fee unit
+>     _rum  :: Wad      -- Total ilk issuance denominated in fee unit
 >
 >   } deriving (Eq, Show)
 
 \section{|Urn| --- stablecoin issuance account}
 \actentry{|cat|}{address of riddance initiator} \actentry{|lad|}{urn
-owner} \actentry{|ilk|}{urn type} \actentry{|art|}{amount of issued
-stablecoin in fee unit} \actentry{|ink|}{amount of locked assetcoin in
-fee unit} An |urn| record defines a basic entity through which users
-interact with the system to issue stablecoin.  Each urn belongs to an
-ilk.  The urn records an amount of locked assetcoin along with the
-amount of stablecoin created for this particular urn.  When riddance
-is initiated on an urn, the identity of the triggering entity is
+owner} \actentry{|ilk|}{urn type} \actentry{|art|}{stablecoin issuance
+in fee unit} \actentry{|ink|}{amount of locked assetcoin}
+An |urn| record defines a basic entity through which users interact
+with the system to issue stablecoin.  Each urn belongs to an ilk.
+The urn records the value of locked assetcoin along with the amount of
+stablecoin created for this particular urn.  When riddance is
+triggered on an urn, the identity of the triggering entity is
 also recorded.
 
 > data Urn = Urn {
@@ -390,8 +390,8 @@ also recorded.
 >     _ilk  :: Id Ilk,         -- Urn type
 >     _lad  :: Entity,         -- Urn owner
 > 
->     _art  :: Wad,            -- Issued stablecoin in fee unit
->     _ink  :: Wad,            -- Locked assetcoin in fee unit
+>     _art  :: Wad,            -- Stablecoin issuance in fee unit
+>     _ink  :: Wad,            -- Amount of locked assetcoin
 > 
 >     _cat  :: Maybe Entity    -- Entity that triggered riddance, if applicable
 >
@@ -410,12 +410,12 @@ a record called |Vox|.
 
 > data Vox = Vox {
 > 
->     _wut   :: Wad,    -- Market price of dai denominated in |sdr|
->     _par   :: Wad,    -- Target price of dai denominated in |sdr|
+>     _wut   :: Wad,    -- Stablecoin market price denominated in |sdr|
+>     _par   :: Wad,    -- Stablecoin target price denominated in |sdr|
 >     _way   :: Ray,    -- Current per-second change in target price
 > 
 >     _how   :: Ray,    -- Sensitivity parameter set by governance
->     _tau   :: Sec     -- Time of latest feedback cycle
+>     _tau   :: Sec     -- Timestamp of latest feedback iteration
 > 
 >  } deriving (Eq, Show)
 
@@ -426,7 +426,7 @@ price feeds, along with the data of the feedback mechanism.
 
 > data Vat = Vat {
 > 
->     _tags  :: Map Gem Tag,        -- Token price feeds
+>     _tags  :: Map Gem Tag,        -- Assetcoin price feeds
 >     _ilks  :: Map (Id Ilk) Ilk,   -- Urn type records
 >     _urns  :: Map (Id Urn) Urn,   -- Urn records
 > 
@@ -615,23 +615,23 @@ We define the function |analyze| that determines the risk stage of an urn.
 >         -- Riddance triggered
 >          -> Grief  
 >       | pro < min
->         -- Value ratio of assetcoin to stablecoin below minimum
+>         -- Locked assetcoin value below issuance times riddance ratio
 >          -> Panic  
 >       | view zzz tag0 + view lax ilk0 < era0
->         -- Gem price limbo exceeded limit
+>         -- Assetcoin price limbo exceeded limit
 >          -> Panic  
 >       | view zzz tag0 < era0
->         -- Gem price feed in limbo
+>         -- Assetcoin price feed in limbo
 >          -> Worry  
 >       | cap  > view hat ilk0
->         -- Ilk ceiling exceeded
+>         -- Issuance ceiling exceeded
 >          -> Anger
 >       | otherwise   
 >         -- No problems
 >          -> Pride
 >
 >   where
->   -- Urn's assetcoin value in |sdr|:
+>   -- Value of urn's locked assetcoin in |sdr|:
 >     pro  = view ink urn0  * view tag tag0
 >
 >   -- Ilk's total stablecoin issuance in |dai|:
@@ -640,7 +640,7 @@ We define the function |analyze| that determines the risk stage of an urn.
 >   -- Urn's stablecoin issuance denominated in |sdr|:
 >     con  = view art urn0  * cast (view chi ilk0) * par0
 >
->   -- Required assetcoin as per riddance ratio:
+>   -- Required assetcoin value as per riddance ratio:
 >     min  = con * cast (view mat ilk0)
 >
 
@@ -725,7 +725,7 @@ identifier and an ilk.
 >   id_lad <- use sender
 >   initialize (vat . urns . at id_urn) (emptyUrn id_ilk id_lad)
 
-\actentry{|give|}{transfer urn ownership} The owner of an urn can
+\actentry{|give|}{change urn owner} The owner of an urn can
 transfer its ownership at any time using |give|.
 
 > give id_urn id_lad = do

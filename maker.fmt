@@ -326,7 +326,7 @@
 %format _tax = "\texttt{· tax}"
 %format _mat = "\texttt{· mat}"
 %format _lag = "\texttt{· lag}"
-%format _lax = "\texttt{· tax}"
+%format _lax = "\texttt{· lax}"
 %format _rho = "\texttt{· rho}"
 %format _rum = "\texttt{· rum}"
 %format _chi = "\texttt{· chi}"
