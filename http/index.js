@@ -254,4 +254,4 @@ saga([
   }
 )
 
-document.write("<div id=app></div>")
+fetch("/git").then(x => x.text()).then(x => document.querySelector("git").innerHTML = x)

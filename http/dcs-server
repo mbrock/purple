@@ -5,9 +5,9 @@ let crypto = require("crypto")
 let fs = require("fs")
 let etag = x => `"${crypto.createHash("sha256").update(x, "utf8").digest("base64")}"`
 
-let sendFile = (res, filename) => {
+let sendFile = (res, filename, type) => {
   let buffer = fs.readFileSync(filename)
-  res.setHeader("Content-Type", "text/html")
+  res.setHeader("Content-Type", type)
   res.setHeader("Content-Length", buffer.length)
   res.setHeader("ETag", etag(buffer))
   res.end(buffer)
@@ -30,12 +30,25 @@ require("http").createServer((req, res) => {
     child.stdout.pipe(res, { end: false })
 
   } else if (q == "GET /") {
-    sendFile(res, "index.html")
+    sendFile(res, "index.html", "text/html")
   } else if (q == "GET /index.js") {
-    sendFile(res, "index.js")
+    sendFile(res, "index.js", "application/javascript")
   } else if (q == "GET /decimal.js") {
-    sendFile(res, "decimal.js")
-
+    sendFile(res, "decimal.js", "application/javascript")
+  } else if (q == "GET /purple.pdf") {
+    sendFile(res, "../doc/purple.pdf", "application/pdf")
+  } else if (q == "GET /git") {
+    let child = spawn("git", ["rev-parse", "HEAD"], {
+      stdio: ["ignore",, "pipe", process.stderr]
+    }).on("close", code => {
+      res.headersSent || res.writeHead(code ? 500 : 200)
+      res.end()
+      console.warn([res.statusCode, req.method, req.url].join(" "))
+    })
+    res.setHeader("Content-Type", "text-plaini")
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    child.stdout.pipe(res, { end: false })
+    
   } else {
     res.writeHead(404)
     res.end()

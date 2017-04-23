@@ -1,13 +1,16 @@
 <!doctype html>
 <meta charset=utf-8>
-<title>Dai system simulator</title>
+<title>Dai Simulator</title>
 <script src="https://unpkg.com/react@15/dist/react.js"></script>
 <script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
 <script src=decimal.js></script>
 <script src=index.js></script>
 <style>
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-family: monospace; font-size: 14px; line-height: 1.2; }
+h1 { font-size: inherit; }
+body { background: #fafafa; }
+p { margin-bottom: 1rem; }
 .act, td, th { padding: 0 .5rem; }
 table  { border: 0px solid #aaa; }
 li { padding-bottom: 1rem; }
@@ -18,11 +21,20 @@ li { padding-bottom: 1rem; }
 date { color: #777; }
 .special { font-style: italic; }
 
-#app {
+body {
   max-width: 50rem;
   margin: 0 auto;
   overflow-y: auto;
 }
+
+header {
+  margin: 2rem 0 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+a { text-decoration: none; }
 
 .box { margin-top: .5rem; }
 .box > * { font-size: 80%; }
@@ -42,9 +54,25 @@ summary { outline: 0; cursor: pointer; }
 
 li {
   border: 1px solid #ccc;
-  border-radius: .5rem;
-  margin-bottom: .5rem;
   padding: .5rem;
-  background-color: #fafafa;
+  background: white;
 }
+
+li:not(:last-child) { border-bottom: 0; }
+
+git { opacity: 0.4; }
+p { font-size: 80%; }
+dai { font-size: 140%; }
 </style>
+
+<header>
+<dai>◈</dai>
+<h1>dai simulator</h1>
+<git title="Git HEAD of simulator"></git>
+<a target=_blank href=purple.pdf>purple paper</a>
+<a target=_blank href="https://github.com/makerdao/docs/blob/master/Dai.md">white paper</a>
+</header>
+<p>
+  This is an example trace of a system history with all intermediate states.
+</p>
+<div id=app></div>
