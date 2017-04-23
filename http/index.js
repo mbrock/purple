@@ -256,7 +256,7 @@ saga([
 ]).then(
   x => {
     ReactDOM.render(realize(x), document.getElementById("app"))
-    // document.querySelector("li:last-child details").open = true
+    document.querySelector("li:first-child details").open = true
   }
 )
 
