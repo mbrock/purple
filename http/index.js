@@ -18,7 +18,7 @@ let valueExplanations = {
   how: "magnitude of target price acceleration",
   tau: "time stamp of feedback engine update",
   lad: "owner of urn",
-  gem: "ID of asset token",
+  gem: "ID of token",
   wad: "token quantity",
   ilk: "ID of ilk",
   axe: "penalty ratio on riddance",
@@ -194,7 +194,7 @@ let explainAct = (act, system) => {
     form: () => `Create ilk ${arg("ilk")} with gem ${arg("gem")}.`,
     cork: () => `Set hat of ilk ${arg("ilk")} to ${arg("hat")} dai.`,
     mark: () =>
-      `Mark gem ${arg("gem")} with price ${arg("tag")} XDR, valid ${arg("zzz")}s.`,
+      `Mark gem ${arg("gem")} with price ${arg("tag")} SDR, valid ${arg("zzz")}s.`,
     open: () =>
       `Open urn of type ${arg("ilk")}, owned by ${arg("lad")}, named "${arg("urn")}".`,
     lock: () =>
