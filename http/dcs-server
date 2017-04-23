@@ -1,7 +1,20 @@
 #!/usr/bin/env node
 let parseURL = require("url").parse
 let spawn = require("child_process").spawn
+let crypto = require("crypto")
+let fs = require("fs")
+let etag = x => `"${crypto.createHash("sha256").update(x, "utf8").digest("base64")}"`
+
+let sendFile = (res, filename) => {
+  let buffer = fs.readFileSync(filename)
+  res.setHeader("Content-Type", "text/html")
+  res.setHeader("Content-Length", buffer.length)
+  res.setHeader("ETag", etag(buffer))
+  res.end(buffer)
+}
+
 require("http").createServer((req, res) => {
+  let q = `${req.method} ${req.url}`
   if (req.method == "POST") {
     let args = req.url.replace(/\/$/, "").split("/").slice(1)
     let child = spawn("./dcs", args.map(decodeURIComponent), {
@@ -15,8 +28,16 @@ require("http").createServer((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*")
     req.pipe(child.stdin)
     child.stdout.pipe(res, { end: false })
+
+  } else if (q == "GET /") {
+    sendFile(res, "index.html")
+  } else if (q == "GET /index.js") {
+    sendFile(res, "index.js")
+  } else if (q == "GET /decimal.js") {
+    sendFile(res, "decimal.js")
+
   } else {
-    res.writeHead(400)
+    res.writeHead(404)
     res.end()
   }
 }).listen(process.env.PORT || 80)

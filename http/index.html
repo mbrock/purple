@@ -7,7 +7,7 @@
 <script src=index.js></script>
 <style>
 * { box-sizing: border-box; }
-html { font-family: monospace; font-size: 13px; line-height: 1.2; }
+html { font-family: monospace; font-size: 14px; line-height: 1.2; }
 .act, td, th { padding: 0 .5rem; }
 table  { border: 0px solid #aaa; }
 li { padding-bottom: 1rem; }
@@ -17,9 +17,6 @@ li { padding-bottom: 1rem; }
 .param { color: #555; }
 date { color: #777; }
 .special { font-style: italic; }
-
-li { transition: 0.5s all ease; }
-li:not(:hover) { opacity: 0.5; }
 
 #app {
   max-width: 50rem;
@@ -33,12 +30,21 @@ li:not(:hover) { opacity: 0.5; }
 
 th:first-child { font-weight: normal; width: 4em; text-align: left; }
 
-explanation {
-  display: block;
+details[open] summary {
   margin-bottom: .5rem;
 }
 
+summary { outline: 0; cursor: pointer; }
+
 .act {
   font-size: 80%;
+}
+
+li {
+  border: 1px solid #ccc;
+  border-radius: .5rem;
+  margin-bottom: .5rem;
+  padding: .5rem;
+  background-color: #fafafa;
 }
 </style>

@@ -1,5 +1,3 @@
-const url = "http://localhost:1988"
-
 let $ = React.createElement
 let dec = s => new Decimal(s)
 let unray = x => x.toFixed(36)
@@ -167,9 +165,11 @@ let render = ({
 }) => $("ol", null, [
   saga.map(([act, system]) =>
     $("li", null, [
-      $("explanation", null, [$("date", null, `at ${system.era}s: `), explainAct(act, system)]),
-      renderAct(act),
-      renderSystem(system),
+      $("details", null, [
+        $("summary", null, [$("date", null, `at ${system.era}s: `), explainAct(act, system)]),
+        renderAct(act),
+        renderSystem(system),
+      ])
     ])
   )
 ])
@@ -214,7 +214,7 @@ let renderAct = act => {
 }
 
 let post = (path, body) =>
-  fetch(`${url}/${path}`, {
+  fetch(`/${path}`, {
     method: "POST", body: body ? JSON.stringify(body) : null,
   }).then(x => x.json())
 
@@ -240,15 +240,18 @@ let realize = x => {
 saga([
   "init",
   "frob/--how/1.000000001",
-  "mint/--lad/mbrock/--gem/ETH/--wad/100",
+  "mint/--lad/Alice/--gem/ETH/--wad/100",
   "form/--ilk/ETH1/--gem/ETH",
   "cork/--ilk/ETH1/--hat/100",
   "mark/--gem/ETH/--tag/20/--zzz/600",
-  "open/--lad/mbrock/--ilk/ETH1/--urn/x",
-  "lock/--lad/mbrock/--urn/x/--wad/50",
-  "draw/--lad/mbrock/--urn/x/--dai/10",
+  "open/--lad/Alice/--ilk/ETH1/--urn/x",
+  "lock/--lad/Alice/--urn/x/--wad/50",
+  "draw/--lad/Alice/--urn/x/--dai/10",
 ]).then(
-  x => ReactDOM.render(realize(x), document.getElementById("app"))
+  x => {
+    ReactDOM.render(realize(x), document.getElementById("app"))
+    document.querySelector("li:last-child details").open = true
+  }
 )
 
 document.write("<div id=app></div>")
