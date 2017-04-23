@@ -137,6 +137,7 @@ let render = ({
 }) => $("ol", null, [
   saga.map(([act, system]) =>
     $("li", null, [
+      $("explanation", null, explainAct(act)),
       renderAct(act),
       renderSystem(system),
     ])
@@ -146,21 +147,21 @@ let render = ({
 let opts = args =>
   Object.keys(args).map(k => `--${k}/${args[k]}`).join("/")
 
-// let explainAct = act => {
-//   let parts = act.split("/")
-//   let verb = parts[0]
-//   let arg = s => parts[parts.indexOf(`--${s}`) + 1]
-//   let cases = {
-//     init: () => `Initialize the system.`,
-//     frob: () => `Set sensitivity to ${arg("how")}.`,
-//     mint: () => `Create ${arg("wad")} ${arg("gem")} in account of ${arg("lad")}.`,
-//     form: () => `Create ilk ${arg("ilk")} with gem ${arg("gem")}.`,
-//     cork: () => `Set hat of ilk ${arg("ilk")} to ${arg("hat")}.`,
-//     mark: () =>
-//       `Mark gem ${arg("gem")} with price ${arg("tag")} XDR, valid ${arg("zzz")}s.`,
-//   }
-//   return cases[verb] ? cases[verb]() : ""
-// }
+let explainAct = act => {
+  let parts = act.split("/")
+  let verb = parts[0]
+  let arg = s => parts[parts.indexOf(`--${s}`) + 1]
+  let cases = {
+    init: () => `Initialize the system.`,
+    frob: () => `Set sensitivity to ${arg("how")}.`,
+    mint: () => `Create ${arg("wad")} ${arg("gem")} in account of ${arg("lad")}.`,
+    form: () => `Create ilk ${arg("ilk")} with gem ${arg("gem")}.`,
+    cork: () => `Set hat of ilk ${arg("ilk")} to ${arg("hat")}.`,
+    mark: () =>
+      `Mark gem ${arg("gem")} with price ${arg("tag")} XDR, valid ${arg("zzz")}s.`,
+  }
+  return cases[verb] ? cases[verb]() : ""
+}
 
 let renderAct = act => {
   let parts = act.split("/")
