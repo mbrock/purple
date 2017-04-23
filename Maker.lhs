@@ -324,10 +324,7 @@ that can hold a token balance or invoke acts.
 
 > data Entity  =  Account Address  -- External holder
 >              |  Jar              -- Token vault
-> 
->              |  Joy              -- Spawning account for stablecoin
->              |  Woe              -- Spawning account for anticoin
->              |  Ice              -- Holding account for anticoin
+>              |  Jug              -- Mints stablecoin/anticoin, holds anticoin
 > 
 >              |  Vow              -- Settler
 >              |  Flipper          -- Assetcoin auctioneer
@@ -814,10 +811,7 @@ would not take the urn below its riddance ratio.
 >   lend wad_dai
 >
 > -- Transfer stablecoin to urn owner
->   transfer DAI wad_dai Joy id_lad
->
-> -- Transfer anticoin to anticoin holding account
->   transfer SIN wad_dai Woe Ice 
+>   transfer DAI wad_dai Jug id_lad
 
 \actentry{|wipe|}{reverse stablecoin issuance}An urn owner who has
 previously issued stablecoin can use |wipe| to send back dai and
@@ -1083,7 +1077,6 @@ for use in the countercoin buy-and-burn auction.
 >   wad  <- look (balance DAI Jar)
 >
 > -- Transfer the entire dai vault balance to sender
->   id_vow   <- use sender
 >   transfer DAI wad Jar Vow
 
 \section{Auctioning}
@@ -1238,8 +1231,8 @@ which stays in the vault until collected.
 
 > lend wad_dai = do
 >
->   mint DAI wad_dai Joy
->   mint SIN wad_dai Woe
+>   mint DAI wad_dai Jug
+>   mint SIN wad_dai Jug
 
 \actentry{|mend|}{burn dai and debt token}%
 The internal act |mend| destroys identical amounts
@@ -1248,8 +1241,8 @@ Its use via |wipe| is how the stablecoin supply is reduced.
 
 > mend wad_dai = do
 >
->   burn DAI wad_dai Jar
->   burn SIN wad_dai Ice
+>   burn DAI wad_dai Jug
+>   burn SIN wad_dai Jug
 
 %if 0
 
