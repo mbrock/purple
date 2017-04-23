@@ -162,17 +162,23 @@ let renderTable = (title, xs, ths, f) => !xs.length ? [] : [
 
 let render = ({
   saga,
-}) => $("ol", null, [
-  saga.map(([act, system]) =>
-    $("li", null, [
-      $("details", null, [
-        $("summary", null, [$("date", null, `at ${system.era}s: `), explainAct(act, system)]),
-        renderAct(act),
-        renderSystem(system),
+}) => {
+  let era
+  return $("ol", null, [
+    saga.map(([act, system]) =>
+      $("li", null, [
+        $("details", null, [
+          $("summary", null, [
+            era === system.era.toString() ? null : (era = system.era.toString(), $("date", null, `(t = ${system.era}) `)),
+            explainAct(act, system)
+          ]),
+          renderAct(act),
+          renderSystem(system),
+        ])
       ])
-    ])
-  )
-])
+    )
+  ])
+}
 
 let opts = args =>
   Object.keys(args).map(k => `--${k}/${args[k]}`).join("/")
@@ -203,7 +209,7 @@ let renderAct = act => {
   let parts = act.split("/")
   return $("span", { className: "act" }, [
     "$ ",
-    $("b", null, parts[0]),
+    $("span", null, parts[0]),
     ...(parts.slice(1).map(
       x => $(
         "span", { className: x.startsWith("--") ? "param" : null },
@@ -250,7 +256,7 @@ saga([
 ]).then(
   x => {
     ReactDOM.render(realize(x), document.getElementById("app"))
-    document.querySelector("li:last-child details").open = true
+    // document.querySelector("li:last-child details").open = true
   }
 )
 
