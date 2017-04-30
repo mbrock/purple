@@ -1,15 +1,18 @@
 <!doctype html>
 <meta charset=utf-8>
 <title>Dai Simulator</title>
-<script src="https://unpkg.com/react@15/dist/react.js"></script>
-<script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
-<script src=decimal.js></script>
-<script src=index.js></script>
 <style>
 @import url('https://fonts.googleapis.com/css?family=Average+Sans|VT323');
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { font: 16px/1.1 "Average Sans", helvetica, sans-serif; }
-table, .act, git { font-family: "VT323", monospace; line-height: 0.8; font-size: 120%; }
+html { font: 16px/1.25rem "Average Sans", helvetica, sans-serif; }
+
+table, .act, git, tt, #console {
+  font-family: "VT323", monospace;
+  font-size: 120%;
+  line-height: 18px;
+  font-variant-ligatures: none;
+}
+
 h1 { font-size: inherit; }
 body { background: #fafafa; padding-bottom: 8rem; }
 body { background: #323; color: ivory; }
@@ -31,7 +34,7 @@ body {
   overflow-y: auto;
 }
 
-header {
+body > header {
   font-size: 120%;
   margin: 2rem 0 .5rem 0;
   display: flex;
@@ -63,8 +66,19 @@ li:not(:last-child) { border-bottom: 0; }
 
 git { opacity: 0.6; }
 git::before { content: "git "; }
-p { line-height: 1.3; }
 dai { font-size: 140%; }
+
+#console {
+  margin: 1rem 0;
+  background: inherit;
+  color: inherit;
+  padding: .25rem .5rem;
+  width: 100%;
+  font-size: 28px;
+  outline: 0;
+  border: 1px solid #777;
+  background: rgba(255, 255, 255, 0.1);
+}
 </style>
 
 <header>
@@ -79,3 +93,10 @@ dai { font-size: 140%; }
  </p>
 
 <div id=app>Invoking reference implementation...</div>
+
+<input id=console autofocus></input>
+
+<script src="https://unpkg.com/react@15/dist/react.js"></script>
+<script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+<script src=decimal.js></script>
+<script src=index.js></script>

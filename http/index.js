@@ -85,7 +85,21 @@ let getUrn = (system, id) => system.urns.find(x => x[0] == id)[1]
 let getIlk = (system, id) => system.ilks.find(x => x[0] == id)[1]
 let urnIlk = (system, id) => getIlk(system, getUrn(system, id).ilk)
 
-let renderSystem = ({
+// let showValue = (struct, name, id, system) => ({
+//   par: x => `${x.toString()} SDR`,
+//   wut: x => `${x.toString()} SDR`,
+//   way: x => showWay(x),
+//   how: x => showHow(x),
+//   tau: x => `t = ${tau.toString()}`,
+//   gem: x => renderGemId({
+//     ilks: () => x.gem,
+//     urns: () => urnIlk(system, id),
+//     tags: () => id,
+//     wads: () => x[1].contents || x[1].tag
+//   }[struct]())
+// })[name]
+
+let renderSystem = (previousSystem, {
   balances,
   vox: { way, par, wut, how, tau },
   tags, ilks, urns,
@@ -164,6 +178,7 @@ let render = ({
   saga,
 }) => {
   let era
+  let previousSystem
   return $("ol", null, [
     saga.map(([act, system]) =>
       $("li", null, [
@@ -173,7 +188,7 @@ let render = ({
             explainAct(act, system)
           ]),
           renderAct(act),
-          renderSystem(system),
+          renderSystem(previousSystem, previousSystem = system),
         ])
       ])
     )
@@ -239,7 +254,7 @@ let state = {
 }
 
 let realize = x => {
-  state.saga = x.map(([act, s]) => [act, transform(s)])
+  state.saga = x.map(([act, s]) => [act, transform(s), s])
   return render(state)
 }
 
@@ -261,3 +276,17 @@ saga([
 )
 
 fetch("/git").then(x => x.text()).then(x => document.querySelector("git").innerHTML = x)
+
+let perform = act => post(act, state.saga[state.saga.length - 1][2]).then(x => {
+  state.saga = [...state.saga, [act, transform(x), x]]
+  ReactDOM.render(render(state), document.getElementById("app"))
+  document.querySelector("li:last-child details").open = true
+  document.body.scrollTop = document.body.scrollHeight
+})
+
+document.querySelector("#console").onkeypress =
+  e => e.keyCode != 13 ? null : (
+    perform(e.target.value.replace(/ /g, "/")),
+    e.target.value = "",
+    false
+  )
