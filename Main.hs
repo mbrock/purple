@@ -36,16 +36,30 @@ instance ParseRecord Sec where
 
 data Command
   = Init
-  | Form { ilk :: String, gem :: String }
-  | Mark { gem :: String, tag :: Wad, zzz :: Sec }
+  
   | Open { lad :: String, urn :: String, ilk :: String }
-  | Tell { sdr :: Wad }
-  | Frob { how :: Ray }
+  | Give { urn :: String, lad :: String }
+  | Lock { urn :: String, wad :: Wad }
+  | Free { urn :: String, wad :: Wad }
+  | Draw { urn :: String, dai :: Wad }
+  | Wipe { urn :: String, dai :: Wad }
+  | Shut { urn :: String }
+  
   | Prod
+  | Drip { ilk :: String }
+  
+  | Mark { gem :: String, tag :: Wad, zzz :: Sec }
+  | Tell { sdr :: Wad }
+
+  | Bite { urn :: String }
+  | Grab { urn :: String }
+  | Plop { urn :: String, wad :: Wad }
+  
+  | Form { ilk :: String, gem :: String }
+  | Frob { how :: Ray }
   | Warp { era :: Sec }
   | Mint { gem :: String, wad :: Wad, lad :: String }
-  | Lock { lad :: String, urn :: String, wad :: Wad }
-  | Draw { lad :: String, urn :: String, dai :: Wad }
+  
   | Cuff { ilk :: String, mat :: Ray }
   | Chop { ilk :: String, axe :: Ray }
   | Cork { ilk :: String, hat :: Wad }
@@ -73,27 +87,47 @@ main = do
                    Right sys' -> do
                      putStrLn (encode (Just sys'))
                      exitSuccess
-                  
+
+               who x =
+                 case view (vat . urns . at (Id x)) sys of
+                   Nothing -> error "no such urn"
+                   Just y -> view Dai.lad y
+                   
            case x of
              Init -> error "not possible"
+             
+             Open x y z -> run (Account (Address x)) $
+               Dai.Open (Id y) (Id z)
+             Give x y -> run (who x) $
+               Dai.Give (Id x) (Account (Address y))
+             Lock x y -> run (who x) $
+               Dai.Lock (Id x) y
+             Free x y -> run (who x) $
+               Dai.Free (Id x) y
+             Draw x y -> run (who x) $
+               Dai.Draw (Id x) y
+             Wipe x y -> run (who x) $
+               Dai.Wipe (Id x) y
+             Shut x -> run (who x) $
+               Dai.Shut (Id x)
+               
+             Prod -> run God $
+               Dai.Prod
+             Drip x -> run God $
+               Dai.Drip x
+               
              Form x y -> run God $
                Dai.Form (Id x) (Gem y)
              Mark x y z -> run God $
                Dai.Mark (Gem x) y z
-             Open x y z -> run (Account (Address x)) $
-               Dai.Open (Id y) (Id z)
              Tell x -> run God $
                Dai.Tell x
              Frob x -> run God $
                Dai.Frob x
-             Prod -> run God $
-               Dai.Prod
              Warp x -> run God $
                Dai.Warp x
              Mint x y z -> run God $
                Dai.Mint (Gem x) y (Account (Address z))
-             Lock x y z -> run (Account (Address x)) $
-               Dai.Lock (Id y) z
              Cuff x y -> run God $
                Dai.Cuff (Id x) y
              Chop x y -> run God $
@@ -102,5 +136,3 @@ main = do
                Dai.Cork (Id x) y
              Calm x y -> run God $
                Dai.Calm (Id x) y
-             Draw x y z -> run (Account (Address x)) $
-               Dai.Draw (Id y) z

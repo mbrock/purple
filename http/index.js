@@ -205,17 +205,17 @@ let explainAct = (act, system) => {
   let cases = {
     init: () => `Initialize the system.`,
     frob: () => `Set sensitivity to ${showHow(dec(arg("how")))}.`,
-    mint: () => `Mint ${arg("wad")} ${arg("gem")} in ${arg("lad")}'s account.`,
-    form: () => `Create ilk ${arg("ilk")} with gem ${arg("gem")}.`,
+    mint: () => `${arg("lad")}: Mint ${arg("wad")} ${arg("gem")}.`,
+    form: () => `Form ilk ${arg("ilk")} with gem ${arg("gem")}.`,
     cork: () => `Set hat of ilk ${arg("ilk")} to ${arg("hat")} dai.`,
     mark: () =>
       `Mark gem ${arg("gem")} with price ${arg("tag")} SDR, valid ${arg("zzz")}s.`,
     open: () =>
-      `Open urn of type ${arg("ilk")}, owned by ${arg("lad")}, named "${arg("urn")}".`,
+      `${arg("lad")}: Open urn of type ${arg("ilk")} named "${arg("urn")}".`,
     lock: () =>
-      `Lock ${arg("wad")} ${renderGemId(urnIlk(system, arg("urn")).gem)} into ${getUrn(system, arg("urn")).lad}'s urn "${arg("urn")}".`,
+      `${getUrn(system, arg("urn")).lad}: Lock ${arg("wad")} ${renderGemId(urnIlk(system, arg("urn")).gem)} in urn "${arg("urn")}".`,
     draw: () =>
-      `Draw ${arg("dai")} dai from ${getUrn(system, arg("urn")).lad}'s urn "${arg("urn")}".`,
+      `${getUrn(system, arg("urn")).lad}: Draw ${arg("dai")} dai from urn "${arg("urn")}".`,
   }
   return cases[verb] ? cases[verb]() : ""
 }
@@ -261,17 +261,17 @@ let realize = x => {
 saga([
   "init",
   "frob/--how/1.000000001",
-  "mint/--lad/Alice/--gem/ETH/--wad/100",
   "form/--ilk/ETH1/--gem/ETH",
   "cork/--ilk/ETH1/--hat/100",
   "mark/--gem/ETH/--tag/20/--zzz/600",
+  "mint/--lad/Alice/--gem/ETH/--wad/100",
   "open/--lad/Alice/--ilk/ETH1/--urn/x",
-  "lock/--lad/Alice/--urn/x/--wad/50",
-  "draw/--lad/Alice/--urn/x/--dai/10",
+  // "lock/--urn/x/--wad/50",
+  // "draw/--urn/x/--dai/10",
 ]).then(
   x => {
     ReactDOM.render(realize(x), document.getElementById("app"))
-    document.querySelector("li:first-child details").open = true
+    document.querySelector("li:last-child details").open = true
   }
 )
 
@@ -282,7 +282,7 @@ let perform = act => post(act, state.saga[state.saga.length - 1][2]).then(x => {
   ReactDOM.render(render(state), document.getElementById("app"))
   document.querySelector("li:last-child details").open = true
   document.body.scrollTop = document.body.scrollHeight
-})
+}).catch(() => alert("That didn't work. Sorry for the bad error message."))
 
 document.querySelector("#console").onkeypress =
   e => e.keyCode != 13 ? null : (

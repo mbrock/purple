@@ -1279,6 +1279,7 @@ Its use via |wipe| is how the stablecoin supply is reduced.
 >     Tell wad         -> tell wad
 >     Frob ray         -> frob ray
 >     Prod             -> prod
+>     Drip x           -> drip x
 >     Warp t           -> warp t
 >     Give urn lad     -> give urn lad
 >     Lock urn wad     -> lock urn wad
@@ -1312,20 +1313,32 @@ Its use via |wipe| is how the stablecoin supply is reduced.
 We define the Maker act vocabulary as a data type to represent invocations.
 
 > data Act =
->      Bite     (Id Urn)       |  Draw     (Id Urn)  Wad          |  Form     (Id Ilk)  (Gem)
->   |  Free     (Id Urn)  Wad  |  Frob     Ray                    |  Give     (Id Urn)  Entity
->   |  Grab     (Id Urn)       |  Lock     (Id Urn)  Wad
->   |  Loot     Wad            |  Mark     (Gem)  Wad  Sec     |  Open     (Id Urn)  (Id Ilk)
->   |  Prod                    |  Pull     (Gem)  Entity Wad  |  Shut     (Id Urn)
->   |  Tell     Wad            |  Wipe     (Id Urn)  Wad
->   |  Mine (Gem)  | Hand Address Wad (Gem) | Sire Address
->   |  Addr Address    | Warp     Sec
+>      Bite     (Id Urn)
+>   |  Draw     (Id Urn)  Wad
+>   |  Form     (Id Ilk)  (Gem)
+>   |  Free     (Id Urn)  Wad
+>   |  Frob     Ray
+>   |  Give     (Id Urn)  Entity
+>   |  Grab     (Id Urn)
+>   |  Lock     (Id Urn)  Wad
+>   |  Loot     Wad
+>   |  Mark     (Gem)  Wad  Sec
+>   |  Open     (Id Urn)  (Id Ilk)
+>   |  Prod
+>   |  Shut     (Id Urn)
+>   |  Tell     Wad
+>   |  Wipe     (Id Urn)  Wad
+>   |  Mine (Gem)
+>   |  Hand Address Wad (Gem)
+>   |  Sire Address
+>   |  Addr Address
+>   |  Warp Sec
 >   |  Cuff (Id Ilk) Ray
 >   |  Chop (Id Ilk) Ray
 >   |  Cork (Id Ilk) Wad
 >   |  Calm (Id Ilk) Sec
->
 >   |  Mint Gem Wad Entity
+>   |  Drip
 >  deriving (Eq, Show)
 
 %endif

@@ -4,12 +4,12 @@
 <style>
 @import url('https://fonts.googleapis.com/css?family=Average+Sans|VT323');
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { font: 16px/1.25rem "Average Sans", helvetica, sans-serif; }
+html { font: 14px/18px "Average Sans", helvetica, sans-serif; }
 
 table, .act, git, tt, #console {
   font-family: "VT323", monospace;
   font-size: 120%;
-  line-height: 18px;
+  line-height: 14px;
   font-variant-ligatures: none;
 }
 
@@ -21,7 +21,6 @@ p { margin-bottom: 1rem; }
 .act, td, th { padding: 0 .5rem; }
 .act { display: block; margin-bottom: .25rem; }
 table  { border: 0px solid #aaa; }
-li { padding-bottom: 1rem; }
 .act > * { padding-right: .5rem; }
 .act .param::before { content: "--"; }
 .act .param { padding-right: .5rem; }
@@ -50,6 +49,10 @@ a { color: #bab; }
 th { font-weight: normal; color: white; }
 th:first-child { font-style: italic; width: 4em; text-align: left; }
 
+details[open] {
+  margin-bottom: .5rem;
+}
+
 details[open] summary {
   margin-bottom: .5rem;
 }
@@ -57,9 +60,9 @@ details[open] summary {
 summary { outline: 0; cursor: pointer; }
 
 li {
-  border: 1px solid #777;
-  padding: .5rem .5rem .5rem .75rem;
-  background: rgba(255, 255, 255, 0.1);
+/*  border: 1px solid #777; */
+/*  padding: .5rem .5rem .5rem .75rem; */
+/*  background: rgba(255, 255, 255, 0.1); */
 }
 
 li:not(:last-child) { border-bottom: 0; }
@@ -72,12 +75,39 @@ dai { font-size: 140%; }
   margin: 1rem 0;
   background: inherit;
   color: inherit;
-  padding: .25rem .5rem;
+  padding: .25rem .75rem;
   width: 100%;
   font-size: 28px;
   outline: 0;
   border: 1px solid #777;
   background: rgba(255, 255, 255, 0.1);
+}
+
+aside {
+  column-count: 2;
+}
+
+aside header {
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+aside section {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+}
+
+aside {
+  margin-top: 1rem;
+}
+
+aside command {
+  display: block;
+}
+
+aside span {
+  display: block;
+  margin-left: .5rem;
 }
 </style>
 
@@ -94,7 +124,48 @@ dai { font-size: 140%; }
 
 <div id=app>Invoking reference implementation...</div>
 
-<input id=console autofocus></input>
+<input id=console autofocus placeholder="..."></input>
+
+<aside>
+  <section>
+    <header>Issuance</header>
+    <command><tt>open --urn x --lad y --ilk z</tt><span>create urn</span></command>
+    <command><tt>give --urn x --lad y</tt><span>change urn owner</span></command>
+    <command><tt>lock --urn x --wad y</tt><span>lock assetcoin</span></command>
+    <command><tt>free --urn x --wad y</tt><span>reclaim assetcoin</span></command>
+    <command><tt>draw --urn x --dai y</tt><span>issue stablecoin</span></command>
+    <command><tt>wipe --urn x --dai y</tt><span>reverse stablecoin issuance</span></command>
+    <command><tt>shut --urn x</tt><span>wipe, free, and delete urn</span></command>
+  </section>
+  <section>
+    <header>Adjustment</header>
+    <command><tt>prod</tt><span>adjust target price and target rate</span></command>
+    <command><tt>drip --ilk x</tt><span>update fee unit and unprocessed fee revenue</span></command>
+  </section>
+  <section>
+    <header>Price feed</header>
+    <command><tt>mark --gem x --tag y --zzz z</tt><span>update market price of assetcoin</span></command>
+    <command><tt>tell --sdr x</tt><span>update market price of stablecoin</span></command>
+  </section>
+  <section>
+    <header>Liquidation</header>
+    <command><tt>bite --urn x</tt><span>mark for liquidation</span></command>
+    <command><tt>grab --urn x</tt><span>take stablecoin and anticoin to liquidation</span></command>
+    <command><tt>plop --urn x --wad y</tt><span>finish liquidation returning profit</span></command>
+  </section>
+  <section style="opacity: 0.5">
+    <header>Auctioning</header>
+    <command><tt>flip</tt><span>put assetcoin up for liquidation auction</span></command>
+    <command><tt>flap</tt><span>put fee revenue stablecoin up for auction</span></command>
+    <command><tt>flop</tt><span>inflate countercoin for auction</span></command>
+  </section>
+  <section>
+    <header>Settlement</header>
+    <command><tt>loot</tt><span>take unprocessed stability fees</span></command>
+    <command><tt>tidy</tt><span>burn equal quantities of stablecoin and anticoin</span></command>
+    <command><tt>kick</tt><span>flap, flop, and whatnot</span></command>
+  </section>
+</aside>
 
 <script src="https://unpkg.com/react@15/dist/react.js"></script>
 <script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
