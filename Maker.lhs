@@ -1338,7 +1338,7 @@ We define the Maker act vocabulary as a data type to represent invocations.
 >   |  Cork (Id Ilk) Wad
 >   |  Calm (Id Ilk) Sec
 >   |  Mint Gem Wad Entity
->   |  Drip
+>   |  Drip (Id Ilk)
 >  deriving (Eq, Show)
 
 %endif
