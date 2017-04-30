@@ -1279,7 +1279,7 @@ Its use via |wipe| is how the stablecoin supply is reduced.
 >     Tell wad         -> tell wad
 >     Frob ray         -> frob ray
 >     Prod             -> prod
->     Drip x           -> drip x
+>     Drip x           -> drip x >> return ()
 >     Warp t           -> warp t
 >     Give urn lad     -> give urn lad
 >     Lock urn wad     -> lock urn wad
