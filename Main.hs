@@ -114,7 +114,7 @@ main = do
              Prod -> run God $
                Dai.Prod
              Drip x -> run God $
-               Dai.Drip x
+               Dai.Drip (Id x)
                
              Form x y -> run God $
                Dai.Form (Id x) (Gem y)
