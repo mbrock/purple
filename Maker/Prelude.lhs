@@ -127,7 +127,7 @@ http://www.haskellforall.com/2013/05/program-imperatively-using-haskell.html
 >   at,                -- Lens for map insertion
 >
 > -- Operators for partial state updates in |do| blocks:
->   (.=),              -- Replace
+>   (.=), assign,      -- Replace
 >   (-=), (+=),        -- Update arithmetically
 >   (%=),              -- Update according to function
 >   (?=))              -- Insert into map

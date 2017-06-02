@@ -1,0 +1,19 @@
+/^[^>]/ || /^$/ {
+  sub(/%date%/, strftime("%F")); print; next
+}
+
+/^>/ {
+  print "<pre>"
+  sub(/^> |$/,"")
+  gsub(/&/, "\\&amp;"); gsub(/</, "\\&lt;"); gsub(/>/, "\\&gt;")
+  print
+  rc = getline
+  while(($0 ~ /^>/) && (rc > 0)) {
+    sub(/^> /,"")
+    sub(/^>$/,"")
+    gsub(/&/, "\\&amp;"); gsub(/</, "\\&lt;"); gsub(/>/, "\\&gt;");
+    print
+    rc = getline
+  }
+  print "</pre>"
+}

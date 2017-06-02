@@ -1,6 +1,5 @@
-doc/maker.pdf: Maker.lhs
-	docker build -t makerdao/lhs2tex doc
-	docker run -it --rm -v `pwd`:/src:ro -v `pwd`/doc:/doc makerdao/lhs2tex
+doc/index.html: Maker.lhs
+	awk -f lhs2html Maker.lhs > $@
 
 nix: default.nix
 	nix-shell -A mkrfuzz.env mkrfuzz.nix --command 'cabal configure'
