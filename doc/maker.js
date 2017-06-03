@@ -14,10 +14,14 @@ document.querySelectorAll("define").forEach(function(x) {
 var re1 = new RegExp("([ [(])(" + words.join("|") + ")\\b", "g")
 var re2 = new RegExp("\\b(" + words.join("|") + ")\\b", "g")
 
-document.querySelectorAll("pre,  code").forEach(function(x) {
+document.querySelectorAll("pre").forEach(function(x) {
   x.innerHTML = x.innerHTML
     .replace(re1, "$1<a href=\"#dfn-$2\">$2</a>")
-    .replace(/\b(module|import|data|newtype|type|deriving|if|case|where|let|do)\b/g, "<b>$&</b>")
+})
+
+document.querySelectorAll("pre, code").forEach(function(x) {
+  x.innerHTML = x.innerHTML
+    .replace(/\b(module|import|data|newtype|type|deriving|if|case|where|let|do)\b/g, "<strong>$&</strong>")
     .replace(/^(\s*)-- (.*)/gm, "$1<comment class=block>$2</comment>")
     .replace(/(\s+)-- (.*)/g, "$1<comment>$2</comment>")
     .replace(/\$([^ ]+)\$/g, "<math>$1</math>")
@@ -32,9 +36,9 @@ document.querySelectorAll("pre,  code").forEach(function(x) {
     .replace(/\n\s*\n/gm, "<p>")
 })
 
-document.querySelectorAll("p > code").forEach(function(x) {
+document.querySelectorAll("p > code, table code, dl code").forEach(function(x) {
   x.innerHTML = x.innerHTML
-    .replace(re2, " <a href=\"#dfn-$1\">$1</a>")
+    .replace(re2, "<a href=\"#dfn-$1\">$1</a>")
 })
 
 var counters = []
@@ -67,4 +71,29 @@ ToC.forEach(function (x) {
   e.appendChild(e1)
   e.appendChild(e2)
   toc.appendChild(e)
+})
+
+var oldPopup
+
+document.querySelectorAll("glossary dt").forEach(function(dt) {
+  var popup = document.createElement("popup")
+  var dd = dt.nextElementSibling
+  popup.innerHTML = "<span>" + dd.innerHTML + "</span>"
+  console.log('a[href="#dfn-' + dt.innerText + '"]')
+  document.querySelectorAll('a[href="#dfn-' + dt.innerText + '"]').forEach(function(a) {
+    a.onmouseenter = function() {
+      oldPopup && oldPopup.parentNode.removeChild(oldPopup)
+      oldPopup = popup
+      console.log(a)
+      popup.className = ""
+      a.appendChild(popup)
+      setTimeout(function() { popup.className = "show" })
+    }
+
+    a.onmouseleave = function() {
+      setTimeout(function() {
+        popup.className = ""
+      })
+    }
+  })
 })

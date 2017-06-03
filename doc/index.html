@@ -1,3 +1,4 @@
+<!doctype html>
 <meta charset=utf-8>
 <link rel=stylesheet href=maker.css>
 
@@ -6,79 +7,75 @@
 <header>
 <center>
 <img src=makerdao.svg>
-<p class=x1>presents the</p>
 <p class=x2>REFERENCE<br>IMPLEMENTATION</p>
-<p class=x3>also known as the<br><span class=sc>&raquo;purple paper&laquo;</span></p>
-<p class=x1>of the remarkable</p>
+<p class=x5>of the decentralized</p>
 <p class=x4>DAI STABLECOIN</p>
-<p class=x5>decentralized issuance system</p>
-<p class=x7>last update on 2017-06-02</p>
+<p class=x5>issuance system</p>
+<p class=x6>Nikolai Mushegian<br>Daniel Brockman<br>Mikael Brockman</p>
+<p class=x7>[draft; 2017-06-03]</p>
+<p class=x8>◈</p>
 </center>
 </header>
 
+<div style="font-size: 180%">Contents</div>
 <toc>
 </toc>
 
 <section>
 <h1>Introduction</h1>
 
-<p>The <dfn>Dai stablecoin system</dfn> is a network of Ethereum
-contracts defining a token that is subject to a decentralized price
-stability mechanism.  The token is named <dfn>dai</dfn>.
+<p>The <b>Dai stablecoin system</b> is a set of blockchain smart
+contracts designed to issue a token (called the dai) and subject its
+price to a decentralized stability mechanism.
 
-<p>For an overview of the economics of the system, as well as
-descriptions of governance, off-chain mechanisms, and so on, see the
-whitepaper.
+<p>This document is an executable and interactive technical
+specification of the system.  It is a draft and will change
+before launch.
 
-<p>This document is an executable technical specification of the Dai
-smart contracts.  It is a draft; be aware that the contents will
-certainly change before launch.
+<p>For an overview of the system, see the <a
+href="https://github.com/makerdao/docs/blob/master/Dai.md">white
+paper</a>.
 
-<h2>Motivation</h2>
+<p>For a "choose your own adventure" exploration of the system's
+mechanics, please wait for the interactive FAQ.
 
-<p>The version of this system that will be deployed on the blockchain
-is written in Solidity, which is a workable smart contract
-implementation language.  This reference implementation is a model of
-the behavior of those contracts, written as a &raquo;literate&laquo; Haskell
-program.  The motivations for such a reference implementation include:
+<p>We are dedicated to providing material for new people to understand
+the system in depth.  This will be important for successful governance
+in the project's future.
+
+<p>If you have any questions, ask on our <a
+href="https://chat.makerdao.com">chat</a> or <a
+href="https://reddit.com/r/MakerDAO">subreddit</a>.  Asking helps us
+work on our explanatory material, so we appreciate it.
+
+</section><section>
+
+<h2>Why a reference implementation?</h2>
+
+<p>The contracts that will be deployed on the Ethereum blockchain are
+written in Solidity.  This paper is a model of the system written as a
+Haskell program.  The motivations for this include:
 
 <p><b>Comparison.</b>
 Checking two free-standing implementations
 against each other is a well-known way of ensuring that they both
 behave as intended.
 
-<p><b>Testing.</b>
-Haskell lets us use powerful testing tools
-such as QuickCheck and SmallCheck for comprehensively verifying key
-properties as a middle ground between unit testing and
-formal verification.
+<p><b>Testing.</b> Haskell lets us use powerful testing tools such as
+QuickCheck for comprehensively verifying key properties. This is a
+middle ground between testing and formal verification.
 
-<p><b>Explicitness.</b>
-Coding the contract behavior in Haskell,
-a purely functional language, enforces explicit description of aspects
-which Solidity leaves implicit.  For example, a Solidity program can
-read previously unwritten storage and get back a zero value, whereas
-in Haskell we must give explicit defaults.  The state rollback
-behavior of failed actions is also explicit in the type of the
-execution function, which may return an error.
+<p><b>Explicitness.</b> Coding the contract behavior in Haskell, a
+purely functional language, enforces explicit description of aspects
+which Solidity leaves implicit.
 
-<p><b>Typing.</b>
-While Solidity does have a static
-type system, it is not expressive enough to encode the distinctions
-made by our system.  In particular, the two different decimal fixed
-point number types that we use are typed in Solidity with one and the
-same <code>uint128</code> type.  In Haskell we can make this distinction
-explicit.
+<p><b>Typing.</b> Solidity's type system can't encode all the
+distinctions made by our system.
 
-<p><b>Formality.</b>
-The work of translating a Solidity program
-into a purely functional program opens up opportunities for certain
-types of formal verification.  In particular, this document will be
-useful for modelling aspects of the system in a proof assistant like
-Agda, Idris, Coq, or Isabelle.  We can also use logical tools for
-Haskell, such as Liquid Haskell (which provides compile time logical
-property checking) and <code>sbv</code> (a toolkit for model checking and
-symbolic execution).
+<p><b>Formality.</b> The work of translating into a purely functional
+program opens up opportunities for formal verification.  This document
+will be useful for modelling aspects of the system in a proof
+assistant like Isabelle.
 
 <p><b>Clarity.</b>
 An implementation not intended to be deployed
@@ -86,38 +83,37 @@ on the blockchain is free from concerns about optimizing for gas cost
 and other factors that make the Solidity implementation less ideal as
 an understandable specification.
 
-<p><b>Simulation.</b>
-Solidity is highly specific to the
-Ethereum blockchain environment and as such does not have facilities
-for interfacing with files or other computer programs.  This makes the
-Solidity implementation of the system less useful for doing
-simulations of the system's economic, game-theoretic, or
-statistical aspects.
+<p><b>Simulation.</b> Solidity is specific to the blockchain
+environment and lacks facilities for interfacing with files or other
+programs.  A reference implementation is useful for doing simulations
+of the system's economic, game-theoretic, or statistical aspects.
 
-<h2>Limitations</h2>
+<h2>What are the limitations of this model?</h2>
 
 <p>This model is limited in that it has
 
 <p><ul>
 <li>a simplified version of authorization for governance;
 <li>a simplified version of ERC20 token semantics;
-<li>no implementation of the decentralized auction contracts; and
-<li>no 256-bit word limits.
+<li>no implementation of the decentralized auction contracts;
+<li>and no 256-bit word limits.
 </ul>
 
 <p>These limitations will be addressed in future revisions.
 
-<h2>Verification</h2>
+<h2>On formal verification and steps thereto</h2>
 
-<p>Separately from this document, we are developing automatic test suites
-that generate many, large, and diverse action sequences for property
-verification.  One such property is that the reference implementation
-exactly matches the on-chain implementation; this is verified through
-the generation of Solidity test cases with assertions covering the
-entire state.  Other key properties include
+<p>Separately from this document, we are developing automatic test
+suites that generate interaction sequences for property verification.
+
+<p>One such property is that the reference implementation behaves like
+the on-chain implementation. We verify this by generating Solidity
+test cases with equality assertions for the entire state.
+
+<p>Other key properties include
 
 <ul>
-<li>that the target price changes only according to the target rate;
+<li>that the target price changes according to the target rate;
 <li>that the total dai supply is fully accounted for;
 <li>that acts are restricted with respect to risk stage;
 </ul>
@@ -125,7 +121,7 @@ entire state.  Other key properties include
 <p>along with similar invariants and conditions.  A future revision of
 this document will include formal statements of these properties.
 
-<h2>Naming</h2>
+<h2>Note on jargon</h2>
 
 <p>The implementation is formulated in terms of a parallel vocabulary
 of concise words like <code>Urn</code>, <code>par</code>, and
@@ -167,9 +163,7 @@ reasons:
 </ul>
 
 </section><section>
-<h1>Implementation</h1>
-
-<h2>Preamble</h2>
+<h1>Preamble and data types</h1>
 
 <!--
 
@@ -195,25 +189,16 @@ reasons:
 </pre>
 -->
 
-<p>This is a Haskell program, and as such makes reference to a background
-of symbols defined in libraries.
+<p>This program uses some symbols defined in external libraries.
+Most symbols should be clear in context, but our "prelude" lists and
+briefly explains each imported type and function.
 
-<p>Context should allow the reader to understand most symbols without
-further reading, but our custom prelude lists and briefly explains
-each imported type and function.
-
-<p>We replace the default prelude module with our own.
+<todo>Render the prelude.</todo>
 
 <pre>
 module Maker where
 
-import Prelude ()      -- Import nothing from Prelude
-import Maker.Prelude   -- Import everything from Maker Prelude
-</pre>
-We also import our definition of decimal fixed point numbers.
-
-<pre>
-import Maker.Decimal
+import Prelude (); import Maker.Prelude; import Maker.Decimal
 </pre>
 <!--
 
@@ -224,30 +209,39 @@ import Prelude (drop)
 </pre>
 -->
 
-<h2>Types</h2>
-
-<p>This chapter defines the data types used: numeric types,
-identifiers, on-chain records, and test model data.
-
+<!--
 <p>Haskell syntax note: <code>newtype</code> defines a type synonym with distinct
 type identity; <code>data</code> creates a record type; and <code>deriving</code> creates
 automatic instances of common functionality.
+-->
 
-<h3>Numeric types</h3>
+<h2>Numeric types</h2>
 
-<p>The system uses two different precisions of decimal fixed point
-numbers, which we call <em>wads</em> (token quantities) and
-<em>rays</em> (precise rates and ratios), having respectively 18
-digits and 36 digits of precision.
+<p>The system uses two precisions of decimal numbers, to which we have
+given short mnemonic names.
+
+<p>One is called <em>wad</em> and has 18 digits of precision.  It is
+used for token quantities, such as amounts of ETH, DAI, or MKR.
+
+<p>The other is called <em>ray</em> and has 36 digits of precision.
+It is used for precise rates and ratios, such as the stability
+fee parameter.
+
+<p>We define these as distinct types.  The type system will prevent us
+from mixing them up unintentionally.
 
 <pre>
--- Define the distinct type of currency quantities
 newtype Wad = Wad (Decimal E18)
   deriving (Ord, Eq, Num, Real, Fractional, RealFrac)
 
--- Define the distinct type of rates and ratios
 newtype Ray = Ray (Decimal E36)
   deriving (Ord, Eq, Num, Real, Fractional, RealFrac)
+</pre>
+<p>We define a generic function for converting one of these types to
+the other.
+
+<pre>
+cast x = fromRational (toRational x) -- [Via fractional $n/m$ form]
 </pre>
 <!--
 
@@ -275,21 +269,11 @@ instance Epsilon Ray  where epsilon = Ray epsilon
 newtype Sec = Sec Int
   deriving (Eq, Ord, Enum, Num, Real, Integral)
 </pre>
-<p>Haskell number types are not automatically converted, so we convert
-explicitly with a <code>cast</code> function.
+<h2>Identifiers and addresses</h2>
 
-<pre>
--- Convert via fractional $n/m$ form.
-cast :: (Real a, Fractional b) =&gt; a -&gt; b
-cast = fromRational . toRational
-</pre>
-
-<h3>Identifiers and addresses</h3>
-
-<p>There are several kinds of identifiers used in the system, and we
-use types to distinguish them.  The type parameter <code>a</code>
-creates distinct types; e.g., <code>Id Foo</code> and <code>Id
-Bar</code> are incompatible.
+<p>The following common Haskell idiom lets us use <code>Id Ilk</code>
+and <code>Id Urn</code> as distinct identifier types without
+code duplication.
 
 <pre>
 newtype Id a = Id String
@@ -301,17 +285,49 @@ newtype Id a = Id String
 newtype Address = Address String
   deriving (Eq, Ord, Show)
 </pre>
-<p>We also define the different kinds of tokens used by the system.
+<h2>Token types</h2>
+
+<p>The system makes use of four basic types of tokens.  These tokens
+are called <b>gems</b>, because they are precious.
 
 <pre>
 data Gem
-  = Gem String  -- Some assetcoin
-  | DAI         -- Stablecoin
-  | SIN         -- Anticoin
-  | MKR         -- Countercoin
+
+  = Gem String  -- Asset token
+  | DAI         -- Public stablecoin
+  | MKR         -- Countercoin and voting token
+  | SIN         -- Private anticoin
 
   deriving (Eq, Ord, Show)
 </pre>
+<p>The asset tokens are used as collateral, and are written in the
+form <code>Gem "ETH"</code>.  The model treats all asset tokens as
+basic ERC20 tokens differing only in ticker symbol.  In reality,
+voters should make sure that asset tokens are well-behaved.
+
+
+<h2>Actors</h2>
+
+<p>We use a data type to explicitly distinguish the different entities
+that can hold a token balance or invoke acts.
+
+<pre>
+data Actor
+  = Account Address  -- External holder
+  | Jar              -- Token vault
+  | Jug              -- Mints stablecoin/anticoin, holds anticoin
+  | Vow              -- Settler
+  | Flipper          -- Asset auctioneer
+  | Flapper          -- Stablecoin auctioneer
+  | Flopper          -- Countercoin auctioneer
+  | Toy              -- Test driver
+  | God              -- Omnipotent actor
+
+  deriving (Eq, Ord, Show)
+</pre>
+
+
+
 <!--
 
 <pre>
@@ -329,37 +345,25 @@ deriving instance Generic Gem
 
 -->
 
-<h4><code>Tag</code> &mdash; external token price data</h4>
+<h2><code>Urn</code>: CDP bookkeeping record</h2>
 
-<p>The data received from price feeds is categorized by token and
-stored in <code>Tag</code> records.
+<p>An <code>urn</code> record defines a basic entity through which
+users interact with the system to issue stablecoin.  Each urn belongs
+to an ilk.  The urn records the value of locked assets along with
+the amount of stablecoin created for this particular urn.
+When liquidation is triggered on an urn, the identity of the triggering
+entity is also recorded.
 
 <pre>
-data Tag = Tag {
-  _tag :: Wad,  -- Market price denominated in SDR
-  _zzz :: Sec   -- Time of price expiration
+data Urn = Urn {
+  _ilk  :: Id Ilk,      -- Urn type
+  _lad  :: Actor,       -- Urn owner
+  _art  :: Wad,         -- Stablecoin issuance in fee unit
+  _ink  :: Wad,         -- Amount of locked assets
+  _cat  :: Maybe Actor  -- Actor that triggered liquidation, if applicable
 } deriving (Eq, Show)
 </pre>
-<h3><code>Entity</code> &mdash; token balance holder</h3>
-
-<p>We use a data type to explicitly distinguish the different entities
-that can hold a token balance or invoke acts.
-
-<pre>
-data Entity
-  = Account Address  -- External holder
-  | Jar              -- Token vault
-  | Jug              -- Mints stablecoin/anticoin, holds anticoin
-  | Vow              -- Settler
-  | Flipper          -- Assetcoin auctioneer
-  | Flapper          -- Stablecoin auctioneer
-  | Flopper          -- Countercoin auctioneer
-  | Toy              -- Test driver
-  | God              -- Omnipotent actor
-
-  deriving (Eq, Ord, Show)
-</pre>
-<h3><code>Ilk</code> &mdash; urn type</h3>
+<h2><code>Ilk</code>: CDP type parameters</h2>
 
 <p>Each urn belongs to an urn type, specified by an <code>Ilk</code>
 record.
@@ -375,7 +379,7 @@ Chapter&nbsp;\ref{chapter:acts}; see the whitepaper for an overview.
 
 <pre>
 data Ilk = Ilk {
-  _gem :: Gem,   -- Assetcoin identifier
+  _gem :: Gem,   -- Asset identifier
   _lax :: Sec,   -- Grace period after price feed becomes unavailable
   _mat :: Ray,   -- Urn liquidation ratio of locked value to issued value
   _axe :: Ray,   -- Urn liquidation penalty as fraction of urn issuance
@@ -386,25 +390,7 @@ data Ilk = Ilk {
   _rum :: Wad    -- Total ilk issuance denominated in fee unit
 } deriving (Eq, Show)
 </pre>
-<h3><code>Urn</code> &mdash; stablecoin issuance account</h3>
-
-<p>An <code>urn</code> record defines a basic entity through which
-users interact with the system to issue stablecoin.  Each urn belongs
-to an ilk.  The urn records the value of locked assetcoin along with
-the amount of stablecoin created for this particular urn.
-When liquidation is triggered on an urn, the identity of the triggering
-entity is also recorded.
-
-<pre>
-data Urn = Urn {
-  _ilk  :: Id Ilk,         -- Urn type
-  _lad  :: Entity,         -- Urn owner
-  _art  :: Wad,            -- Stablecoin issuance in fee unit
-  _ink  :: Wad,            -- Amount of locked assetcoin
-  _cat  :: Maybe Entity    -- Entity that triggered liquidation, if applicable
-} deriving (Eq, Show)
-</pre>
-<h3><code>Vox</code> &mdash; feedback mechanism data</h3>
+<h2><code>Vox</code>: feedback mechanism data</h2>
 
 <p>The <em>feedback mechanism</em> is the aspect of the system that
 adjusts the target price of dai based on market price. Its data is
@@ -419,20 +405,31 @@ data Vox = Vox {
   _tau   :: Sec     -- Timestamp of latest feedback iteration
 } deriving (Eq, Show)
 </pre>
-<h3><code>Vat</code> &mdash; system root</h3>
+<h2><code>Tag</code>: asset price record</h2>
+
+<p>The data received from price feeds is categorized by token and
+stored in <code>Tag</code> records.
+
+<pre>
+data Tag = Tag {
+  _tag :: Wad,  -- Market price denominated in SDR
+  _zzz :: Sec   -- Time of price expiration
+} deriving (Eq, Show)
+</pre>
+<h2><code>Vat</code>: system root</h2>
 
 <p>The <code>Vat</code> record aggregates the records of tokens, urns,
 ilks, and price feeds, along with the data of the feedback mechanism.
 
 <pre>
 data Vat = Vat {
-  _tags  :: Map Gem Tag,        -- Assetcoin price feeds
+  _tags  :: Map Gem Tag,        -- Asset price feeds
   _ilks  :: Map (Id Ilk) Ilk,   -- Urn type records
   _urns  :: Map (Id Urn) Urn,   -- Urn records
   _vox   :: Vox                 -- Feedback mechanism data
 } deriving (Eq, Show)
 </pre>
-<h3>System model</h3>
+<h2>System model</h2>
 
 <p>Finally we define a record with no direct counterpart in the
 Solidity contracts, which has the <code>Vat</code> record along with
@@ -440,12 +437,12 @@ model state.
 
 <pre>
 data System =  System {
-  _balances  :: Map (Entity, Gem) Wad,  -- Token balances
-  _vat       :: Vat,                    -- Root entity
-  _era       :: Sec,                    -- Current time stamp
-  _sender    :: Entity,                 -- Sender of current act
-  _accounts  :: [Address],              -- For test suites
-  _mode      :: Mode                    -- Vow operation mode
+  _balances  :: Map (Actor, Gem) Wad,  -- Token balances
+  _vat       :: Vat,                   -- Root entity
+  _era       :: Sec,                   -- Current time stamp
+  _sender    :: Actor,                 -- Sender of current act
+  _accounts  :: [Address],             -- For test suites
+  _mode      :: Mode                   -- Vow operation mode
 } deriving (Eq, Show)
 
 data Mode = Dummy
@@ -455,7 +452,7 @@ data Mode = Dummy
 
 <pre>
 deriving instance Generic Tag
-deriving instance Generic Entity
+deriving instance Generic Actor
 deriving instance Generic Ilk
 deriving instance Generic Urn
 deriving instance Generic Vox
@@ -477,7 +474,7 @@ instance FromJSON Sec where
   parseJSON v = fmap (Sec . read) (parseJSON v)
 
 instance ToJSONKey Gem    ; instance FromJSONKey Gem
-instance ToJSONKey Entity ; instance FromJSONKey Entity
+instance ToJSONKey Actor ; instance FromJSONKey Actor
 instance ToJSONKey (Id a) ; instance FromJSONKey (Id a)
 
 instance ToJSON Wad
@@ -488,8 +485,8 @@ instance ToJSON Address
 instance FromJSON Address
 instance ToJSON (Id a)
 instance FromJSON (Id a)
-instance ToJSON Entity
-instance FromJSON Entity
+instance ToJSON Actor
+instance FromJSON Actor
 instance ToJSON Gem
 instance FromJSON Gem
 instance ToJSON Tag where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
@@ -519,7 +516,7 @@ balance id_gem entity = balances . ix (entity, id_gem)
 </pre>
 -->
 
-<h3>Default data</h3>
+<h2>Default data</h2>
 
 <pre>
 defaultIlk :: Gem -&gt; Ilk
@@ -536,7 +533,7 @@ defaultIlk id_gem = Ilk {
 }
 </pre>
 <pre>
-emptyUrn :: Id Ilk -&gt; Entity -&gt; Urn
+emptyUrn :: Id Ilk -&gt; Actor -&gt; Urn
 emptyUrn id_ilk id_lad = Urn {
   _cat = Nothing,
   _lad = id_lad,
@@ -578,7 +575,7 @@ initialSystem how0 = System {
   _mode     = Dummy
 }
 </pre>
-<h2>Acts</h2>
+<h1>Acts</h1>
 
 <p>The <em>acts</em> are the basic state transitions of the system.
 
@@ -592,7 +589,7 @@ from addresses to which the system has granted authority.
 specifies how the act definitions behave with regard to state and
 rollback, see chapter&nbsp;\ref{chapter:monad}.
 
-<h3>Assessment</h3>
+<h2>Assessment</h2>
 
 <p>In order to prohibit urn acts based on risk situation, we define
 these stages of risk.
@@ -601,7 +598,7 @@ these stages of risk.
 data Stage
   = Pride  -- No problems
   | Anger  -- Issuance ceiling reached
-  | Worry  -- Assetcoin price feed in limbo
+  | Worry  -- Asset price feed in limbo
   | Panic  -- Price limbo limit exceeded, or undercollateralized
   | Grief  -- Liquidation triggered
   | Dread  -- Liquidation started
@@ -613,6 +610,35 @@ data Stage
 deriving instance Generic Stage
 </pre>
 -->
+
+<h3>Risk stage effects</h3>
+
+<center>
+<table>
+<thead>
+<th></th>
+<th><code>give</code>
+<th><code>shut</code>
+<th><code>lock</code>
+<th><code>wipe</code>
+<th><code>free</code>
+<th><code>draw</code>
+<th><code>bite</code>
+<th><code>grab</code>
+<th><code>plop</code>
+</thead>
+<tbody>
+<tr><td><code>Pride</code><td>yah<td>yep<td>yep<td>yep<td>meh<td>meh<td>nah<td>nah<td>nah
+<tr><td><code>Anger</code><td>yah<td>yep<td>yep<td>yep<td>meh<td>nah<td>nah<td>nah<td>nah
+<tr><td><code>Worry</code><td>yah<td>yep<td>yep<td>yep<td>nah<td>nah<td>nah<td>nah<td>nah
+<tr><td><code>Panic</code><td>yah<td>yep<td>yep<td>yep<td>nah<td>nah<td>woo<td>nah<td>nah
+<tr><td><code>Grief</code><td>yah<td>nah<td>nah<td>nah<td>nah<td>nah<td>nah<td>hey<td>nah
+<tr><td><code>Dread</code><td>yah<td>nah<td>nah<td>nah<td>nah<td>nah<td>nah<td>nah<td>hey
+</tbody>
+</table>
+</center>
+
+<h3>Risk stage analysis</h3>
 
 <p>We define the function <code>analyze</code> that determines the
 risk stage of an urn.
@@ -637,16 +663,16 @@ analyze era0 par0 urn0 ilk0 tag0 =
 
   where
 
-   -- Value of urn's locked assetcoin in SDR:
-    pro = view ink urn0  * view tag tag0
+   -- Value of urn's locked asset in SDR:
+    pro = view ink urn0 * view tag tag0
 
    -- Ilk's total stablecoin issuance in DAI:
-    cap = view rum ilk0  * cast (view chi ilk0)
+    cap = view rum ilk0 * cast (view chi ilk0)
 
    -- Urn's stablecoin issuance denominated in SDR:
-    con = view art urn0  * cast (view chi ilk0) * par0
+    con = view art urn0 * cast (view chi ilk0) * par0
 
-   -- Required assetcoin value as per liquidation ratio:
+   -- Required asset value as per liquidation ratio:
     min = con * cast (view mat ilk0)
 </pre>
 <!--
@@ -711,10 +737,10 @@ feel id_urn = do
   return (analyze era0 par0 urn0 ilk0 tag0)
 </pre>
 <p>Urn acts use <code>feel</code> to prohibit increasing risk when
-already risky, and to freeze stablecoin and assetcoin during liquidation;
+already risky, and to freeze stablecoin and assets during liquidation;
 see Table&nbsp;\ref{table:stages}.
 
-<h3>Issuance</h3>
+<h2>Issuance</h2>
 
 <p>Any user can open one or more accounts with the system using
 <code>open</code>, specifying a self-chosen account identifier and
@@ -747,7 +773,7 @@ give id_urn id_lad = do
   assign (vat . urns . ix id_urn . lad) id_lad
 </pre>
 <p>Unless urn is in liquidation, its owner can use <code>lock</code> to
-lock more assetcoin.
+lock more asset.
 
 <pre>
 lock id_urn wad_gem = do
@@ -757,21 +783,21 @@ lock id_urn wad_gem = do
   owns id_urn id_lad
 
  -- Fail if liquidation in process
-  want (feel id_urn) (`notElem` [Grief, Dread])
+  want (feel id_urn) (anythingBut [Grief, Dread])
 
- -- Identify assetcoin
+ -- Identify asset token
   id_ilk  &lt;- look (vat . urns . ix id_urn . ilk)
   id_gem  &lt;- look (vat . ilks . ix id_ilk . gem)
 
- -- Take custody of assetcoin
+ -- Take custody of assets
   transfer id_gem wad_gem id_lad Jar
 
- -- Record an assetcoin balance increase
+ -- Record an asset token balance increase
   increase (vat . urns . ix id_urn . ink) wad_gem
 </pre>
 <p>When an urn has no risk problems (except that its ilk's ceiling may
 be exceeded), its owner can use <code>free</code> to reclaim some
-amount of assetcoin, as long as this would not take the urn below its
+amount of assets, as long as this would not take the urn below its
 liquidation ratio.
 
 <pre>
@@ -781,13 +807,13 @@ free id_urn wad_gem = do
   id_lad &lt;- use sender
   owns id_urn id_lad
 
- -- Record an assetcoin balance decrease
+ -- Record an asset token balance decrease
   decrease (vat . urns . ix id_urn . ink) wad_gem
 
  -- Roll back on any risk problem except ilk ceiling excess
   want (feel id_urn) (`elem` [Pride, Anger])
 
- -- Release custody of assetcoin quantity
+ -- Release custody of assets
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
   id_gem &lt;- look (vat . ilks . ix id_ilk . gem)
   transfer id_gem wad_gem Jar id_lad
@@ -837,7 +863,7 @@ wipe id_urn wad_dai = do
   owns id_urn id_lad
 
  -- Fail if urn is in liquidation
-  want (feel id_urn) (`notElem` [Grief, Dread])
+  want (feel id_urn) (anythingBut [Grief, Dread])
 
  -- Update fee unit and unprocessed fee revenue
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
@@ -860,7 +886,7 @@ wipe id_urn wad_dai = do
 </pre>
 <p>An urn owner can use <code>shut</code> to close their
 account&mdash;reversing all issuance plus fee and reclaiming all
-assetcoin&mdash;if the price feed is up to date and the urn is not
+assets&mdash;if the price feed is up to date and the urn is not
 in liquidation.
 
 <pre>
@@ -874,14 +900,14 @@ shut id_urn = do
   art0 &lt;- look (vat . urns . ix id_urn . art)
   wipe id_urn (art0 * cast chi1)
 
- -- Reclaim all locked assetcoin
+ -- Reclaim all locked assets
   ink0 &lt;- look (vat . urns . ix id_urn . ink)
   free id_urn ink0
 
  -- Nullify urn record
   assign (vat . urns . at id_urn) Nothing
 </pre>
-<h3>Adjustment</h3>
+<h2>Adjustment</h2>
 
 <p>The feedback mechanism is updated through <code>prod</code>, which
 can be invoked at any time by keepers, but is also invoked as a side
@@ -955,18 +981,18 @@ drip id_ilk = do
   lend dew
 
  -- Record time of update
-  vat . ilks . ix id_ilk . rho  .= era0
+  assign (vat . ilks . ix id_ilk . rho) era0
 
  -- Record new fee unit
-  vat . ilks . ix id_ilk . chi  .= chi1
+  assign (vat . ilks . ix id_ilk . chi) chi1
 
  -- Return the new fee unit
   return chi1
 </pre>
-<h3>Price feed input</h3>
+<h2>Price feed input</h2>
 
 <p>The <code>mark</code> act records a new market price of an
-assetcoin along with the expiration date of this price.
+asset along with the expiration date of this price.
 
 <pre>
 mark id_gem tag1 zzz1 = auth $ do
@@ -982,7 +1008,7 @@ with the expiration date of this price.
 tell wad = auth $ do
   assign (vat . vox . wut) wad
 </pre>
-<h3>Liquidation</h3>
+<h2>Liquidation</h2>
 
 <p>
 When an urn's stage marks it
@@ -990,7 +1016,7 @@ When an urn's stage marks it
  any account can invoke the <code>bite</code> act
   to trigger the liquidation process.
 This enables the settler contract
- to grab the assetcoin for auctioning
+ to grab the assets for auctioning
  and take over the anticoin.
 
 <pre>
@@ -1015,7 +1041,7 @@ bite id_urn = do
 <p>
 After liquidation has been triggered,
 the designated settler contract invokes <code>grab</code>
-to receive both the urn's assetcoin
+to receive both the urn's assets
 and the anticoins
 corresponding to the urn's issuance.
 
@@ -1036,11 +1062,11 @@ grab id_urn = auth $ do
  -- Denominate the issuance in dai
   let con = art0 * cast chi1
 
- -- Transfer assetcoin and anticoin to settler
+ -- Transfer assets and anticoin to settler
   transfer id_gem ink0 Jar Vow
   transfer SIN con Jar Vow
 
- -- Nullify urn's assetcoin and anticoin quantities
+ -- Nullify urn's asset and anticoin quantities
   assign (vat . urns . ix id_urn . ink) 0
   assign (vat . urns . ix id_urn . art) 0
 
@@ -1049,7 +1075,7 @@ grab id_urn = auth $ do
 </pre>
 <p>
 When the settler has finished the liquidation of an urn, it invokes
-<code>plop</code> to give back any assetcoin it did not need to sell and restore
+<code>plop</code> to give back any assets it did not need to sell and restore
 the urn.
 
 <pre>
@@ -1061,13 +1087,13 @@ plop id_urn wad_dai = auth $ do
  -- Forget the urn's initiator of liquidation
   assign (vat . urns . ix id_urn . cat) Nothing
 
- -- Take excess assetcoin from settler to vault
+ -- Take excess assets from settler to vault
   id_vow &lt;- use sender
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
   id_gem &lt;- look (vat . ilks . ix id_ilk . gem)
   transfer id_gem wad_dai id_vow Jar
 
- -- Record the excess assetcoin as belonging to the urn
+ -- Record the excess assets as belonging to the urn
   assign (vat . urns . ix id_urn . ink) wad_dai
 </pre>
 <p>
@@ -1084,7 +1110,7 @@ loot = auth $ do
  -- Transfer the entire dai vault balance to sender
   transfer DAI wad Jar Vow
 </pre>
-<h3>Auctioning</h3>
+<h2>Auctioning</h2>
 
 <pre>
 flip id_gem wad_jam wad_tab id_urn = do
@@ -1103,7 +1129,7 @@ flop = do
   case vow of
     Dummy -&gt; return ()
 </pre>
-<h3>Settlement</h3>
+<h2>Settlement</h2>
 
 <pre>
 tidy who = auth $ do
@@ -1140,7 +1166,7 @@ kick = do
   transferAll SIN Vow Flopper
   flop
 </pre>
-<h3>Governance</h3>
+<h2>Governance</h2>
 
 <p>Governance uses <code>form</code> to create a new ilk.  Since the
 new type is initialized with a zero ceiling, a separate transaction
@@ -1189,7 +1215,7 @@ crop id_ilk tax1 = auth $ do
  -- Change the stability fee
   assign (vat . ilks . ix id_ilk . tax) tax1
 </pre>
-<h3>Token manipulation</h3>
+<h2>Token manipulation</h2>
 
 <p>We model the ERC20 transfer function in simplified form (omitting
 the concept of &raquo;allowance&laquo;).
@@ -1298,21 +1324,21 @@ perform x =
     Mint gem wad lad -&gt; mint gem wad lad
 </pre>
 <pre>
-being :: Entity -&gt; Action () -&gt; Action ()
+being :: Actor -&gt; Action () -&gt; Action ()
 being who x = do
-  old     &lt;- use sender
-  sender  .= who
-  y       &lt;- x
-  sender  .= old
+  old &lt;- use sender
+  assign sender who
+  y &lt;- x
+  assign sender old
   return y
 </pre>
 -->
 
-<h2>Act framework</h2>
+<h1>Act framework</h1>
 
 <!--
 
-<h3>Act descriptions</h3>
+<h2>Act descriptions</h2>
 
 <p>We define the act vocabulary as a data type to
 represent invocations.
@@ -1324,7 +1350,7 @@ data Act =
   |  Form     (Id Ilk)  (Gem)
   |  Free     (Id Urn)  Wad
   |  Frob     Ray
-  |  Give     (Id Urn)  Entity
+  |  Give     (Id Urn)  Actor
   |  Grab     (Id Urn)
   |  Lock     (Id Urn)  Wad
   |  Loot     Wad
@@ -1343,7 +1369,7 @@ data Act =
   |  Chop (Id Ilk) Ray
   |  Cork (Id Ilk) Wad
   |  Calm (Id Ilk) Sec
-  |  Mint Gem Wad Entity
+  |  Mint Gem Wad Actor
   |  Drip (Id Ilk)
  deriving (Eq, Show)
 </pre>
@@ -1355,7 +1381,7 @@ understand the code.  They give us a nice syntax&mdash;the
 state in a way that is still purely functional.  Each line of such a
 block is interpreted by the monad to provide the semantics we want.
 
-<h3>The <code>Action</code> monad</h3>
+<h2>The <code>Action</code> monad</h2>
 
 <p>This defines the <code>Action</code> monad as a simple composition
 of a state monad and an error monad:
@@ -1379,7 +1405,7 @@ which will be interpreted as a single transaction.
 exec :: System -&gt; Action () -&gt; Either Error System
 exec sys m = runExcept (execStateT m sys)
 </pre>
-<h3>Asserting</h3>
+<h2>Asserting</h2>
 
 <p>We now define a set of functions that fail unless some
 condition holds.
@@ -1477,5 +1503,80 @@ Thus:
 %include Maker/Prelude.lhs
 %include Maker/Decimal.lhs
 -->
+
+<h1>Glossary</h1>
+
+<glossary>
+<dl>
+
+<dt><code>Pride</code>
+<dd><code>Pride</code> is the risk stage of a non-risky CDP.
+
+<dt><code>Anger</code><dd><code>Anger</code> is the <code>Stage</code>
+of a CDP whose type has reached its issuance ceiling, but has a fresh
+price feed; is overcollateralized; and has not been triggered
+for liquidation.
+
+<dt><code>Worry</code><dd><code>Worry</code> is the <code>Stage</code>
+of a CDP whose asset's price feed has expired yet is still within the
+CDP type's grace period; but the CDP is still considered
+overcollateralized and has not been triggered for liquidation.  (The
+CDP's type may also have reached its issuance ceiling.)
+
+<dt><code>Panic</code><dd><code>Panic</code> is the <code>Stage</code>
+of a CDP which is undercollateralized or whose price feed is expired
+past the CDP type's grace period; but which has not yet been triggered
+for liquidation.  (The CDP's type may also have reached its
+issuance ceiling.)
+
+<dt><code>Grief</code><dd><code>Grief</code> is the <code>Stage</code>
+of a CDP which has been triggered for liquidation.
+
+<dt><code>Dread</code><dd><code>Dread</code> is the <code>Stage</code>
+of a CDP which is undergoing liquidation.
+
+<dt><code>cat</code><dd>The <code>cat</code> of an <code>urn</code> is
+the actor which triggered the CDP's liquidation, if applicable.
+
+<dt><code>ink</code><dd>The <code>ink</code> of an <code>Urn</code>
+(type: <code>Wad</code>) is the quantity of asset token locked in the
+corresponding CDP.
+
+<dt><code>zzz</code><dd>The <code>zzz</code> of a <code>Tag</code>
+(type: <code>Sec</code>) is the timestamp at which the corresponding
+asset price tag will expire.
+
+<dt><code>lax</code><dd>The <code>lax</code> of an <code>Ilk</code>
+(type: <code>Sec</code>) is the grace period for expired asset price
+tags applying to CDPs of the corresponding type.
+
+<dt><code>hat</code><dd>The <code>hat</code> of an <code>Ilk</code>
+(type: <code>Wad</code>) is the maximum total ("ceiling") dai issuance
+for the corresponding CDP type.
+
+<dt><code>tag</code><dd>The <code>tag</code> of a <code>Tag</code>
+record (type: <code>Wad</code>) is the recorded market price of the
+corresponding asset token denominated in SDR.
+
+<dt><code>rum</code><dd>The <code>rum</code> of an <code>Ilk</code>
+(type: <code>Wad</code>) is the total current issuance for the
+corresponding CDP type, denominated in the CDP's internal fee unit.
+
+<dt><code>chi</code><dd>The <code>chi</code> of an <code>Ilk</code>
+(type: <code>Ray</code>) is the dai valuation for the corresponding
+CDP type's internal fee unit, compounding over time according to the
+CDP type's stability fee.
+
+<dt><code>mat</code><dd>The <code>mat</code> of an <code>Ilk</code>
+(type: <code>Ray</code>) is the minimum required collateralization
+ratio (value of collateral divided by value of issued dai) for CDPs of
+the corresponding CDP type.
+
+<dt><code>has</code><dd><code>has k x</code> is true if the field
+<code>k</code> of the record <code>x</code> is not
+<code>Nothing</code>.
+
+</dl>
+</glossary>
 
 <script src=maker.js></script>
