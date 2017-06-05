@@ -163,4 +163,4 @@ Finally we define some of our own convenience functions.
 > initialize  a x = a %=  (\case Nothing -> Just x; y -> y)
 > prepend     a x = a %=  (x :)
 > 
-> anythingBut xs x = not (elem x xs)
+> oneOf  xs x = elem x xs

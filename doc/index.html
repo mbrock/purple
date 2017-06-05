@@ -12,7 +12,7 @@
 <p class=x4>DAI STABLECOIN</p>
 <p class=x5>issuance system</p>
 <p class=x6>Nikolai Mushegian<br>Daniel Brockman<br>Mikael Brockman</p>
-<p class=x7>[draft; 2017-06-03]</p>
+<p class=x7>[draft; 2017-06-05]</p>
 <p class=x8>◈</p>
 </center>
 </header>
@@ -88,20 +88,9 @@ environment and lacks facilities for interfacing with files or other
 programs.  A reference implementation is useful for doing simulations
 of the system's economic, game-theoretic, or statistical aspects.
 
-<h2>What are the limitations of this model?</h2>
-
-<p>This model is limited in that it has
-
-<p><ul>
-<li>a simplified version of authorization for governance;
-<li>a simplified version of ERC20 token semantics;
-<li>no implementation of the decentralized auction contracts;
-<li>and no 256-bit word limits.
-</ul>
-
-<p>These limitations will be addressed in future revisions.
-
 <h2>On formal verification and steps thereto</h2>
+
+<todo>Describe this better.</todo>
 
 <p>Separately from this document, we are developing automatic test
 suites that generate interaction sequences for property verification.
@@ -161,6 +150,15 @@ reasons:
     and easier to formalize.
 
 </ul>
+
+<h1>Dai mechanics</h1>
+
+<todo>Explain CDPs and CDP types.</todo>
+<todo>Explain the fee unit.</todo>
+<todo>Explain SIN.</todo>
+<todo>Explain MKR.</todo>
+<todo>Explain price tags.</todo>
+<todo>Explain feedback mechanism.</todo>
 
 </section><section>
 <h1>Preamble and data types</h1>
@@ -227,8 +225,8 @@ used for token quantities, such as amounts of ETH, DAI, or MKR.
 It is used for precise rates and ratios, such as the stability
 fee parameter.
 
-<p>We define these as distinct types.  The type system will prevent us
-from mixing them up unintentionally.
+<p>We define these as distinct types.  The type system will not allow
+us to combine them without explicit conversion.
 
 <pre>
 newtype Wad = Wad (Decimal E18)
@@ -272,8 +270,7 @@ newtype Sec = Sec Int
 <h2>Identifiers and addresses</h2>
 
 <p>The following common Haskell idiom lets us use <code>Id Ilk</code>
-and <code>Id Urn</code> as distinct identifier types without
-code duplication.
+and <code>Id Urn</code> as distinct identifier types.
 
 <pre>
 newtype Id a = Id String
@@ -285,28 +282,85 @@ newtype Id a = Id String
 newtype Address = Address String
   deriving (Eq, Ord, Show)
 </pre>
-<h2>Token types</h2>
+<h2><code>Gem, SIN, DAI, MKR</code>: token identifiers</h2>
 
-<p>The system makes use of four basic types of tokens.  These tokens
-are called <b>gems</b>, because they are precious.
+<p>The system makes use of four basic types of tokens.
 
 <pre>
-data Gem
+data Token
 
-  = Gem String  -- Asset token
-  | DAI         -- Public stablecoin
-  | MKR         -- Countercoin and voting token
-  | SIN         -- Private anticoin
+  = Gem (Id Tag)  -- Collateral token
+  | SIN           -- Private anticoin
+  | DAI           -- Public stablecoin
+  | MKR           -- Countercoin and voting token
 
   deriving (Eq, Ord, Show)
 </pre>
-<p>The asset tokens are used as collateral, and are written in the
-form <code>Gem "ETH"</code>.  The model treats all asset tokens as
-basic ERC20 tokens differing only in ticker symbol.  In reality,
-voters should make sure that asset tokens are well-behaved.
+<p>The system's approved collateral tokens are called "gems". We use
+the type <code>Id Tag</code> to denote the identity of some
+collateral token.
 
+<p>The model treats all collateral tokens as basic ERC20 tokens
+differing only in symbol.  In reality, voters should make sure that
+tokens are well-behaved before approving them.
 
-<h2>Actors</h2>
+<h2><code>Tag</code>: collateral token price record</h2>
+
+<p>The data received from price feeds is stored in
+<code>Tag</code> records.
+
+<pre>
+data Tag = Tag {
+  _tag :: Wad,  -- Market price denominated in SDR
+  _zzz :: Sec   -- Time of price expiration
+} deriving (Eq, Show)
+</pre>
+<h2><code>Urn</code>: CDP record</h2>
+
+<p>An <code>Urn</code> record keeps track of one CDP.
+
+<pre>
+data Urn = Urn {
+  _ilk  :: Id Ilk,      -- Urn type
+  _lad  :: Actor,       -- Urn owner
+  _art  :: Wad,         -- Stablecoin issuance in fee unit
+  _ink  :: Wad,         -- Amount of locked collateral
+  _cat  :: Maybe Actor  -- Actor that triggered liquidation, if applicable
+} deriving (Eq, Show)
+</pre>
+<h2><code>Ilk</code>: CDP type record</h2>
+
+<p>An <code>Ilk</code> record keeps track of one CDP type.
+
+<pre>
+data Ilk = Ilk {
+  _gem :: Id Tag, -- Collateral token identifier
+  _chi :: Ray,    -- Value of fee unit (in dai)
+  _rum :: Wad,    -- Total dai (in fee unit)
+  _hat :: Wad,    -- Maximum dai (issuance ceiling)
+  _mat :: Ray,    -- Liquidation ratio (collateral value per dai value)
+  _axe :: Ray,    -- Liquidation penalty (fraction of dai)
+  _tax :: Ray,    -- Fee (per-second fraction of dai)
+  _lax :: Sec,    -- Grace period of price feed unavailability
+  _rho :: Sec     -- Timestamp of latest fee unit adjustment
+} deriving (Eq, Show)
+</pre>
+<h2><code>Vox</code>: feedback mechanism record</h2>
+
+<p>The <em>feedback mechanism</em> is the aspect of the system that
+adjusts the target price of dai based on market price. Its data is
+grouped in a record called <code>Vox</code>.
+
+<pre>
+data Vox = Vox {
+  _wut :: Wad,    -- Stablecoin market price denominated in SDR
+  _par :: Wad,    -- Stablecoin target price denominated in SDR
+  _way :: Ray,    -- Current per-second change in target price
+  _how :: Ray,    -- Sensitivity parameter set by governance
+  _tau :: Sec     -- Timestamp of latest feedback iteration
+} deriving (Eq, Show)
+</pre>
+<h2><code>Actor</code>: account identifier</h2>
 
 <p>We use a data type to explicitly distinguish the different entities
 that can hold a token balance or invoke acts.
@@ -314,10 +368,10 @@ that can hold a token balance or invoke acts.
 <pre>
 data Actor
   = Account Address  -- External holder
-  | Jar              -- Token vault
+  | Jar              -- Collateral vault
   | Jug              -- Mints stablecoin/anticoin, holds anticoin
   | Vow              -- Settler
-  | Flipper          -- Asset auctioneer
+  | Flipper          -- Collateral auctioneer
   | Flapper          -- Stablecoin auctioneer
   | Flopper          -- Countercoin auctioneer
   | Toy              -- Test driver
@@ -340,93 +394,23 @@ deriving instance Generic Ray
 deriving instance Generic Sec
 deriving instance Generic (Id a)
 deriving instance Generic Address
-deriving instance Generic Gem
+deriving instance Generic Token
 </pre>
 
 -->
 
-<h2><code>Urn</code>: CDP bookkeeping record</h2>
-
-<p>An <code>urn</code> record defines a basic entity through which
-users interact with the system to issue stablecoin.  Each urn belongs
-to an ilk.  The urn records the value of locked assets along with
-the amount of stablecoin created for this particular urn.
-When liquidation is triggered on an urn, the identity of the triggering
-entity is also recorded.
-
-<pre>
-data Urn = Urn {
-  _ilk  :: Id Ilk,      -- Urn type
-  _lad  :: Actor,       -- Urn owner
-  _art  :: Wad,         -- Stablecoin issuance in fee unit
-  _ink  :: Wad,         -- Amount of locked assets
-  _cat  :: Maybe Actor  -- Actor that triggered liquidation, if applicable
-} deriving (Eq, Show)
-</pre>
-<h2><code>Ilk</code>: CDP type parameters</h2>
-
-<p>Each urn belongs to an urn type, specified by an <code>Ilk</code>
-record.
-
-<p>Five parameters, <code>mat</code>, <code>axe</code>,
-<code>hat</code>, <code>tax</code> and <code>lax</code>, are set by
-governance and are known as the <em>risk parameters</em>. The rest of
-the values are used by the system to keep track of the current state.
-
-<p>The meaning of each <code>ilk</code> parameter is defined by its
-interactions in the act definitions of
-Chapter&nbsp;\ref{chapter:acts}; see the whitepaper for an overview.
-
-<pre>
-data Ilk = Ilk {
-  _gem :: Gem,   -- Asset identifier
-  _lax :: Sec,   -- Grace period after price feed becomes unavailable
-  _mat :: Ray,   -- Urn liquidation ratio of locked value to issued value
-  _axe :: Ray,   -- Urn liquidation penalty as fraction of urn issuance
-  _hat :: Wad,   -- Maximum total issuance for ilk ("issuance ceiling")
-  _tax :: Ray,   -- Stability fee as per-second fraction of urn issuance
-  _chi :: Ray,   -- Value of fee unit in stablecoin
-  _rho :: Sec,   -- Time of latest fee unit adjustment
-  _rum :: Wad    -- Total ilk issuance denominated in fee unit
-} deriving (Eq, Show)
-</pre>
-<h2><code>Vox</code>: feedback mechanism data</h2>
-
-<p>The <em>feedback mechanism</em> is the aspect of the system that
-adjusts the target price of dai based on market price. Its data is
-grouped in a record called <code>Vox</code>.
-
-<pre>
-data Vox = Vox {
-  _wut   :: Wad,    -- Stablecoin market price denominated in SDR
-  _par   :: Wad,    -- Stablecoin target price denominated in SDR
-  _way   :: Ray,    -- Current per-second change in target price
-  _how   :: Ray,    -- Sensitivity parameter set by governance
-  _tau   :: Sec     -- Timestamp of latest feedback iteration
-} deriving (Eq, Show)
-</pre>
-<h2><code>Tag</code>: asset price record</h2>
-
-<p>The data received from price feeds is categorized by token and
-stored in <code>Tag</code> records.
-
-<pre>
-data Tag = Tag {
-  _tag :: Wad,  -- Market price denominated in SDR
-  _zzz :: Sec   -- Time of price expiration
-} deriving (Eq, Show)
-</pre>
 <h2><code>Vat</code>: system root</h2>
 
-<p>The <code>Vat</code> record aggregates the records of tokens, urns,
-ilks, and price feeds, along with the data of the feedback mechanism.
+<p>The <code>Vat</code> record aggregates the records of tokens, CDPs,
+CDP types, and price feeds, along with the data of the
+feedback mechanism.
 
 <pre>
 data Vat = Vat {
-  _tags  :: Map Gem Tag,        -- Asset price feeds
-  _ilks  :: Map (Id Ilk) Ilk,   -- Urn type records
-  _urns  :: Map (Id Urn) Urn,   -- Urn records
-  _vox   :: Vox                 -- Feedback mechanism data
+  _tags  :: Map (Id Tag) Tag, -- Collateral price feeds
+  _ilks  :: Map (Id Ilk) Ilk, -- CDP type records
+  _urns  :: Map (Id Urn) Urn, -- CDP records
+  _vox   :: Vox               -- Feedback mechanism data
 } deriving (Eq, Show)
 </pre>
 <h2>System model</h2>
@@ -437,12 +421,12 @@ model state.
 
 <pre>
 data System =  System {
-  _balances  :: Map (Actor, Gem) Wad,  -- Token balances
-  _vat       :: Vat,                   -- Root entity
-  _era       :: Sec,                   -- Current time stamp
-  _sender    :: Actor,                 -- Sender of current act
-  _accounts  :: [Address],             -- For test suites
-  _mode      :: Mode                   -- Vow operation mode
+  _balances  :: Map (Actor, Token) Wad,  -- Token balances
+  _vat       :: Vat,                     -- Root entity
+  _era       :: Sec,                     -- Current time stamp
+  _sender    :: Actor,                   -- Sender of current act
+  _accounts  :: [Address],               -- For test suites
+  _mode      :: Mode                     -- Vow operation mode
 } deriving (Eq, Show)
 
 data Mode = Dummy
@@ -473,7 +457,7 @@ instance ToJSON Sec where
 instance FromJSON Sec where
   parseJSON v = fmap (Sec . read) (parseJSON v)
 
-instance ToJSONKey Gem    ; instance FromJSONKey Gem
+instance ToJSONKey Token ; instance FromJSONKey Token
 instance ToJSONKey Actor ; instance FromJSONKey Actor
 instance ToJSONKey (Id a) ; instance FromJSONKey (Id a)
 
@@ -487,8 +471,8 @@ instance ToJSON (Id a)
 instance FromJSON (Id a)
 instance ToJSON Actor
 instance FromJSON Actor
-instance ToJSON Gem
-instance FromJSON Gem
+instance ToJSON Token
+instance FromJSON Token
 instance ToJSON Tag where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
 instance FromJSON Tag where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
 instance ToJSON Ilk where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
@@ -519,9 +503,9 @@ balance id_gem entity = balances . ix (entity, id_gem)
 <h2>Default data</h2>
 
 <pre>
-defaultIlk :: Gem -&gt; Ilk
-defaultIlk id_gem = Ilk {
-  _gem = id_gem,
+defaultIlk :: Id Tag -&gt; Ilk
+defaultIlk id_tag = Ilk {
+  _gem = id_tag,
   _axe = Ray 1,
   _mat = Ray 1,
   _tax = Ray 1,
@@ -598,7 +582,7 @@ these stages of risk.
 data Stage
   = Pride  -- No problems
   | Anger  -- Issuance ceiling reached
-  | Worry  -- Asset price feed in limbo
+  | Worry  -- Collateral price feed in limbo
   | Panic  -- Price limbo limit exceeded, or undercollateralized
   | Grief  -- Liquidation triggered
   | Dread  -- Liquidation started
@@ -663,7 +647,7 @@ analyze era0 par0 urn0 ilk0 tag0 =
 
   where
 
-   -- Value of urn's locked asset in SDR:
+   -- Value of urn's locked collateral in SDR:
     pro = view ink urn0 * view tag tag0
 
    -- Ilk's total stablecoin issuance in DAI:
@@ -672,7 +656,7 @@ analyze era0 par0 urn0 ilk0 tag0 =
    -- Urn's stablecoin issuance denominated in SDR:
     con = view art urn0 * cast (view chi ilk0) * par0
 
-   -- Required asset value as per liquidation ratio:
+   -- Required collateral value as per liquidation ratio:
     min = con * cast (view mat ilk0)
 </pre>
 <!--
@@ -737,8 +721,8 @@ feel id_urn = do
   return (analyze era0 par0 urn0 ilk0 tag0)
 </pre>
 <p>Urn acts use <code>feel</code> to prohibit increasing risk when
-already risky, and to freeze stablecoin and assets during liquidation;
-see Table&nbsp;\ref{table:stages}.
+already risky, and to freeze stablecoin and collateral during
+liquidation; see Table&nbsp;\ref{table:stages}.
 
 <h2>Issuance</h2>
 
@@ -773,7 +757,7 @@ give id_urn id_lad = do
   assign (vat . urns . ix id_urn . lad) id_lad
 </pre>
 <p>Unless urn is in liquidation, its owner can use <code>lock</code> to
-lock more asset.
+lock more collateral.
 
 <pre>
 lock id_urn wad_gem = do
@@ -783,21 +767,21 @@ lock id_urn wad_gem = do
   owns id_urn id_lad
 
  -- Fail if liquidation in process
-  want (feel id_urn) (anythingBut [Grief, Dread])
+  want (feel id_urn) (not . oneOf [Grief, Dread])
 
- -- Identify asset token
+ -- Identify collateral token
   id_ilk  &lt;- look (vat . urns . ix id_urn . ilk)
-  id_gem  &lt;- look (vat . ilks . ix id_ilk . gem)
+  id_tag  &lt;- look (vat . ilks . ix id_ilk . gem)
 
- -- Take custody of assets
-  transfer id_gem wad_gem id_lad Jar
+ -- Take custody of collateral
+  transfer (Gem id_tag) wad_gem id_lad Jar
 
- -- Record an asset token balance increase
+ -- Record an collateral token balance increase
   increase (vat . urns . ix id_urn . ink) wad_gem
 </pre>
 <p>When an urn has no risk problems (except that its ilk's ceiling may
 be exceeded), its owner can use <code>free</code> to reclaim some
-amount of assets, as long as this would not take the urn below its
+amount of collateral, as long as this would not take the urn below its
 liquidation ratio.
 
 <pre>
@@ -807,16 +791,16 @@ free id_urn wad_gem = do
   id_lad &lt;- use sender
   owns id_urn id_lad
 
- -- Record an asset token balance decrease
+ -- Record a collateral token balance decrease
   decrease (vat . urns . ix id_urn . ink) wad_gem
 
  -- Roll back on any risk problem except ilk ceiling excess
-  want (feel id_urn) (`elem` [Pride, Anger])
+  want (feel id_urn) (oneOf [Pride, Anger])
 
- -- Release custody of assets
+ -- Release custody of collateral
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  id_gem &lt;- look (vat . ilks . ix id_ilk . gem)
-  transfer id_gem wad_gem Jar id_lad
+  id_tag &lt;- look (vat . ilks . ix id_ilk . gem)
+  transfer (Gem id_tag) wad_gem Jar id_lad
 </pre>
 <p>When an urn has no risk problems, its owner can can use
 <code>draw</code> to issue fresh stablecoin, as long as the ilk
@@ -863,7 +847,7 @@ wipe id_urn wad_dai = do
   owns id_urn id_lad
 
  -- Fail if urn is in liquidation
-  want (feel id_urn) (anythingBut [Grief, Dread])
+  want (feel id_urn) (not . oneOf [Grief, Dread])
 
  -- Update fee unit and unprocessed fee revenue
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
@@ -884,10 +868,9 @@ wipe id_urn wad_dai = do
  -- Destroy stablecoin and anticoin
   mend wad_dai
 </pre>
-<p>An urn owner can use <code>shut</code> to close their
-account&mdash;reversing all issuance plus fee and reclaiming all
-assets&mdash;if the price feed is up to date and the urn is not
-in liquidation.
+<p>An urn owner can use <code>shut</code> to close their account, if
+the price feed is up to date and the urn is not in liquidation.
+This reclaims all collateral and cancels all issuance plus fee.
 
 <pre>
 shut id_urn = do
@@ -900,7 +883,7 @@ shut id_urn = do
   art0 &lt;- look (vat . urns . ix id_urn . art)
   wipe id_urn (art0 * cast chi1)
 
- -- Reclaim all locked assets
+ -- Reclaim all locked collateral
   ink0 &lt;- look (vat . urns . ix id_urn . ink)
   free id_urn ink0
 
@@ -939,13 +922,13 @@ prod = do
                  if wut0 &lt; par0 then wag else -wag)
 
  -- Update target price
-  assign (vat.vox.par) par1
+  assign (vat . vox . par) par1
 
  -- Update rate of price change
-  assign (vat.vox.way) way1
+  assign (vat . vox . way) way1
 
  -- Record time of update
-  assign (vat.vox.tau) era0
+  assign (vat . vox . tau) era0
 
   where
    -- Convert between multiplicative and additive form
@@ -992,7 +975,7 @@ drip id_ilk = do
 <h2>Price feed input</h2>
 
 <p>The <code>mark</code> act records a new market price of an
-asset along with the expiration date of this price.
+collateral along with the expiration date of this price.
 
 <pre>
 mark id_gem tag1 zzz1 = auth $ do
@@ -1016,7 +999,7 @@ When an urn's stage marks it
  any account can invoke the <code>bite</code> act
   to trigger the liquidation process.
 This enables the settler contract
- to grab the assets for auctioning
+ to grab the collateral for auctioning
  and take over the anticoin.
 
 <pre>
@@ -1041,7 +1024,7 @@ bite id_urn = do
 <p>
 After liquidation has been triggered,
 the designated settler contract invokes <code>grab</code>
-to receive both the urn's assets
+to receive both the urn's collateral
 and the anticoins
 corresponding to the urn's issuance.
 
@@ -1054,7 +1037,7 @@ grab id_urn = auth $ do
   ink0 &lt;- look (vat . urns . ix id_urn . ink)
   art0 &lt;- look (vat . urns . ix id_urn . art)
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  id_gem &lt;- look (vat . ilks . ix id_ilk . gem)
+  id_tag &lt;- look (vat . ilks . ix id_ilk . gem)
 
  -- Update the fee unit and unprocessed fee revenue
   chi1 &lt;- drip id_ilk
@@ -1062,21 +1045,20 @@ grab id_urn = auth $ do
  -- Denominate the issuance in dai
   let con = art0 * cast chi1
 
- -- Transfer assets and anticoin to settler
-  transfer id_gem ink0 Jar Vow
+ -- Transfer collateral and anticoin to settler
+  transfer (Gem id_tag) ink0 Jar Vow
   transfer SIN con Jar Vow
 
- -- Nullify urn's asset and anticoin quantities
+ -- Nullify urn's collateral and anticoin quantities
   assign (vat . urns . ix id_urn . ink) 0
   assign (vat . urns . ix id_urn . art) 0
 
  -- Decrease the ilk's total issuance
   decrease (vat . ilks . ix id_ilk . rum) art0
 </pre>
-<p>
-When the settler has finished the liquidation of an urn, it invokes
-<code>plop</code> to give back any assets it did not need to sell and restore
-the urn.
+<p>When the settler has finished the liquidation of an urn, it
+invokes <code>plop</code> to give back any collateral it did not need
+to sell and restore the urn.
 
 <pre>
 plop id_urn wad_dai = auth $ do
@@ -1087,13 +1069,13 @@ plop id_urn wad_dai = auth $ do
  -- Forget the urn's initiator of liquidation
   assign (vat . urns . ix id_urn . cat) Nothing
 
- -- Take excess assets from settler to vault
+ -- Take excess collateral from settler to vault
   id_vow &lt;- use sender
   id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  id_gem &lt;- look (vat . ilks . ix id_ilk . gem)
-  transfer id_gem wad_dai id_vow Jar
+  id_tag &lt;- look (vat . ilks . ix id_ilk . gem)
+  transfer (Gem id_tag) wad_dai id_vow Jar
 
- -- Record the excess assets as belonging to the urn
+ -- Record the excess collateral as belonging to the urn
   assign (vat . urns . ix id_urn . ink) wad_dai
 </pre>
 <p>
@@ -1313,7 +1295,7 @@ perform x =
     Warp t           -&gt; warp t
     Give urn lad     -&gt; give urn lad
     Lock urn wad     -&gt; lock urn wad
-    Mine id          -&gt; mine id
+    Mine id          -&gt; mine (Gem id)
     Hand lad wad gem -&gt; hand lad wad gem
     Sire lad         -&gt; sire lad
     Draw lad wad     -&gt; draw lad wad
@@ -1347,21 +1329,21 @@ represent invocations.
 data Act =
      Bite     (Id Urn)
   |  Draw     (Id Urn)  Wad
-  |  Form     (Id Ilk)  (Gem)
+  |  Form     (Id Ilk)  (Id Tag)
   |  Free     (Id Urn)  Wad
   |  Frob     Ray
   |  Give     (Id Urn)  Actor
   |  Grab     (Id Urn)
   |  Lock     (Id Urn)  Wad
   |  Loot     Wad
-  |  Mark     (Gem)  Wad  Sec
+  |  Mark     (Id Tag)  Wad  Sec
   |  Open     (Id Urn)  (Id Ilk)
   |  Prod
   |  Shut     (Id Urn)
   |  Tell     Wad
   |  Wipe     (Id Urn)  Wad
-  |  Mine (Gem)
-  |  Hand Address Wad (Gem)
+  |  Mine (Id Tag)
+  |  Hand Address Wad Token
   |  Sire Address
   |  Addr Address
   |  Warp Sec
@@ -1369,17 +1351,17 @@ data Act =
   |  Chop (Id Ilk) Ray
   |  Cork (Id Ilk) Wad
   |  Calm (Id Ilk) Sec
-  |  Mint Gem Wad Actor
+  |  Mint Token Wad Actor
   |  Drip (Id Ilk)
  deriving (Eq, Show)
 </pre>
 -->
 
 <p>The reader does not need any abstract understanding of monads to
-understand the code.  They give us a nice syntax&mdash;the
-<code>do</code> block notation&mdash;for expressing exceptions and
-state in a way that is still purely functional.  Each line of such a
-block is interpreted by the monad to provide the semantics we want.
+understand the code.  They provide syntax (the <code>do</code>
+notation) for expressing exceptions and state in a way that is still
+purely functional.  Each line of such a block is interpreted by the
+monad to provide the semantics we want.
 
 <h2>The <code>Action</code> monad</h2>
 
@@ -1509,54 +1491,51 @@ Thus:
 <glossary>
 <dl>
 
-<dt><code>Pride</code>
-<dd><code>Pride</code> is the risk stage of a non-risky CDP.
+<dt><code>Id</code></dt>
+<dd><code>Id a</code> (for any <code>a</code>) is a string identifier
+that cannot be mixed up with some other <code>Id b</code>.
 
-<dt><code>Anger</code><dd><code>Anger</code> is the <code>Stage</code>
-of a CDP whose type has reached its issuance ceiling, but has a fresh
-price feed; is overcollateralized; and has not been triggered
-for liquidation.
+<dt><code>Urn</code>
+<dd><code>Urn</code> is the data record for a CDP.
 
-<dt><code>Worry</code><dd><code>Worry</code> is the <code>Stage</code>
-of a CDP whose asset's price feed has expired yet is still within the
-CDP type's grace period; but the CDP is still considered
-overcollateralized and has not been triggered for liquidation.  (The
-CDP's type may also have reached its issuance ceiling.)
+<dt><code>Ilk</code>
 
-<dt><code>Panic</code><dd><code>Panic</code> is the <code>Stage</code>
-of a CDP which is undercollateralized or whose price feed is expired
-past the CDP type's grace period; but which has not yet been triggered
-for liquidation.  (The CDP's type may also have reached its
-issuance ceiling.)
+<dd><code>Ilk</code> is the data record for a CDP type.
 
-<dt><code>Grief</code><dd><code>Grief</code> is the <code>Stage</code>
-of a CDP which has been triggered for liquidation.
+<dt><code>lad</code>
 
-<dt><code>Dread</code><dd><code>Dread</code> is the <code>Stage</code>
-of a CDP which is undergoing liquidation.
+<dd>The <code>lad</code> of an <code>Urn</code> (type:
+<code>Actor</code>) is the account identifier of the owner of
+that CDP.
 
-<dt><code>cat</code><dd>The <code>cat</code> of an <code>urn</code> is
-the actor which triggered the CDP's liquidation, if applicable.
+<dt><code>art</code>
+
+<dd>The <code>art</code> of an <code>Urn</code> (type:
+<code>Wad</code>) is the amount of outstanding dai issued by that CDP.
 
 <dt><code>ink</code><dd>The <code>ink</code> of an <code>Urn</code>
-(type: <code>Wad</code>) is the quantity of asset token locked in the
+(type: <code>Wad</code>) is the quantity of collateral locked in the
 corresponding CDP.
 
-<dt><code>zzz</code><dd>The <code>zzz</code> of a <code>Tag</code>
-(type: <code>Sec</code>) is the timestamp at which the corresponding
-asset price tag will expire.
+<dt><code>cat</code><dd>The <code>cat</code> of an <code>Urn</code> is
+the actor which triggered the CDP's liquidation, if applicable.
+
+
+<dt><code>gem</code><dd>The <code>gem</code> of an <code>Ilk</code> is
+the collateral token used for collateral in the corresponding CDP type.
+
+<dt><code>tax</code><dd>The <code>tax</code> of an <code>Ilk</code>
+(type: <code>Ray</code>) is the stability fee imposed on CDPs of the
+corresponding CDP type, expressed as a per-second fraction of the
+CDP's outstanding dai.
 
 <dt><code>lax</code><dd>The <code>lax</code> of an <code>Ilk</code>
-(type: <code>Sec</code>) is the grace period for expired asset price
+(type: <code>Sec</code>) is the grace period for expired collateral price
 tags applying to CDPs of the corresponding type.
 
 <dt><code>hat</code><dd>The <code>hat</code> of an <code>Ilk</code>
 (type: <code>Wad</code>) is the maximum total ("ceiling") dai issuance
 for the corresponding CDP type.
-
-<dt><code>tag</code><dd>The <code>tag</code> of a <code>Tag</code>
-record (type: <code>Wad</code>) is the recorded market price of the
-corresponding asset token denominated in SDR.
 
 <dt><code>rum</code><dd>The <code>rum</code> of an <code>Ilk</code>
 (type: <code>Wad</code>) is the total current issuance for the
@@ -1572,9 +1551,200 @@ CDP type's stability fee.
 ratio (value of collateral divided by value of issued dai) for CDPs of
 the corresponding CDP type.
 
+<dt><code>axe</code><dd>The <code>axe</code> of an <code>Ilk</code>
+(type: <code>Ray</code>) is the penalty imposed on liquidated CDPs of
+the corresponding CDP type, expressed as a fraction of the CDP's
+outstanding dai.
+
+<dt><code>rho</code><dd>The <code>rho</code> of an <code>Ilk</code>
+(type: <code>Sec</code>) is the timestamp of its latest fee unit
+adjustment.
+
+<dt><code>tag</code><dd>The <code>tag</code> of a <code>Tag</code>
+record (type: <code>Wad</code>) is the recorded market price of the
+corresponding collateral token denominated in SDR.
+
+<dt><code>zzz</code><dd>The <code>zzz</code> of a <code>Tag</code>
+(type: <code>Sec</code>) is the timestamp at which the corresponding
+collateral price tag will expire.
+
+
+<dt><code>Pride</code>
+<dd><code>Pride</code> is the risk stage of a non-risky CDP.
+
+<dt><code>Anger</code><dd><code>Anger</code> is the <code>Stage</code>
+of a CDP whose type has reached its issuance ceiling, but has a fresh
+price feed; is overcollateralized; and has not been triggered
+for liquidation.
+
+<dt><code>Worry</code><dd><code>Worry</code> is the <code>Stage</code>
+of a CDP whose collateral price feed has expired yet is still within
+the CDP type's grace period; but the CDP is still considered
+overcollateralized and has not been triggered for liquidation.  (The
+CDP's type may also have reached its issuance ceiling.)
+
+<dt><code>Panic</code><dd><code>Panic</code> is the <code>Stage</code>
+of a CDP which is undercollateralized or whose price feed is expired
+past the CDP type's grace period; but which has not yet been triggered
+for liquidation.  (The CDP's type may also have reached its
+issuance ceiling.)
+
+<dt><code>Grief</code><dd><code>Grief</code> is the <code>Stage</code>
+of a CDP which has been triggered for liquidation.
+
+<dt><code>Dread</code><dd><code>Dread</code> is the <code>Stage</code>
+of a CDP which is undergoing liquidation.
+
 <dt><code>has</code><dd><code>has k x</code> is true if the field
 <code>k</code> of the record <code>x</code> is not
 <code>Nothing</code>.
+
+<dt><code>Wad</code>
+
+<dd><code>Wad</code> is the type of a decimal number with 18 decimals
+of precision, used for token quantities.
+
+<dt><code>Ray</code>
+
+<dd><code>Ray</code> is the type of a decimal number with 36 decimals
+of precision, used for precise rates and ratios.
+
+<dt><code>Sec</code>
+
+<dd><code>Sec</code> is the type of a timestamp or duration in
+whole seconds.
+
+<dt><code>cast</code>
+
+<dd><code>cast x</code> converts <code>x</code> to whatever numeric
+type is required in the expression context, possibly losing precision.
+
+<dt><code>Address</code>
+
+<dd><code>Address</code> represents an arbitrary Ethereum
+account address.
+
+<dt><code>Token</code>
+
+<dd><code>Token</code> identifies an ERC20 token used by the system:
+either some <code>Gem</code> (a collateral token) or one of
+<code>SIN</code>, <code>DAI</code>, or <code>MKR</code>.
+
+<dt><code>Gem</code>
+
+<dd><code>Gem</code> is a constructor for a <code>Token</code>
+representing a collateral token.
+
+<dt><code>DAI</code>
+
+<dd><code>DAI</code> is the identifier of the dai stablecoin token.
+
+<dt><code>MKR</code>
+
+<dd><code>MKR</code> is the identifier of the MKR token (the
+countercoin and governance token).
+
+<dt><code>SIN</code>
+
+<dd><code>SIN</code> is the identifier of the internal "anticoin"
+token which is always minted and burned in the same amounts as dai,
+only kept within the system as an accounting quantity.
+
+<dt><code>vat</code>
+
+<dd><code>vat</code> is the root of the system state.
+
+<dt><code>Vat</code>
+
+<dd><code>Vat</code> is the root record of the system state.
+
+<dt><code>wut</code>
+
+<dd><code>wut</code> (type: <code>Wad</code>) is the feedback
+mechanism's latest market price of dai, denominated in SDR.
+
+<dt><code>par</code>
+
+<dd><code>par</code> (type: <code>Wad</code>) is the feedback
+mechanism's latest target price of dai, denominated in SDR.
+
+<dt><code>way</code>
+
+<dd><code>way</code> (type: <code>Ray</code>) is the current
+per-second change in target price, continuously altered by the
+feedback mechanism according to the sensitivity parameter.
+
+<dt><code>how</code>
+
+<dd><code>how</code> (type: <code>Ray</code>) is the sensitivity
+parameter of the feedback mechanism, set by governance, controlling
+the rate of change of the dai target price.
+
+<dt><code>tau</code>
+
+<dd><code>tau</code> (type: <code>Sec</code>) is the timestamp of the
+latest feedback mechanism iteration.
+
+<dt><code>Tag</code>
+
+<dd><code>Tag</code> is the record of collateral price feed updates.
+The type <code>Id Tag</code> is used to identify collateral tokens
+(aka <code>Gem</code>s).
+
+<dt><code>Vox</code>
+
+<dd><code>Vox</code> is the record of feedback mechanism data.
+
+<dt><code>Actor</code>
+
+<dd><code>Actor</code> represents the identity of an entity which can
+hold a token balance or perform system actions.
+
+<dt><code>Account</code>
+
+<dd><code>Account</code> (type: <code>Address -> Actor</code>)
+constructs an <code>Actor</code> identifier denoting an external
+Ethereum account.
+
+<dt><code>Jar</code>
+
+<dd><code>Jar</code> (type: <code>Actor</code>) identifies the
+system's collateral vault.
+
+<dt><code>Jug</code>
+
+<dd><code>Jug</code> (type: <code>Actor</code>) identifies the
+actor that mints DAI/SIN and holds SIN.
+
+<dt><code>Vow</code>
+
+<dd><code>Vow</code> (type: <code>Actor</code>) identifies the
+system's settler component.
+
+<dt><code>Flipper</code>
+
+<dd><code>Flipper</code> (type: <code>Actor</code>) identifies the
+collateral auctioneer component.
+
+<dt><code>Flapper</code>
+
+<dd><code>Flapper</code> (type: <code>Actor</code>) identifies the
+DAI stablecoin auctioneer component.
+
+<dt><code>Flopper</code>
+
+<dd><code>Flopper</code> (type: <code>Actor</code>) identifies the MKR
+countercoin auctioneer component.
+
+<dt><code>Toy</code>
+
+<dd><code>Toy</code> (type: <code>Actor</code>) identifies the
+system's test driver (not present in production).
+
+<dt><code>God</code>
+
+<dd><code>God</code> (type: <code>Actor</code>) identifies an
+omnipotent actor (prototyping kludge, will be removed).
 
 </dl>
 </glossary>
