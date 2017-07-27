@@ -61,21 +61,18 @@ Checking two free-standing implementations
 against each other is a well-known way of ensuring that they both
 behave as intended.
 
-<p><b>Testing.</b> Haskell lets us use powerful testing tools such as
-QuickCheck for comprehensively verifying key properties. This is a
-middle ground between testing and formal verification.
-
-<p><b>Explicitness.</b> Coding the contract behavior in Haskell, a
-purely functional language, enforces explicit description of aspects
-which Solidity leaves implicit.
-
-<p><b>Typing.</b> Solidity's type system can't encode all the
-distinctions made by our system.
+<p><b>Verification.</b> Haskell lets us use powerful testing tools
+such as QuickCheck for comprehensively verifying key properties. This
+is a middle ground between testing and formal verification.
 
 <p><b>Formality.</b> The work of translating into a purely functional
 program opens up opportunities for formal verification.  This document
 will be useful for modelling aspects of the system in a proof
 assistant like Isabelle.
+
+<p><b>Explicitness.</b> Coding the contract behavior in Haskell, a
+statically typed functional language, enforces explicit description of
+aspects which Solidity leaves implicit.
 
 <p><b>Clarity.</b>
 An implementation not intended to be deployed
@@ -88,12 +85,10 @@ environment and lacks facilities for interfacing with files or other
 programs.  A reference implementation is useful for doing simulations
 of the system's economic, game-theoretic, or statistical aspects.
 
-<h2>On formal verification and steps thereto</h2>
+<h2>Formal verification and steps thereto</h2>
 
-<todo>Describe this better.</todo>
-
-<p>Separately from this document, we are developing automatic test
-suites that generate interaction sequences for property verification.
+<p>We are developing automatic test suites that generate interaction
+sequences for property verification.
 
 <p>One such property is that the reference implementation behaves like
 the on-chain implementation. We verify this by generating Solidity
@@ -104,7 +99,7 @@ test cases with equality assertions for the entire state.
 <ul>
 <li>that the target price changes according to the target rate;
 <li>that the total dai supply is fully accounted for;
-<li>that acts are restricted with respect to risk stage;
+<li>that actions are restricted with respect to CDP stage;
 </ul>
 
 <p>along with similar invariants and conditions.  A future revision of
@@ -141,7 +136,7 @@ reasons:
 <li>The ability to discuss the system formally,
  with the financial interpretation partly suspended,
   has suggested insights that would have been
-   harder to think of inside the normal language. 
+   harder to think of inside the normal language.
 
 <li>The precise and distinctive language
  makes the structure and logic
@@ -153,12 +148,39 @@ reasons:
 
 <h1>Dai mechanics</h1>
 
+<p>The dai stablecoin system lets users lock collateral assets and
+issue dai in proportion to the collateral's market value.
+
+<aside>See <code>lock</code> and <code>draw</code>.</aside>
+
+<p>For deciding collateral requirements, the system values the dai not
+at the market price, but at its own <i>target price</i>, which is
+adjusted by the stability mechanism.
+
+<aside>See <code>feel</code>, which determines the lifecycle stage of
+a CDP.</aside>
+
+<p>The target price adjustment is a second order effect. Primarily,
+the stability mechanism reacts to market price changes by adjusting
+the <i>target rate</i>.
+
+<aside>See <code>prod</code>, which updates the stability
+mechanism.</aside>
+
+<todo>More explanations with code links.</todo>
+
+<h2>Yet to be fully specified</h2>
+<h3>Voting</h3>
+<h3>Auctions</h3>
+
+<!--
 <todo>Explain CDPs and CDP types.</todo>
-<todo>Explain the fee unit.</todo>
+<todo>Explain the debt unit.</todo>
 <todo>Explain SIN.</todo>
 <todo>Explain MKR.</todo>
 <todo>Explain price tags.</todo>
 <todo>Explain feedback mechanism.</todo>
+-->
 
 </section><section>
 <h1>Preamble and data types</h1>
@@ -289,10 +311,17 @@ newtype Address = Address String
 <pre>
 data Token
 
-  = Gem (Id Tag)  -- Collateral token
-  | SIN           -- Private anticoin
-  | DAI           -- Public stablecoin
-  | MKR           -- Countercoin and voting token
+    -- Some collateral token approved by system governance
+  = Gem (Id Tag)
+
+    -- Fungible stablecoin, issued by CDP owners and traded publicly
+  | DAI
+
+    -- Internal anticoin whose quantity is always equal to total issued dai
+  | SIN
+
+    -- Volatile countercoin and voting token
+  | MKR
 
   deriving (Eq, Ord, Show)
 </pre>
@@ -311,8 +340,13 @@ tokens are well-behaved before approving them.
 
 <pre>
 data Tag = Tag {
-  _tag :: Wad,  -- Market price denominated in SDR
-  _zzz :: Sec   -- Time of price expiration
+
+  -- Latest token market price (denominated in SDR)
+  _tag :: Wad,
+
+  -- Timestamp after which price should be considered stale
+  _zzz :: Sec
+
 } deriving (Eq, Show)
 </pre>
 <h2><code>Urn</code>: CDP record</h2>
@@ -321,11 +355,22 @@ data Tag = Tag {
 
 <pre>
 data Urn = Urn {
-  _ilk  :: Id Ilk,      -- Urn type
-  _lad  :: Actor,       -- Urn owner
-  _art  :: Wad,         -- Stablecoin issuance in fee unit
-  _ink  :: Wad,         -- Amount of locked collateral
-  _cat  :: Maybe Actor  -- Actor that triggered liquidation, if applicable
+
+  -- CDP type identifier
+  _ilk  :: Id Ilk,
+
+  -- CDP owner
+  _lad  :: Address,
+
+  -- Amount of outstanding dai issued by this CDP, denominated in debt unit
+  _art  :: Wad,
+
+  -- Amount of collateral currently locked by this CDP
+  _ink  :: Wad,
+
+  -- Actor that triggered liquidation, if applicable
+  _cat  :: Maybe Actor
+
 } deriving (Eq, Show)
 </pre>
 <h2><code>Ilk</code>: CDP type record</h2>
@@ -334,15 +379,34 @@ data Urn = Urn {
 
 <pre>
 data Ilk = Ilk {
-  _gem :: Id Tag, -- Collateral token identifier
-  _chi :: Ray,    -- Value of fee unit (in dai)
-  _rum :: Wad,    -- Total dai (in fee unit)
-  _hat :: Wad,    -- Maximum dai (issuance ceiling)
-  _mat :: Ray,    -- Liquidation ratio (collateral value per dai value)
-  _axe :: Ray,    -- Liquidation penalty (fraction of dai)
-  _tax :: Ray,    -- Fee (per-second fraction of dai)
-  _lax :: Sec,    -- Grace period of price feed unavailability
-  _rho :: Sec     -- Timestamp of latest fee unit adjustment
+
+  -- Token used as collateral for CDPs of this type
+  _gem :: Id Tag,
+
+  -- Total debt owed by CDPs of this type, denominated in debt unit
+  _rum :: Wad,
+
+  -- Current dai value of debt unit, increasing according to stability fee
+  _chi :: Ray,
+
+  -- Debt ceiling: maximum total outstanding dai value that can be issued by this CDP type
+  _hat :: Wad,
+
+  -- Liquidation ratio (collateral value per dai value)
+  _mat :: Ray,
+
+  -- Liquidation penalty (fraction of dai)
+  _axe :: Ray,
+
+  -- Fee (per-second fraction of dai)
+  _tax :: Ray,
+
+  -- Grace period of price feed unavailability
+  _lax :: Sec,
+
+  -- Timestamp of latest debt unit adjustment
+  _rho :: Sec
+
 } deriving (Eq, Show)
 </pre>
 <h2><code>Vox</code>: feedback mechanism record</h2>
@@ -353,29 +417,58 @@ grouped in a record called <code>Vox</code>.
 
 <pre>
 data Vox = Vox {
-  _wut :: Wad,    -- Stablecoin market price denominated in SDR
-  _par :: Wad,    -- Stablecoin target price denominated in SDR
-  _way :: Ray,    -- Current per-second change in target price
-  _how :: Ray,    -- Sensitivity parameter set by governance
-  _tau :: Sec     -- Timestamp of latest feedback iteration
+
+  -- Dai market price denominated in SDR
+  _wut :: Wad,
+
+  -- Dai target price denominated in SDR
+  _par :: Wad,
+
+  -- Current per-second change in target price
+  _way :: Ray,
+
+  -- Sensitivity parameter (set by governance)
+  _how :: Ray,
+
+  -- Timestamp of latest feedback iteration
+  _tau :: Sec
+
 } deriving (Eq, Show)
 </pre>
 <h2><code>Actor</code>: account identifier</h2>
 
 <p>We use a data type to explicitly distinguish the different entities
-that can hold a token balance or invoke acts.
+that can hold a token balance or invoke actions.
 
 <pre>
 data Actor
-  = Account Address  -- External holder
-  | Jar              -- Collateral vault
-  | Jug              -- Mints stablecoin/anticoin, holds anticoin
-  | Vow              -- Settler
-  | Flipper          -- Collateral auctioneer
-  | Flapper          -- Stablecoin auctioneer
-  | Flopper          -- Countercoin auctioneer
-  | Toy              -- Test driver
-  | God              -- Omnipotent actor
+
+    -- Extern address (CDP owner)
+  = Account Address
+
+    -- Collateral vault, holds all locked collateral until liquidation
+  | Jar
+
+    -- DAI and SIN are minted and burned by the "jug"
+  | Jug
+
+    -- The settler component
+  | Vow
+
+    -- The collateral auctioneer that raises DAI to cover liquidations
+  | Flipper
+
+    -- The "buy and burn" auctioneer that spends fee revenue on buying MKR
+  | Flapper
+
+    -- The "inflate and sell" auctioneer that mints MKR to cover liquidations
+  | Flopper
+
+    -- Test driver (not present in real system)
+  | Toy
+
+    -- Omnipotent actor (temporary kludge)
+  | God
 
   deriving (Eq, Ord, Show)
 </pre>
@@ -399,36 +492,44 @@ deriving instance Generic Token
 
 -->
 
-<h2><code>Vat</code>: system root</h2>
-
-<p>The <code>Vat</code> record aggregates the records of tokens, CDPs,
-CDP types, and price feeds, along with the data of the
-feedback mechanism.
-
-<pre>
-data Vat = Vat {
-  _tags  :: Map (Id Tag) Tag, -- Collateral price feeds
-  _ilks  :: Map (Id Ilk) Ilk, -- CDP type records
-  _urns  :: Map (Id Urn) Urn, -- CDP records
-  _vox   :: Vox               -- Feedback mechanism data
-} deriving (Eq, Show)
-</pre>
 <h2>System model</h2>
 
-<p>Finally we define a record with no direct counterpart in the
-Solidity contracts, which has the <code>Vat</code> record along with
-model state.
+<p>Finally we define the overall state of the model.
 
 <pre>
-data System =  System {
-  _balances  :: Map (Actor, Token) Wad,  -- Token balances
-  _vat       :: Vat,                     -- Root entity
-  _era       :: Sec,                     -- Current time stamp
-  _sender    :: Actor,                   -- Sender of current act
-  _accounts  :: [Address],               -- For test suites
-  _mode      :: Mode                     -- Vow operation mode
-} deriving (Eq, Show)
+data System = System {
 
+  -- Feedback mechanism data
+  _vox      :: Vox,
+
+  -- CDP records
+  _urns     :: Map (Id Urn) Urn,
+
+  -- CDP type records
+  _ilks     :: Map (Id Ilk) Ilk,
+
+  -- Price tags of collateral tokens
+  _tags     :: Map (Id Tag) Tag,
+
+  -- Token balances by actor and token
+  _balances :: Map (Actor, Token) Wad,
+
+  -- Current timestamp
+  _era      :: Sec,
+
+  -- Settler operation mode
+  _mode     :: Mode,
+
+  -- Sender of current action
+  _sender   :: Actor,
+
+  -- All user accounts (for tests)
+  _accounts :: [Address]
+
+} deriving (Eq, Show)
+</pre>
+<pre>
+-- Settler-related work in progress
 data Mode = Dummy
   deriving (Eq, Show)
 </pre>
@@ -481,8 +582,6 @@ instance ToJSON Urn where { toJSON = genericToJSON defaultOptions { fieldLabelMo
 instance FromJSON Urn where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
 instance ToJSON Vox where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
 instance FromJSON Vox where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
-instance ToJSON Vat where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
-instance FromJSON Vat where { parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 } }
 instance ToJSON Mode
 instance FromJSON Mode
 instance ToJSON System where { toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 } }
@@ -534,58 +633,64 @@ initialTag = Tag {
 }
 </pre>
 <pre>
-initialVat :: Ray -&gt; Vat
-initialVat how0 = Vat {
-  _vox = Vox {
+initialSystem :: Ray -&gt; System
+initialSystem how0 = System {
+  _balances = empty,
+  _ilks     = empty,
+  _urns     = empty,
+  _tags     = empty,
+  _era      = 0,
+  _sender   = God,
+  _accounts = mempty,
+  _mode     = Dummy,
+  _vox      = Vox {
     _tau = 0,
     _wut = Wad 1,
     _par = Wad 1,
     _how = how0,
     _way = Ray 1
-  },
-  _ilks = empty,
-  _urns = empty,
-  _tags = empty
+  }
 }
 </pre>
-<pre>
-initialSystem :: Ray -&gt; System
-initialSystem how0 = System {
-  _balances = empty,
-  _vat      = initialVat how0,
-  _era      = 0,
-  _sender   = God,
-  _accounts = mempty,
-  _mode     = Dummy
-}
-</pre>
-<h1>Acts</h1>
+<h1>Actions</h1>
 
-<p>The <em>acts</em> are the basic state transitions of the system.
+<p>The <em>actions</em> are the basic state transitions of the system.
 
-<p>Unless specified as <em>internal</em>, acts are accessible as public
-functions on the blockchain.
+<p>Unless specified as <em>internal</em>, actions are accessible as
+public functions on the blockchain.
 
-<p>The <code>auth</code> modifier marks acts which can only be invoked
-from addresses to which the system has granted authority.
+<p>The <code>auth</code> modifier marks actions which can only be
+invoked from addresses to which the system has granted authority.
 
 <p>For details on the underlying &raquo;Action monad&laquo; which
-specifies how the act definitions behave with regard to state and
+specifies how the action definitions behave with regard to state and
 rollback, see chapter&nbsp;\ref{chapter:monad}.
 
 <h2>Assessment</h2>
 
-<p>In order to prohibit urn acts based on risk situation, we define
-these stages of risk.
+<p>We define six stages of a CDP's lifecycle.
 
 <pre>
 data Stage
-  = Pride  -- No problems
-  | Anger  -- Issuance ceiling reached
-  | Worry  -- Collateral price feed in limbo
-  | Panic  -- Price limbo limit exceeded, or undercollateralized
-  | Grief  -- Liquidation triggered
-  | Dread  -- Liquidation started
+
+    -- Overcollateralized, CDP type below debt ceiling, fresh price tag, liquidation not triggered
+  = Pride
+
+    -- Debt ceiling reached for CDP's type
+  | Anger
+
+    -- CDP type's collateral price feed in limbo
+  | Worry
+
+    -- CDP undercollateralized, or CDP type's price limbo grace period exceeded
+  | Panic
+
+    -- Liquidation triggered
+  | Grief
+
+    -- Liquidation triggered and started
+  | Dread
+
   deriving (Eq, Show)
 </pre>
 <!--
@@ -595,54 +700,47 @@ deriving instance Generic Stage
 </pre>
 -->
 
-<h3>Risk stage effects</h3>
+<h3>Lifecycle stage effects</h3>
 
-<center>
-<table>
-<thead>
-<th></th>
-<th><code>give</code>
-<th><code>shut</code>
-<th><code>lock</code>
-<th><code>wipe</code>
-<th><code>free</code>
-<th><code>draw</code>
-<th><code>bite</code>
-<th><code>grab</code>
-<th><code>plop</code>
-</thead>
-<tbody>
-<tr><td><code>Pride</code><td>yah<td>yep<td>yep<td>yep<td>meh<td>meh<td>nah<td>nah<td>nah
-<tr><td><code>Anger</code><td>yah<td>yep<td>yep<td>yep<td>meh<td>nah<td>nah<td>nah<td>nah
-<tr><td><code>Worry</code><td>yah<td>yep<td>yep<td>yep<td>nah<td>nah<td>nah<td>nah<td>nah
-<tr><td><code>Panic</code><td>yah<td>yep<td>yep<td>yep<td>nah<td>nah<td>woo<td>nah<td>nah
-<tr><td><code>Grief</code><td>yah<td>nah<td>nah<td>nah<td>nah<td>nah<td>nah<td>hey<td>nah
-<tr><td><code>Dread</code><td>yah<td>nah<td>nah<td>nah<td>nah<td>nah<td>nah<td>nah<td>hey
-</tbody>
-</table>
-</center>
+<p>The following table shows which CDP actions are allowed and
+prohibited in each stage of the CDP lifecycle.</p>
 
-<h3>Risk stage analysis</h3>
+<figure><div>
+   risk unchanged          risk increasing
+       ╭┈┈┈┈╮               ╭┈┈┈┈┈┈┈┈┈╮
+        <code>give shut lock wipe free draw bite grab plop</code>
+<code>Pride</code>    ■    ■    ■    ■    ■    ■
+<code>Anger</code>    ■    ■    ■    ■    ■
+<code>Worry</code>    ■    ■    ■    ■
+<code>Panic</code>    ■    ■    ■    ■              ■
+<code>Grief</code>    ■                                  ■
+<code>Dread</code>    ■                                       ■
+        <code>give shut lock wipe free draw bite grab plop</code>
+             ╰┈┈┈┈┈┈┈┈┈┈┈┈┈╯           ╰┈┈┈┈┈┈┈┈┈┈┈┈┈╯
+              risk decreasing         risk unwinding
+</div></figure>
+
+<h3>CDP stage analysis</h3>
 
 <p>We define the function <code>analyze</code> that determines the
-risk stage of an urn.
+lifecycle stage of a CDP.
 
 <pre>
 analyze era0 par0 urn0 ilk0 tag0 =
 
-  if | has cat urn0 &amp;&amp; view ink urn0 == 0
+  if | has cat urn0 &amp;&amp; view ink urn0 == 0 --!
         -&gt; Dread
-     | has cat urn0
+     | has cat urn0 --!
         -&gt; Grief
-     | pro &lt; min
+     | pro &lt; min --!
         -&gt; Panic
-     | view zzz tag0 + view lax ilk0 &lt; era0
+     | view zzz tag0 + view lax ilk0 &lt; era0 --!
         -&gt; Panic
-     | view zzz tag0 &lt; era0
+     | view zzz tag0 &lt; era0 --!
         -&gt; Worry
-     | cap &gt; view hat ilk0
+     | cap &gt; view hat ilk0 --!
         -&gt; Anger
-     | otherwise
+     | otherwise --!
         -&gt; Pride
 
   where
@@ -702,27 +800,27 @@ is updated.
 
 <pre>
 feel id_urn = do
-  
+
  -- Adjust target price and target rate
   prod
 
- -- Update fee unit and unprocessed fee revenue
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
+ -- Update debt unit and unprocessed fee revenue
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
   drip id_ilk
 
- -- Read parameters for risk analysis
+ -- Read parameters for stage analysis
   era0 &lt;- use era
-  par0 &lt;- use (vat . vox . par)
-  urn0 &lt;- look (vat . urns . ix id_urn)
-  ilk0 &lt;- look (vat . ilks . ix (view ilk urn0))
-  tag0 &lt;- look (vat . tags . ix (view gem ilk0))
+  par0 &lt;- use (vox . par)
+  urn0 &lt;- look (urns . ix id_urn)
+  ilk0 &lt;- look (ilks . ix (view ilk urn0))
+  tag0 &lt;- look (tags . ix (view gem ilk0))
 
- -- Return risk stage of urn
+ -- Return lifecycle stage of CDP
   return (analyze era0 par0 urn0 ilk0 tag0)
 </pre>
-<p>Urn acts use <code>feel</code> to prohibit increasing risk when
+<p>CDP actions use <code>feel</code> to prohibit increasing risk when
 already risky, and to freeze stablecoin and collateral during
-liquidation; see Table&nbsp;\ref{table:stages}.
+liquidation.
 
 <h2>Issuance</h2>
 
@@ -734,14 +832,14 @@ an ilk.
 open id_urn id_ilk = do
 
  -- Fail if account identifier is taken
-  none (vat . urns . ix id_urn)
+  none (urns . ix id_urn)
 
  -- Fail if ilk type is not present
-  _ &lt;- look (vat . ilks . ix id_ilk)
+  _ &lt;- look (ilks . ix id_ilk)
 
- -- Create an urn with the sender as owner
+ -- Create a CDP with the sender as owner
   id_lad &lt;- use sender
-  initialize (vat . urns . at id_urn) (emptyUrn id_ilk id_lad)
+  initialize (urns . at id_urn) (emptyUrn id_ilk id_lad)
 </pre>
 <p>The owner of an urn can transfer its ownership at any time using
 <code>give</code>.
@@ -749,20 +847,20 @@ open id_urn id_ilk = do
 <pre>
 give id_urn id_lad = do
 
- -- Fail if sender is not the urn owner
+ -- Fail if sender is not the CDP owner
   id_sender &lt;- use sender
   owns id_urn id_sender
 
- -- Transfer urn ownership
-  assign (vat . urns . ix id_urn . lad) id_lad
+ -- Transfer CDP ownership
+  assign (urns . ix id_urn . lad) id_lad
 </pre>
-<p>Unless urn is in liquidation, its owner can use <code>lock</code> to
+<p>Unless CDP is in liquidation, its owner can use <code>lock</code> to
 lock more collateral.
 
 <pre>
 lock id_urn wad_gem = do
 
- -- Fail if sender is not the urn owner
+ -- Fail if sender is not the CDP owner
   id_lad &lt;- use sender
   owns id_urn id_lad
 
@@ -770,62 +868,62 @@ lock id_urn wad_gem = do
   want (feel id_urn) (not . oneOf [Grief, Dread])
 
  -- Identify collateral token
-  id_ilk  &lt;- look (vat . urns . ix id_urn . ilk)
-  id_tag  &lt;- look (vat . ilks . ix id_ilk . gem)
+  id_ilk  &lt;- look (urns . ix id_urn . ilk)
+  id_tag  &lt;- look (ilks . ix id_ilk . gem)
 
  -- Take custody of collateral
   transfer (Gem id_tag) wad_gem id_lad Jar
 
  -- Record an collateral token balance increase
-  increase (vat . urns . ix id_urn . ink) wad_gem
+  increase (urns . ix id_urn . ink) wad_gem
 </pre>
-<p>When an urn has no risk problems (except that its ilk's ceiling may
+<p>When a CDP has no risk problems (except that its ilk's ceiling may
 be exceeded), its owner can use <code>free</code> to reclaim some
-amount of collateral, as long as this would not take the urn below its
+amount of collateral, as long as this would not take the CDP below its
 liquidation ratio.
 
 <pre>
 free id_urn wad_gem = do
 
- -- Fail if sender is not the urn owner
+ -- Fail if sender is not the CDP owner
   id_lad &lt;- use sender
   owns id_urn id_lad
 
  -- Record a collateral token balance decrease
-  decrease (vat . urns . ix id_urn . ink) wad_gem
+  decrease (urns . ix id_urn . ink) wad_gem
 
  -- Roll back on any risk problem except ilk ceiling excess
   want (feel id_urn) (oneOf [Pride, Anger])
 
  -- Release custody of collateral
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  id_tag &lt;- look (vat . ilks . ix id_ilk . gem)
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
+  id_tag &lt;- look (ilks . ix id_ilk . gem)
   transfer (Gem id_tag) wad_gem Jar id_lad
 </pre>
-<p>When an urn has no risk problems, its owner can can use
+<p>When a CDP has no risk problems, its owner can can use
 <code>draw</code> to issue fresh stablecoin, as long as the ilk
-ceiling is not exceeded and the issuance would not take the urn below
+ceiling is not exceeded and the issuance would not take the CDP below
 its liquidation ratio.
 
 <pre>
 draw id_urn wad_dai = do
 
- -- Fail if sender is not the urn owner
+ -- Fail if sender is not the CDP owner
   id_lad &lt;- use sender
   owns id_urn id_lad
 
- -- Update fee unit and unprocessed fee revenue
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
+ -- Update debt unit and unprocessed fee revenue
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
   chi1 &lt;- drip id_ilk
 
- -- Denominate issuance quantity in fee unit
+ -- Denominate issuance quantity in debt unit
   let wad_chi = wad_dai / cast chi1
 
- -- Record increase of urn's stablecoin issuance
-  increase (vat . urns . ix id_urn . art) wad_chi
+ -- Record increase of CDP's stablecoin issuance
+  increase (urns . ix id_urn . art) wad_chi
 
  -- Record increase of ilk's stablecoin issuance
-  increase (vat . ilks . ix id_ilk . rum) wad_chi
+  increase (ilks . ix id_ilk . rum) wad_chi
 
  -- Roll back on any risk problem
   want (feel id_urn) (== Pride)
@@ -833,79 +931,79 @@ draw id_urn wad_dai = do
  -- Mint both stablecoin and anticoin
   lend wad_dai
 
- -- Transfer stablecoin to urn owner
+ -- Transfer stablecoin to CDP owner
   transfer DAI wad_dai Jug id_lad
 </pre>
-<p>An urn owner who has previously issued stablecoin can use
-<code>wipe</code> to send back dai and reduce the urn's issuance.
+<p>An CDP owner who has previously issued stablecoin can use
+<code>wipe</code> to send back dai and reduce the CDP's issuance.
 
 <pre>
 wipe id_urn wad_dai = do
 
- -- Fail if sender is not the urn owner
+ -- Fail if sender is not the CDP owner
   id_lad &lt;- use sender
   owns id_urn id_lad
 
- -- Fail if urn is in liquidation
+ -- Fail if CDP is in liquidation
   want (feel id_urn) (not . oneOf [Grief, Dread])
 
- -- Update fee unit and unprocessed fee revenue
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
+ -- Update debt unit and unprocessed fee revenue
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
   chi1 &lt;- drip id_ilk
 
- -- Denominate stablecoin amount in fee unit
+ -- Denominate stablecoin amount in debt unit
   let wad_chi = wad_dai / cast chi1
 
- -- Record decrease of urn issuance
-  decrease (vat . urns . ix id_urn . art) wad_chi
+ -- Record decrease of CDP issuance
+  decrease (urns . ix id_urn . art) wad_chi
 
  -- Record decrease of ilk total issuance
-  decrease (vat . ilks . ix id_ilk . rum) wad_chi
+  decrease (ilks . ix id_ilk . rum) wad_chi
 
- -- Take custody of stablecoin from urn owner
+ -- Take custody of stablecoin from CDP owner
   transfer DAI wad_dai id_lad Jar
 
  -- Destroy stablecoin and anticoin
   mend wad_dai
 </pre>
-<p>An urn owner can use <code>shut</code> to close their account, if
-the price feed is up to date and the urn is not in liquidation.
+<p>An CDP owner can use <code>shut</code> to close their account, if
+the price feed is up to date and the CDP is not in liquidation.
 This reclaims all collateral and cancels all issuance plus fee.
 
 <pre>
 shut id_urn = do
 
- -- Update fee unit and unprocessed fee revenue
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
+ -- Update debt unit and unprocessed fee revenue
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
   chi1 &lt;- drip id_ilk
 
  -- Reverse all issued stablecoin plus fee
-  art0 &lt;- look (vat . urns . ix id_urn . art)
+  art0 &lt;- look (urns . ix id_urn . art)
   wipe id_urn (art0 * cast chi1)
 
  -- Reclaim all locked collateral
-  ink0 &lt;- look (vat . urns . ix id_urn . ink)
+  ink0 &lt;- look (urns . ix id_urn . ink)
   free id_urn ink0
 
- -- Nullify urn record
-  assign (vat . urns . at id_urn) Nothing
+ -- Nullify CDP record
+  assign (urns . at id_urn) Nothing
 </pre>
 <h2>Adjustment</h2>
 
 <p>The feedback mechanism is updated through <code>prod</code>, which
 can be invoked at any time by keepers, but is also invoked as a side
-effect of any urn act that uses <code>feel</code> to assess risk.
+effect of any CDP act that uses <code>feel</code> to assess risk.
 
 <pre>
 prod = do
 
  -- Read all parameters relevant for feedback mechanism
   era0 &lt;- use era
-  tau0 &lt;- use (vat . vox . tau)
-  wut0 &lt;- use (vat . vox . wut)
-  par0 &lt;- use (vat . vox . par)
-  how0 &lt;- use (vat . vox . how)
-  way0 &lt;- use (vat . vox . way)
+  tau0 &lt;- use (vox . tau)
+  wut0 &lt;- use (vox . wut)
+  par0 &lt;- use (vox . par)
+  how0 &lt;- use (vox . how)
+  way0 &lt;- use (vox . way)
 
   let
    -- Time difference in seconds
@@ -922,13 +1020,13 @@ prod = do
                  if wut0 &lt; par0 then wag else -wag)
 
  -- Update target price
-  assign (vat . vox . par) par1
+  assign (vox . par) par1
 
  -- Update rate of price change
-  assign (vat . vox . way) way1
+  assign (vox . way) way1
 
  -- Record time of update
-  assign (vat . vox . tau) era0
+  assign (vox . tau) era0
 
   where
    -- Convert between multiplicative and additive form
@@ -937,25 +1035,25 @@ prod = do
 </pre>
 <p>The stability fee of an ilk can change through governance.  Due to
 the constraint that acts should run in constant time, the system
-cannot iterate over urns to effect such changes.  Instead each ilk has
-a single &raquo;fee unit&laquo; which accumulates the stability fee.
+cannot iterate over CDPs to effect such changes.  Instead each ilk has
+a single &raquo;debt unit&laquo; which accumulates the stability fee.
 The <code>drip</code> act updates this unit.  It can be called at any
 time by keepers, but is also called as a side effect of every act that
-uses <code>feel</code> to assess urn risk.
+uses <code>feel</code> to assess CDP risk.
 
 <pre>
 drip id_ilk = do
 
-  rho0  &lt;- look (vat . ilks . ix id_ilk . rho)
-  tax0  &lt;- look (vat . ilks . ix id_ilk . tax)
-  chi0  &lt;- look (vat . ilks . ix id_ilk . chi)
-  rum0  &lt;- look (vat . ilks . ix id_ilk . rum)
+  rho0  &lt;- look (ilks . ix id_ilk . rho)
+  tax0  &lt;- look (ilks . ix id_ilk . tax)
+  chi0  &lt;- look (ilks . ix id_ilk . chi)
+  rum0  &lt;- look (ilks . ix id_ilk . rum)
   era0  &lt;- use era
 
   let
    -- Time difference in seconds
     age   = era0 - rho0
-   -- Value of fee unit increased according to stability fee
+   -- Value of debt unit increased according to stability fee
     chi1  = chi0 * tax0 ^^ age
    -- Stability fee revenue denominated in new unit
     dew   = (cast (chi1 - chi0) :: Wad) * rum0
@@ -964,12 +1062,12 @@ drip id_ilk = do
   lend dew
 
  -- Record time of update
-  assign (vat . ilks . ix id_ilk . rho) era0
+  assign (ilks . ix id_ilk . rho) era0
 
- -- Record new fee unit
-  assign (vat . ilks . ix id_ilk . chi) chi1
+ -- Record new debt unit
+  assign (ilks . ix id_ilk . chi) chi1
 
- -- Return the new fee unit
+ -- Return the new debt unit
   return chi1
 </pre>
 <h2>Price feed input</h2>
@@ -979,7 +1077,7 @@ collateral along with the expiration date of this price.
 
 <pre>
 mark id_gem tag1 zzz1 = auth $ do
-  initialize (vat . tags . at id_gem) Tag {
+  initialize (tags . at id_gem) Tag {
     _tag  = tag1,
     _zzz  = zzz1
   }
@@ -989,12 +1087,12 @@ with the expiration date of this price.
 
 <pre>
 tell wad = auth $ do
-  assign (vat . vox . wut) wad
+  assign (vox . wut) wad
 </pre>
 <h2>Liquidation</h2>
 
 <p>
-When an urn's stage marks it
+When a CDP's stage marks it
   as in need of liquidation,
  any account can invoke the <code>bite</code> act
   to trigger the liquidation process.
@@ -1005,41 +1103,41 @@ This enables the settler contract
 <pre>
 bite id_urn = do
 
- -- Fail if urn is not in the appropriate stage
+ -- Fail if CDP is not in the appropriate stage
   want (feel id_urn) (== Panic)
 
  -- Record the sender as the liquidation initiator
   id_cat &lt;- use sender
-  assign (vat . urns . ix id_urn . cat) (Just id_cat)
+  assign (urns . ix id_urn . cat) (Just id_cat)
 
- -- Apply liquidation penalty to urn issuance
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  axe0 &lt;- look (vat . ilks . ix id_ilk . axe)
-  art0 &lt;- look (vat . urns . ix id_urn . art)
+ -- Apply liquidation penalty to CDP issuance
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
+  axe0 &lt;- look (ilks . ix id_ilk . axe)
+  art0 &lt;- look (urns . ix id_urn . art)
   let art1 = art0 * cast axe0
 
- -- Update urn issuance to include penalty
-  assign (vat . urns . ix id_urn . art) art1
+ -- Update CDP issuance to include penalty
+  assign (urns . ix id_urn . art) art1
 </pre>
 <p>
 After liquidation has been triggered,
 the designated settler contract invokes <code>grab</code>
-to receive both the urn's collateral
+to receive both the CDP's collateral
 and the anticoins
-corresponding to the urn's issuance.
+corresponding to the CDP's issuance.
 
 <pre>
 grab id_urn = auth $ do
 
- -- Fail if urn is not marked for liquidation
+ -- Fail if CDP is not marked for liquidation
   want (feel id_urn) (== Grief)
 
-  ink0 &lt;- look (vat . urns . ix id_urn . ink)
-  art0 &lt;- look (vat . urns . ix id_urn . art)
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  id_tag &lt;- look (vat . ilks . ix id_ilk . gem)
+  ink0 &lt;- look (urns . ix id_urn . ink)
+  art0 &lt;- look (urns . ix id_urn . art)
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
+  id_tag &lt;- look (ilks . ix id_ilk . gem)
 
- -- Update the fee unit and unprocessed fee revenue
+ -- Update the debt unit and unprocessed fee revenue
   chi1 &lt;- drip id_ilk
 
  -- Denominate the issuance in dai
@@ -1049,34 +1147,34 @@ grab id_urn = auth $ do
   transfer (Gem id_tag) ink0 Jar Vow
   transfer SIN con Jar Vow
 
- -- Nullify urn's collateral and anticoin quantities
-  assign (vat . urns . ix id_urn . ink) 0
-  assign (vat . urns . ix id_urn . art) 0
+ -- Nullify CDP's collateral and anticoin quantities
+  assign (urns . ix id_urn . ink) 0
+  assign (urns . ix id_urn . art) 0
 
  -- Decrease the ilk's total issuance
-  decrease (vat . ilks . ix id_ilk . rum) art0
+  decrease (ilks . ix id_ilk . rum) art0
 </pre>
-<p>When the settler has finished the liquidation of an urn, it
+<p>When the settler has finished the liquidation of a CDP, it
 invokes <code>plop</code> to give back any collateral it did not need
-to sell and restore the urn.
+to sell and restore the CDP.
 
 <pre>
 plop id_urn wad_dai = auth $ do
 
- -- Fail unless urn is in the proper stage
+ -- Fail unless CDP is in the proper stage
   want (feel id_urn) (== Dread)
 
- -- Forget the urn's initiator of liquidation
-  assign (vat . urns . ix id_urn . cat) Nothing
+ -- Forget the CDP's initiator of liquidation
+  assign (urns . ix id_urn . cat) Nothing
 
  -- Take excess collateral from settler to vault
   id_vow &lt;- use sender
-  id_ilk &lt;- look (vat . urns . ix id_urn . ilk)
-  id_tag &lt;- look (vat . ilks . ix id_ilk . gem)
+  id_ilk &lt;- look (urns . ix id_urn . ilk)
+  id_tag &lt;- look (ilks . ix id_ilk . gem)
   transfer (Gem id_tag) wad_dai id_vow Jar
 
- -- Record the excess collateral as belonging to the urn
-  assign (vat . urns . ix id_urn . ink) wad_dai
+ -- Record the excess collateral as belonging to the CDP
+  assign (urns . ix id_urn . ink) wad_dai
 </pre>
 <p>
 The settler can invoke <code>loot</code> at any time
@@ -1156,14 +1254,14 @@ can safely set the risk parameters before any issuance occurs.
 
 <pre>
 form id_ilk id_gem = auth $ do
-  initialize (vat . ilks . at id_ilk) (defaultIlk id_gem)
+  initialize (ilks . at id_ilk) (defaultIlk id_gem)
 </pre>
 <p>Governance uses <code>frob</code> to alter the sensitivity factor,
 which is the only mutable parameter of the feedback mechanism.
 
 <pre>
 frob how1 = auth $ do
-  assign (vat . vox . how) how1
+  assign (vox . how) how1
 </pre>
 <p>Governance can alter the five risk parameters of an ilk using
 <code>cuff</code> for the liquidation ratio; <code>chop</code> for the
@@ -1173,29 +1271,29 @@ liquidation penalty; <code>cork</code> for the ilk ceiling;
 
 <pre>
 cuff id_ilk mat1 = auth $ do
-  assign (vat . ilks . ix id_ilk . mat) mat1
+  assign (ilks . ix id_ilk . mat) mat1
 
 chop id_ilk axe1 = auth $ do
-  assign (vat . ilks . ix id_ilk . axe) axe1
+  assign (ilks . ix id_ilk . axe) axe1
 
 cork id_ilk hat1 = auth $ do
-  assign (vat . ilks . ix id_ilk . hat) hat1
+  assign (ilks . ix id_ilk . hat) hat1
 
 calm id_ilk lax1 = auth $ do
-  assign (vat . ilks . ix id_ilk . lax) lax1
+  assign (ilks . ix id_ilk . lax) lax1
 </pre>
 <p>When altering the stability fee with <code>crop</code>, we ensure
 that the previous stability fee has been accounted for in the internal
-fee unit.
+debt unit.
 
 <pre>
 crop id_ilk tax1 = auth $ do
 
- -- Apply the current stability fee to the internal fee unit
+ -- Apply the current stability fee to the internal debt unit
   drip id_ilk
 
  -- Change the stability fee
-  assign (vat . ilks . ix id_ilk . tax) tax1
+  assign (ilks . ix id_ilk . tax) tax1
 </pre>
 <h2>Token manipulation</h2>
 
@@ -1316,13 +1414,13 @@ being who x = do
 </pre>
 -->
 
-<h1>Act framework</h1>
+<h1>Action framework</h1>
 
 <!--
 
-<h2>Act descriptions</h2>
+<h2>Action descriptions</h2>
 
-<p>We define the act vocabulary as a data type to
+<p>We define the action vocabulary as a data type to
 represent invocations.
 
 <pre>
@@ -1380,7 +1478,7 @@ data Error = AssertError Act | AuthError
 </pre>
 <p>An act can be executed on a given initial system state using
 <code>exec</code>.  The result is either an error or a new state.
-The <code>exec</code> function can also accept a sequence of acts,
+The <code>exec</code> function can also accept a sequence of actions,
 which will be interpreted as a single transaction.
 
 <pre>
@@ -1416,7 +1514,7 @@ given CDP is owned by the given account.
 
 <pre>
 owns id_urn id_lad =
-  want (look (vat . urns . ix id_urn . lad)) (== id_lad)
+  want (look (urns . ix id_urn . lad)) (== id_lad)
 </pre>
 <p>We define <code>auth k</code> as an act modifier that executes
 <code>k</code> only if the sender is authorized.
@@ -1467,17 +1565,17 @@ also f g = lens getter setter
   setter x (a, b) = set f a (set g b x)
 
 keeps :: Parameter -&gt; Action () -&gt; System -&gt; Bool
-keeps Wut  = maintains (vat . vox . wut)
-keeps Par  = maintains (vat . vox . par)
-keeps Way  = maintains (vat . vox . way)
+keeps Wut  = maintains (vox . wut)
+keeps Par  = maintains (vox . par)
+keeps Way  = maintains (vox . way)
 -}
 </pre>
 Thus:
 
 <pre>
 {- foo sys0 = all (\f -&gt; f sys0)
-  [changesOnly (  (vat . vox . par) `also`
-                  (vat . vox . way))
+  [changesOnly (  (vox . par) `also`
+                  (vox . way))
      (perform Prod)] -}
 </pre>
 \appendix
@@ -1491,11 +1589,12 @@ Thus:
 <glossary>
 <dl>
 
-<dt><code>Id</code></dt>
+<dt><code>Id</code>
 <dd><code>Id a</code> (for any <code>a</code>) is a string identifier
 that cannot be mixed up with some other <code>Id b</code>.
 
 <dt><code>Urn</code>
+
 <dd><code>Urn</code> is the data record for a CDP.
 
 <dt><code>Ilk</code>
@@ -1539,11 +1638,11 @@ for the corresponding CDP type.
 
 <dt><code>rum</code><dd>The <code>rum</code> of an <code>Ilk</code>
 (type: <code>Wad</code>) is the total current issuance for the
-corresponding CDP type, denominated in the CDP's internal fee unit.
+corresponding CDP type, denominated in the CDP's internal debt unit.
 
 <dt><code>chi</code><dd>The <code>chi</code> of an <code>Ilk</code>
 (type: <code>Ray</code>) is the dai valuation for the corresponding
-CDP type's internal fee unit, compounding over time according to the
+CDP type's internal debt unit, compounding over time according to the
 CDP type's stability fee.
 
 <dt><code>mat</code><dd>The <code>mat</code> of an <code>Ilk</code>
@@ -1557,7 +1656,7 @@ the corresponding CDP type, expressed as a fraction of the CDP's
 outstanding dai.
 
 <dt><code>rho</code><dd>The <code>rho</code> of an <code>Ilk</code>
-(type: <code>Sec</code>) is the timestamp of its latest fee unit
+(type: <code>Sec</code>) is the timestamp of its latest debt unit
 adjustment.
 
 <dt><code>tag</code><dd>The <code>tag</code> of a <code>Tag</code>
@@ -1573,7 +1672,7 @@ collateral price tag will expire.
 <dd><code>Pride</code> is the risk stage of a non-risky CDP.
 
 <dt><code>Anger</code><dd><code>Anger</code> is the <code>Stage</code>
-of a CDP whose type has reached its issuance ceiling, but has a fresh
+of a CDP whose type has reached its debt ceiling, but has a fresh
 price feed; is overcollateralized; and has not been triggered
 for liquidation.
 
@@ -1581,13 +1680,13 @@ for liquidation.
 of a CDP whose collateral price feed has expired yet is still within
 the CDP type's grace period; but the CDP is still considered
 overcollateralized and has not been triggered for liquidation.  (The
-CDP's type may also have reached its issuance ceiling.)
+CDP's type may also have reached its debt ceiling.)
 
 <dt><code>Panic</code><dd><code>Panic</code> is the <code>Stage</code>
 of a CDP which is undercollateralized or whose price feed is expired
 past the CDP type's grace period; but which has not yet been triggered
 for liquidation.  (The CDP's type may also have reached its
-issuance ceiling.)
+debt ceiling.)
 
 <dt><code>Grief</code><dd><code>Grief</code> is the <code>Stage</code>
 of a CDP which has been triggered for liquidation.
@@ -1745,6 +1844,33 @@ system's test driver (not present in production).
 
 <dd><code>God</code> (type: <code>Actor</code>) identifies an
 omnipotent actor (prototyping kludge, will be removed).
+
+<dt><code>lock</code>
+
+<dd><code>lock</code> transfers collateral from a CDP owner to the
+system's token vault and records an increase of <code>ink</code> to
+the CDP's <code>Urn</code>.
+
+<dt><code>draw</code>
+
+<dd><code>draw</code> mints <code>DAI</code>, transfers it to the CDP
+owner, and records an increase of <code>art</code> to the CDP's
+<code>Urn</code>. It also mints a corresponding amount of
+<code>SIN</code> which is kept in the <code>Jug</code>.
+
+<dt><code>prod</code>
+
+<dd><code>prod</code> updates the stability feedback mechanism.
+It adjusts the target price (<code>par</code>) according to the target
+rate (<code>way</code>), and adjusts the target rate according to the
+current market price (<code>wut</code>) and the sensitivity parameter
+(<code>how</code>).
+
+<dt><code>feel</code>
+
+<dd><code>feel</code> calculates the <code>Stage</code> of a CDP. This
+involves deciding collateralization requirements as well as checking
+price feed status and liquidation progress.
 
 </dl>
 </glossary>

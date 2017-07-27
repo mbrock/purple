@@ -3,7 +3,7 @@ document.querySelectorAll("pre").forEach(function(x) {
     .replace(/^(type |newtype |data )?(\w+)(\b.+=(?: |$))/gm, "$1<define id=dfn-$2>$2</define>$3")
     .replace(/^(data )(\w+)$/gm, "$1<define id=dfn-$2>$2</define>")
     .replace(/^(\s+_)(\w+)(\s+::)/gm, "$1<define id=dfn-$2>$2</define>$3")
-    .replace(/^(\s+(?:\| |= ))(\w+)(?= .*?--)/gm, "$1<define id=dfn-$2>$2</define>")
+    .replace(/^(?:(\s+(?:\| |= ))(\w+))(?!.*--!$)/gm, "$1<define id=dfn-$2>$2</define>")
 })
 
 var words = []
@@ -36,7 +36,7 @@ document.querySelectorAll("pre, code").forEach(function(x) {
     .replace(/\n\s*\n/gm, "<p>")
 })
 
-document.querySelectorAll("p > code, table code, dl code").forEach(function(x) {
+document.querySelectorAll("p > code, aside code, table code, dl code, figure code").forEach(function(x) {
   x.innerHTML = x.innerHTML
     .replace(re2, "<a href=\"#dfn-$1\">$1</a>")
 })
@@ -78,9 +78,10 @@ var oldPopup
 document.querySelectorAll("glossary dt").forEach(function(dt) {
   var popup = document.createElement("popup")
   var dd = dt.nextElementSibling
+  var text = dt.innerText.trim()
   popup.innerHTML = "<span>" + dd.innerHTML + "</span>"
-  console.log('a[href="#dfn-' + dt.innerText + '"]')
-  document.querySelectorAll('a[href="#dfn-' + dt.innerText + '"]').forEach(function(a) {
+  console.log('a[href="#dfn-' + text + '"]')
+  document.querySelectorAll('a[href="#dfn-' + text + '"]').forEach(function(a) {
     a.onmouseenter = function() {
       oldPopup && oldPopup.parentNode.removeChild(oldPopup)
       oldPopup = popup

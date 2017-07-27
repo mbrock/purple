@@ -37,7 +37,7 @@ sub {
 }
 
 body {
-  max-width: 38rem;
+  max-width: 42rem;
   margin: 0 auto 12rem auto;
 }
 
@@ -186,8 +186,9 @@ popup {
   transition: .5s ease all;
   z-index: 1;
   font-family: "Source Sans Pro", helvetica, sans-serif;
-  font-size: 90%;
+  font-size: 0.9rem;
   line-height: calc(0.7 * var(--base));
+  font-style: normal;
 }
 
 popup span {
@@ -209,3 +210,22 @@ popup a { color: #333; }
 dl dt { display: none; }
 dl dd { margin-bottom: 1rem; }
 dl dd code:first-of-type { font-weight: bold; }
+
+aside {
+  margin-left: 1rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+figure {
+  white-space: pre;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  margin: 0 0 calc(1 * var(--base)) 0;
+  display: flex;
+  justify-content: center;
+}
+
+figure, figure * {
+  line-height: 1.2rem;
+}
