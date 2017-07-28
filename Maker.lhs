@@ -25,12 +25,11 @@
 <h1>Introduction</h1>
 
 <p>The <b>Dai stablecoin system</b> is a set of blockchain smart
-contracts designed to issue a token (called the dai) and subject its
-price to a decentralized stability mechanism.
+contracts designed to issue a collateral-backed token (called the dai)
+and subject its price to a decentralized stability mechanism.
 
-<p>This document is an executable and interactive technical
-specification of the system.  It is a draft and will change
-before launch.
+<p>This document is an executable technical specification of the
+system.  It is a draft and will change before launch.
 
 <p>For an overview of the system, see the <a
 href="https://github.com/makerdao/docs/blob/master/Dai.md">white
@@ -53,8 +52,8 @@ work on our explanatory material, so we appreciate it.
 <h2>Why a reference implementation?</h2>
 
 <p>The contracts that will be deployed on the Ethereum blockchain are
-written in Solidity.  This paper is a model of the system written as a
-Haskell program.  The motivations for this include:
+prototyped in Solidity.  This paper is a model of the system written
+as a Haskell program.  The motivations for this include:
 
 <p><b>Comparison.</b>
 Checking two free-standing implementations
@@ -107,22 +106,23 @@ this document will include formal statements of these properties.
 
 <h2>Note on jargon</h2>
 
-<p>The implementation is formulated in terms of a parallel vocabulary
-of concise words like <code>Urn</code>, <code>par</code>, and
+<p>The implementation is formulated in terms of a vocabulary of
+concise words like <code>Urn</code>, <code>par</code>, and
 <code>ink</code>.  These words are selected for metaphoric resonance
-and evocative qualities.  Definitions of the words along with mnemonic
-reminders can be found in the glossary.
+and evocative quality.
 
-<p>We have found that though it requires some initial learning, the
-jargon is good for development and helps when thinking and talking
-about the structure and mechanics of the system.  Here are some of the
-reasons:
+<p>This document aims to clarify the system's exact behavior, so it
+comes with a glossary that is accessible through hovering over
+highlighted words.
+
+<p>Though it requires some initial learning, the jargon aids thinking
+and talking about the structure and mechanics of the system.  Here are
+some of the reasons:
 
 <p><ul>
 
-<li>The parallel jargon
- lets us sidestep
-  terminological debates; for example, whether to say
+<li>We sidestep terminological debates;
+  for example, whether to say
   &raquo;rate of target price change&laquo; or
    &raquo;target rate&laquo;.
 
@@ -144,14 +144,37 @@ reasons:
    more apparent
     and easier to formalize.
 
+<li>Concise names make the code less verbose.
+
 </ul>
 
 <h1>Dai mechanics</h1>
 
-<p>The dai stablecoin system lets users lock collateral assets and
-issue dai in proportion to the collateral's market value.
+<p><aside>Note: this section is far from finished.</aside>
 
-<aside>See <code>lock</code> and <code>draw</code>.</aside>
+<p>The dai stablecoin system lets users lock collateral assets and
+issue dai in proportion to the collateral's market value.  Thus they
+can deposit their valuable tokens in order to withdraw some quantity
+of stablecoin.  Such a deposit account is called a "collateralized
+debt position" or CDP.
+
+<aside>See <code>lock</code>, <code>draw</code>, and
+<code>Urn</code>.</aside>
+
+<p>As long as such a deposit retains sufficient value, the user may
+reclaim their deposit, partially or in whole, by paying back dai.
+As long as the deposit is collateralized in excess of the required
+ratio, the user can also reclaim part of their deposit without
+repayment; but this increases their deposit's risk of liquidation.
+
+<aside>See <code>free</code> and <code>wipe</code>.</aside>
+
+<p>Governance decides which external tokens are valid as collateral,
+and creates different deposit classes, or "CDP types", each with
+different parameters such as maximum dai issuance, minimum collateral
+ratio, and so on.
+
+<aside>See <code>Ilk</code>.</aside>
 
 <p>For deciding collateral requirements, the system values the dai not
 at the market price, but at its own <i>target price</i>, which is
@@ -164,14 +187,9 @@ a CDP.</aside>
 the stability mechanism reacts to market price changes by adjusting
 the <i>target rate</i>.
 
-<aside>See <code>prod</code>, which updates the stability
+<aside>◈ See <code>prod</code>, which updates the stability
 mechanism.</aside>
 
-<todo>More explanations with code links.</todo>
-
-<h2>Yet to be fully specified</h2>
-<h3>Voting</h3>
-<h3>Auctions</h3>
 
 <!--
 <todo>Explain CDPs and CDP types.</todo>
