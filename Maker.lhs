@@ -1125,6 +1125,9 @@ for use in the countercoin buy-and-burn auction.
 
 <h2>Auctioning</h2>
 
+<p><aside>Note: this section is incomplete; all auctions are
+dummies.</aside>
+
 > flip id_gem wad_jam wad_tab id_urn = do
 >   vow <- look mode
 >   case vow of
