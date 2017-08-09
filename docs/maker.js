@@ -24,6 +24,7 @@ document.querySelectorAll("pre, code").forEach(function(x) {
     .replace(/\b(module|import|data|newtype|type|deriving|if|case|where|let|do)\b/g, "<strong>$&</strong>")
     .replace(/^(\s*)-- (.*)/gm, "$1<comment class=block>$2</comment>")
     .replace(/(\s+)-- (.*)/g, "$1<comment>$2</comment>")
+    .replace(/ --!/g, "")
     .replace(/\$([^ ]+)\$/g, "<math>$1</math>")
     .replace(/ \. /g, " ∘ ")
     .replace(/\b_(\w+)\b/g, "· $1")
@@ -36,7 +37,7 @@ document.querySelectorAll("pre, code").forEach(function(x) {
     .replace(/\n\s*\n/gm, "<p>")
 })
 
-document.querySelectorAll("p > code, aside code, table code, dl code, figure code").forEach(function(x) {
+document.querySelectorAll("p > code, li > code, aside code, table code, dl code, figure code").forEach(function(x) {
   x.innerHTML = x.innerHTML
     .replace(re2, "<a href=\"#dfn-$1\">$1</a>")
 })

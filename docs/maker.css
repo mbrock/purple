@@ -34,6 +34,7 @@ li { margin-bottom: calc(var(--base) / 4); padding-left: 1rem; }
 sub {
   vertical-align: bottom;
   line-height: 18px;
+  font-size: inherit;
 }
 
 body {
@@ -160,7 +161,7 @@ em {
   font-weight: bold;
 }
 
-p > code {
+p > code, li > code {
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.03);
   padding: 0px 6px;

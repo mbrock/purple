@@ -106,18 +106,13 @@ this document will include formal statements of these properties.
 
 <h2>Note on jargon</h2>
 
-<p>The implementation is formulated in terms of a vocabulary of
-concise words like <code>Urn</code>, <code>par</code>, and
-<code>ink</code>.  These words are selected for metaphoric resonance
-and evocative quality.
+<p>The reference implementation uses a concise vocabulary for system
+variables and actions.
 
-<p>This document aims to clarify the system's exact behavior, so it
-comes with a glossary that is accessible through hovering over
+<p>This document has a glossary accessible through hovering over
 highlighted words.
 
-<p>Though it requires some initial learning, the jargon aids thinking
-and talking about the structure and mechanics of the system.  Here are
-some of the reasons:
+<p>Here are some of the motivations for this jargon:
 
 <p><ul>
 
@@ -144,13 +139,16 @@ some of the reasons:
    more apparent
     and easier to formalize.
 
-<li>Concise names make the code less verbose.
+<li>Concise names make the code less verbose
+ and the concepts easier to handle on paper, whiteboard, etc.
 
 </ul>
 
 <h1>Dai mechanics</h1>
 
-<p><aside>Note: this section is far from finished.</aside>
+<p><aside>Note: this section is incomplete. It is supposed to briefly
+and technically explain the explicit mechanics of the system with
+links to relevant definitions.</aside>
 
 <p>The dai stablecoin system lets users lock collateral assets and
 issue dai in proportion to the collateral's market value.  Thus they
@@ -161,11 +159,11 @@ debt position" or CDP.
 <aside>See <code>lock</code>, <code>draw</code>, and
 <code>Urn</code>.</aside>
 
-<p>As long as such a deposit retains sufficient value, the user may
-reclaim their deposit, partially or in whole, by paying back dai.
-As long as the deposit is collateralized in excess of the required
-ratio, the user can also reclaim part of their deposit without
-repayment; but this increases their deposit's risk of liquidation.
+<p>As long as such a deposit retains sufficient market value, the user
+may reclaim their deposit, partially or in whole, by paying back dai.
+As long as the CDP is collateralized in excess of the required ratio,
+the user can also decrease their collateralization by reclaiming part
+of the deposit without paying back dai.
 
 <aside>See <code>free</code> and <code>wipe</code>.</aside>
 
@@ -187,7 +185,7 @@ a CDP.</aside>
 the stability mechanism reacts to market price changes by adjusting
 the <i>target rate</i>.
 
-<aside>◈ See <code>prod</code>, which updates the stability
+<aside>See <code>prod</code>, which updates the stability
 mechanism.</aside>
 
 
@@ -301,8 +299,8 @@ the other.
 
 <h2>Identifiers and addresses</h2>
 
-<p>The following common Haskell idiom lets us use <code>Id Ilk</code>
-and <code>Id Urn</code> as distinct identifier types.
+<p>The following common Haskell idiom lets us use <code>Id Ilk</code>,
+<code>Id Urn</code>, and so on, as distinct identifier types.
 
 > newtype Id a = Id String
 >   deriving (Eq, Ord, Show)
@@ -593,55 +591,6 @@ that can hold a token balance or invoke actions.
 
 -->
 
-<h2>Default data</h2>
-
-> defaultIlk :: Id Tag -> Ilk
-> defaultIlk id_tag = Ilk {
->   _gem = id_tag,
->   _axe = Ray 1,
->   _mat = Ray 1,
->   _tax = Ray 1,
->   _hat = Wad 0,
->   _lax = Sec 0,
->   _chi = Ray 1,
->   _rum = Wad 0,
->   _rho = Sec 0
-> }
-
-> emptyUrn :: Id Ilk -> Actor -> Urn
-> emptyUrn id_ilk id_lad = Urn {
->   _cat = Nothing,
->   _lad = id_lad,
->   _ilk = id_ilk,
->   _art = Wad 0,
->   _ink = Wad 0
-> }
-
-> initialTag :: Tag
-> initialTag = Tag {
->   _tag = Wad 0,
->   _zzz = 0
-> }
-
-> initialSystem :: Ray -> System
-> initialSystem how0 = System {
->   _balances = empty,
->   _ilks     = empty,
->   _urns     = empty,
->   _tags     = empty,
->   _era      = 0,
->   _sender   = God,
->   _accounts = mempty,
->   _mode     = Dummy,
->   _vox      = Vox {
->     _tau = 0,
->     _wut = Wad 1,
->     _par = Wad 1,
->     _how = how0,
->     _way = Ray 1
->   }
-> }
-
 <h1>Actions</h1>
 
 <p>The <em>actions</em> are the basic state transitions of the system.
@@ -656,157 +605,6 @@ invoked from addresses to which the system has granted authority.
 specifies how the action definitions behave with regard to state and
 rollback, see chapter&nbsp;\ref{chapter:monad}.
 
-<h2>Assessment</h2>
-
-<p>We define six stages of a CDP's lifecycle.
-
-> data Stage
->
->     -- Overcollateralized, CDP type below debt ceiling, fresh price tag, liquidation not triggered
->   = Pride
->
->     -- Debt ceiling reached for CDP's type
->   | Anger
->
->     -- CDP type's collateral price feed in limbo
->   | Worry
->
->     -- CDP undercollateralized, or CDP type's price limbo grace period exceeded
->   | Panic
->
->     -- Liquidation triggered
->   | Grief
->
->     -- Liquidation triggered and started
->   | Dread
->
->   deriving (Eq, Show)
-
-<!--
-
-> deriving instance Generic Stage
-
--->
-
-<h3>Lifecycle stage effects</h3>
-
-<p>The following table shows which CDP actions are allowed and
-prohibited in each stage of the CDP lifecycle.</p>
-
-<figure><div>
-   risk unchanged          risk increasing
-       ╭┈┈┈┈╮               ╭┈┈┈┈┈┈┈┈┈╮
-        <code>give shut lock wipe free draw bite grab plop</code>
-<code>Pride</code>    ■    ■    ■    ■    ■    ■
-<code>Anger</code>    ■    ■    ■    ■    ■
-<code>Worry</code>    ■    ■    ■    ■
-<code>Panic</code>    ■    ■    ■    ■              ■
-<code>Grief</code>    ■                                  ■
-<code>Dread</code>    ■                                       ■
-        <code>give shut lock wipe free draw bite grab plop</code>
-             ╰┈┈┈┈┈┈┈┈┈┈┈┈┈╯           ╰┈┈┈┈┈┈┈┈┈┈┈┈┈╯
-              risk decreasing         risk unwinding
-</div></figure>
-
-<h3>CDP stage analysis</h3>
-
-<p>We define the function <code>analyze</code> that determines the
-lifecycle stage of a CDP.
-
-> analyze era0 par0 urn0 ilk0 tag0 =
->
->   if | has cat urn0 && view ink urn0 == 0 --!
->         -> Dread
->      | has cat urn0 --!
->         -> Grief
->      | pro < min --!
->         -> Panic
->      | view zzz tag0 + view lax ilk0 < era0 --!
->         -> Panic
->      | view zzz tag0 < era0 --!
->         -> Worry
->      | cap > view hat ilk0 --!
->         -> Anger
->      | otherwise --!
->         -> Pride
->
->   where
->
->    -- Value of urn's locked collateral in SDR:
->     pro = view ink urn0 * view tag tag0
->
->    -- Ilk's total stablecoin issuance in DAI:
->     cap = view rum ilk0 * cast (view chi ilk0)
->
->    -- Urn's stablecoin issuance denominated in SDR:
->     con = view art urn0 * cast (view chi ilk0) * par0
->
->    -- Required collateral value as per liquidation ratio:
->     min = con * cast (view mat ilk0)
-
-<!--
-\newcommand{\yah}{\faHandPeaceO}
-\newcommand{\yep}{\faHandScissorsO}
-\newcommand{\hey}{\faHandGrabO}
-\newcommand{\meh}{\faHandPointerO}
-\newcommand{\woo}{\faHandPaperO}
-\newcommand{\nah}{---}
-\begin{table}[t]
-\caption{Urn acts and risk stages}\label{table:stages}
-\vspace{0.25cm}
-%\resizebox{\textwidth}{!}{%
-\begin{tabular}{ r c c c c c c c c c }
-       &|give|&|shut|&|lock|&|wipe|&|free|&|draw|&|bite|&|grab|&|plop| \\
-|Pride|&\yah  &\yep  &\yep  &\yep  &\meh  &\meh  &\nah  &\nah  &\nah \\
-|Anger|&\yah  &\yep  &\yep  &\yep  &\meh  &\nah  &\nah  &\nah  &\nah \\
-|Worry|&\yah  &\yep  &\yep  &\yep  &\nah  &\nah  &\nah  &\nah  &\nah \\
-|Panic|&\yah  &\yep  &\yep  &\yep  &\nah  &\nah  &\woo  &\nah  &\nah \\
-|Grief|&\yah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\hey  &\nah \\
-|Dread|&\yah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\hey \\
-&  &
-\multicolumn{3}{c}{decrease risk} &
-\multicolumn{2}{c}{increase risk} &
-\multicolumn{3}{c}{unwind risk}
-\end{tabular} %}
-\vspace{0.5cm}
-\caption*{
-\begin{tabular} { c l }
-\woo & allowed for anyone \\
-\yah & allowed for owner unconditionally \\
-\yep & allowed for owner if able to pay \\
-\meh & allowed for owner if above liquidation ratio \\
-\hey & allowed for settler contract \\
-\end{tabular}
-}
-\end{table}
--->
-
-<p>Now we define the internal act <code>feel</code> which returns the
-value of <code>analyze</code> after ensuring that the system state
-is updated.
-
-> feel id_urn = do
->
->  -- Adjust target price and target rate
->   prod
->
->  -- Update debt unit and unprocessed fee revenue
->   id_ilk <- look (urns . ix id_urn . ilk)
->   drip id_ilk
->
->  -- Read parameters for stage analysis
->   era0 <- use era
->   par0 <- use (vox . par)
->   urn0 <- look (urns . ix id_urn)
->   ilk0 <- look (ilks . ix (view ilk urn0))
->   tag0 <- look (tags . ix (view gem ilk0))
->
->  -- Return lifecycle stage of CDP
->   return (analyze era0 par0 urn0 ilk0 tag0)
-
-<p>CDP actions use <code>feel</code> to prohibit increasing risk when
-already risky, and to freeze stablecoin and collateral during
-liquidation.
 
 <h2>Issuance</h2>
 
@@ -966,6 +764,170 @@ This reclaims all collateral and cancels all issuance plus fee.
 >
 >  -- Nullify CDP record
 >   assign (urns . at id_urn) Nothing
+
+<h2>Assessment</h2>
+
+<p>We define six stages of a CDP's lifecycle.
+
+> data Stage
+>
+>     -- Overcollateralized, CDP type below debt ceiling, fresh price tag, liquidation not triggered
+>   = Pride
+>
+>     -- Debt ceiling reached for CDP's type
+>   | Anger
+>
+>     -- CDP type's collateral price feed in limbo
+>   | Worry
+>
+>     -- CDP undercollateralized, or CDP type's price limbo grace period exceeded
+>   | Panic
+>
+>     -- Liquidation triggered
+>   | Grief
+>
+>     -- Liquidation triggered and started
+>   | Dread
+>
+>   deriving (Eq, Show)
+
+<!--
+
+> deriving instance Generic Stage
+
+-->
+
+<h3>Lifecycle stage effects</h3>
+
+<p>The following table shows which CDP actions are allowed and
+prohibited in each stage of the CDP lifecycle.</p>
+
+<figure><div>
+                        decrease collateral
+                           ╭┈┈┈┈┈┈┈┈┈╮
+        <code>give shut lock wipe free draw bite grab plop</code>
+<code>Pride</code>    ■    ■    ■    ■    ■    ■
+<code>Anger</code>    ■    ■    ■    ■    ■
+<code>Worry</code>    ■    ■    ■    ■
+<code>Panic</code>    ■    ■    ■    ■              ■
+<code>Grief</code>    ■                                  ■
+<code>Dread</code>    ■                                       ■
+        <code>give shut lock wipe free draw bite grab plop</code>
+             ╰┈┈┈┈┈┈┈┈┈┈┈┈┈╯           ╰┈┈┈┈┈┈┈┈┈┈┈┈┈╯
+           increase collateral          liquidation
+</div></figure>
+
+Some implications:
+
+<ul>
+
+<li>Collateral-increasing actions are allowed until <code>Grief</code>.
+
+<li>To <code>draw</code> is only allowed during <code>Pride</code>, while
+<code>free</code> is also allowed during <code>Anger</code>.
+
+<li>To <code>give</code> is allowed at any time, including
+during liquidation.
+
+<li>Each of the liquidation actions corresponds to its own stage.
+
+</ul>
+
+<h3>CDP stage analysis</h3>
+
+<p>We define the function <code>analyze</code> that determines the
+lifecycle stage of a CDP.
+
+> analyze era0 par0 urn0 ilk0 tag0 =
+>
+>   let
+>
+>    -- Value of urn's locked collateral in SDR:
+>     pro = view ink urn0 * view tag tag0
+>
+>    -- CDP's issuance denominated in SDR:
+>     con = view art urn0 * cast (view chi ilk0) * par0
+>
+>    -- Required collateral value as per liquidation ratio:
+>     min = con * cast (view mat ilk0)
+>
+>    -- CDP type's total DAI issuance:
+>     cap = view rum ilk0 * cast (view chi ilk0)
+>
+>   in if
+>
+>     -- Cases checked in order:
+>     | has cat urn0 && view ink urn0 == 0    -> Dread
+>     | has cat urn0                          -> Grief
+>     | pro < min                             -> Panic
+>     | view zzz tag0 + view lax ilk0 < era0  -> Panic
+>     | view zzz tag0 < era0                  -> Worry
+>     | cap > view hat ilk0                   -> Anger
+>     | otherwise                             -> Pride
+
+<!--
+\newcommand{\yah}{\faHandPeaceO}
+\newcommand{\yep}{\faHandScissorsO}
+\newcommand{\hey}{\faHandGrabO}
+\newcommand{\meh}{\faHandPointerO}
+\newcommand{\woo}{\faHandPaperO}
+\newcommand{\nah}{---}
+\begin{table}[t]
+\caption{Urn acts and risk stages}\label{table:stages}
+\vspace{0.25cm}
+%\resizebox{\textwidth}{!}{%
+\begin{tabular}{ r c c c c c c c c c }
+       &|give|&|shut|&|lock|&|wipe|&|free|&|draw|&|bite|&|grab|&|plop| \\
+|Pride|&\yah  &\yep  &\yep  &\yep  &\meh  &\meh  &\nah  &\nah  &\nah \\
+|Anger|&\yah  &\yep  &\yep  &\yep  &\meh  &\nah  &\nah  &\nah  &\nah \\
+|Worry|&\yah  &\yep  &\yep  &\yep  &\nah  &\nah  &\nah  &\nah  &\nah \\
+|Panic|&\yah  &\yep  &\yep  &\yep  &\nah  &\nah  &\woo  &\nah  &\nah \\
+|Grief|&\yah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\hey  &\nah \\
+|Dread|&\yah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\nah  &\hey \\
+&  &
+\multicolumn{3}{c}{decrease risk} &
+\multicolumn{2}{c}{increase risk} &
+\multicolumn{3}{c}{unwind risk}
+\end{tabular} %}
+\vspace{0.5cm}
+\caption*{
+\begin{tabular} { c l }
+\woo & allowed for anyone \\
+\yah & allowed for owner unconditionally \\
+\yep & allowed for owner if able to pay \\
+\meh & allowed for owner if above liquidation ratio \\
+\hey & allowed for settler contract \\
+\end{tabular}
+}
+\end{table}
+-->
+
+<p>Now we define the internal act <code>feel</code> which returns the
+value of <code>analyze</code> after ensuring that the system state
+is updated.
+
+> feel id_urn = do
+>
+>  -- Adjust target price and target rate
+>   prod
+>
+>  -- Update debt unit and unprocessed fee revenue
+>   id_ilk <- look (urns . ix id_urn . ilk)
+>   drip id_ilk
+>
+>  -- Read parameters for stage analysis
+>   era0 <- use era
+>   par0 <- use (vox . par)
+>   urn0 <- look (urns . ix id_urn)
+>   ilk0 <- look (ilks . ix (view ilk urn0))
+>   tag0 <- look (tags . ix (view gem ilk0))
+>
+>  -- Return lifecycle stage of CDP
+>   return (analyze era0 par0 urn0 ilk0 tag0)
+
+<p>CDP actions use <code>feel</code> to prohibit increasing risk when
+already risky, and to freeze stablecoin and collateral during
+liquidation.
 
 <h2>Adjustment</h2>
 
@@ -1314,6 +1276,55 @@ is how the stablecoin supply is reduced.
 >   burn DAI wad_dai Jug
 >   burn SIN wad_dai Jug
 
+<h1>Default data</h1>
+
+> defaultIlk :: Id Tag -> Ilk
+> defaultIlk id_tag = Ilk {
+>   _gem = id_tag,
+>   _axe = Ray 1,
+>   _mat = Ray 1,
+>   _tax = Ray 1,
+>   _hat = Wad 0,
+>   _lax = Sec 0,
+>   _chi = Ray 1,
+>   _rum = Wad 0,
+>   _rho = Sec 0
+> }
+
+> emptyUrn :: Id Ilk -> Actor -> Urn
+> emptyUrn id_ilk id_lad = Urn {
+>   _cat = Nothing,
+>   _lad = id_lad,
+>   _ilk = id_ilk,
+>   _art = Wad 0,
+>   _ink = Wad 0
+> }
+
+> initialTag :: Tag
+> initialTag = Tag {
+>   _tag = Wad 0,
+>   _zzz = 0
+> }
+
+> initialSystem :: Ray -> System
+> initialSystem how0 = System {
+>   _balances = empty,
+>   _ilks     = empty,
+>   _urns     = empty,
+>   _tags     = empty,
+>   _era      = 0,
+>   _sender   = God,
+>   _accounts = mempty,
+>   _mode     = Dummy,
+>   _vox      = Vox {
+>     _tau = 0,
+>     _wut = Wad 1,
+>     _par = Wad 1,
+>     _how = how0,
+>     _way = Ray 1
+>   }
+> }
+
 <!--
 
 \section{Manipulation}
@@ -1615,7 +1626,7 @@ collateral price tag will expire.
 
 <dt><code>Anger</code><dd><code>Anger</code> is the <code>Stage</code>
 of a CDP whose type has reached its debt ceiling, but has a fresh
-price feed; is overcollateralized; and has not been triggered
+price feed, is overcollateralized, and has not been triggered
 for liquidation.
 
 <dt><code>Worry</code><dd><code>Worry</code> is the <code>Stage</code>
@@ -1795,10 +1806,17 @@ the CDP's <code>Urn</code>.
 
 <dt><code>draw</code>
 
-<dd><code>draw</code> mints <code>DAI</code>, transfers it to the CDP
-owner, and records an increase of <code>art</code> to the CDP's
-<code>Urn</code>. It also mints a corresponding amount of
-<code>SIN</code> which is kept in the <code>Jug</code>.
+<dd><code>draw</code> mints new <code>DAI</code> for the owner of an
+overcollateralized CDP.
+
+<dt><code>give</code>
+
+<dd><code>give</code> transfers ownership of a CDP.
+
+<dt><code>free</code>
+
+<dd><code>free</code> reclaims collateral from an
+overcollateralized CDP.
 
 <dt><code>prod</code>
 

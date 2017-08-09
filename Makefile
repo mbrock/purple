@@ -1,4 +1,4 @@
-doc/index.html: Maker.lhs
+docs/index.html: Maker.lhs
 	awk -f lhs2html Maker.lhs > $@
 
 nix: default.nix
