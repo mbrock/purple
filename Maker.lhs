@@ -536,7 +536,6 @@ that can hold a token balance or invoke actions.
 > deriving instance Generic Ilk
 > deriving instance Generic Urn
 > deriving instance Generic Vox
-> deriving instance Generic Vat
 > deriving instance Generic System
 > deriving instance Generic Mode
 
@@ -584,7 +583,7 @@ that can hold a token balance or invoke actions.
 <h3>Lens fields</h3>
 
 > makeLenses ''Tag  ; makeLenses ''Ilk
-> makeLenses ''Urn    ; makeLenses ''Vox  ; makeLenses ''Vat
+> makeLenses ''Urn    ; makeLenses ''Vox
 > makeLenses ''System
 
 > balance id_gem entity = balances . ix (entity, id_gem)
@@ -1704,14 +1703,6 @@ countercoin and governance token).
 <dd><code>SIN</code> is the identifier of the internal "anticoin"
 token which is always minted and burned in the same amounts as dai,
 only kept within the system as an accounting quantity.
-
-<dt><code>vat</code>
-
-<dd><code>vat</code> is the root of the system state.
-
-<dt><code>Vat</code>
-
-<dd><code>Vat</code> is the root record of the system state.
 
 <dt><code>wut</code>
 

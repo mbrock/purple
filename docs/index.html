@@ -557,7 +557,6 @@ deriving instance Generic Actor
 deriving instance Generic Ilk
 deriving instance Generic Urn
 deriving instance Generic Vox
-deriving instance Generic Vat
 deriving instance Generic System
 deriving instance Generic Mode
 </pre>
@@ -607,7 +606,7 @@ instance FromJSON System where { parseJSON = genericParseJSON defaultOptions { f
 
 <pre>
 makeLenses ''Tag  ; makeLenses ''Ilk
-makeLenses ''Urn    ; makeLenses ''Vox  ; makeLenses ''Vat
+makeLenses ''Urn    ; makeLenses ''Vox
 makeLenses ''System
 </pre>
 <pre>
@@ -1780,14 +1779,6 @@ countercoin and governance token).
 <dd><code>SIN</code> is the identifier of the internal "anticoin"
 token which is always minted and burned in the same amounts as dai,
 only kept within the system as an accounting quantity.
-
-<dt><code>vat</code>
-
-<dd><code>vat</code> is the root of the system state.
-
-<dt><code>Vat</code>
-
-<dd><code>Vat</code> is the root record of the system state.
 
 <dt><code>wut</code>
 
