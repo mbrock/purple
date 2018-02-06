@@ -45,7 +45,7 @@ require("http").createServer((req, res) => {
       res.end()
       console.warn([res.statusCode, req.method, req.url].join(" "))
     })
-    res.setHeader("Content-Type", "text-plaini")
+    res.setHeader("Content-Type", "text/plain")
     res.setHeader("Access-Control-Allow-Origin", "*")
     child.stdout.pipe(res, { end: false })
     
