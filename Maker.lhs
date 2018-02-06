@@ -1079,7 +1079,7 @@ corresponding to the CDP's issuance.
 >
 >  -- Transfer collateral and anticoin to settler
 >   transfer (Gem id_tag) ink0 Jar Vow
->   transfer SIN con Jar Vow
+>   transfer SIN con Jug Vow
 >
 >  -- Nullify CDP's collateral and anticoin quantities
 >   assign (urns . ix id_urn . ink) 0
@@ -1117,10 +1117,10 @@ for use in the countercoin buy-and-burn auction.
 > loot = auth $ do
 >
 >  -- The dai vault's balance is the uncollected stability fee revenue
->   wad <- look (balance DAI Jar)
+>   wad <- look (balance DAI Jug)
 >
 >  -- Transfer the entire dai vault balance to sender
->   transfer DAI wad Jar Vow
+>   transfer DAI wad Jug Vow
 
 <h2>Auctioning</h2>
 

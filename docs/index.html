@@ -12,7 +12,7 @@
 <p class=x4>DAI STABLECOIN</p>
 <p class=x5>issuance system</p>
 <p class=x6>Nikolai Mushegian<br>Daniel Brockman<br>Mikael Brockman</p>
-<p class=x7>[draft; 2017-08-09]</p>
+<p class=x7>[draft; 2018-02-06]</p>
 <p class=x8>◈</p>
 </center>
 </header>
@@ -645,7 +645,7 @@ open id_urn id_ilk = do
   _ &lt;- look (ilks . ix id_ilk)
 
  -- Create a CDP with the sender as owner
-  id_lad &lt;- use sender
+  Account id_lad &lt;- use sender
   initialize (urns . at id_urn) (emptyUrn id_ilk id_lad)
 </pre>
 <p>The owner of an urn can transfer its ownership at any time using
@@ -1120,7 +1120,7 @@ grab id_urn = auth $ do
 
  -- Transfer collateral and anticoin to settler
   transfer (Gem id_tag) ink0 Jar Vow
-  transfer SIN con Jar Vow
+  transfer SIN con Jug Vow
 
  -- Nullify CDP's collateral and anticoin quantities
   assign (urns . ix id_urn . ink) 0
@@ -1160,10 +1160,10 @@ for use in the countercoin buy-and-burn auction.
 loot = auth $ do
 
  -- The dai vault's balance is the uncollected stability fee revenue
-  wad &lt;- look (balance DAI Jar)
+  wad &lt;- look (balance DAI Jug)
 
  -- Transfer the entire dai vault balance to sender
-  transfer DAI wad Jar Vow
+  transfer DAI wad Jug Vow
 </pre>
 <h2>Auctioning</h2>
 
@@ -1352,7 +1352,7 @@ defaultIlk id_tag = Ilk {
 }
 </pre>
 <pre>
-emptyUrn :: Id Ilk -&gt; Actor -&gt; Urn
+emptyUrn :: Id Ilk -&gt; Address -&gt; Urn
 emptyUrn id_ilk id_lad = Urn {
   _cat = Nothing,
   _lad = id_lad,
@@ -1432,6 +1432,7 @@ perform x =
     Chop ilk ray     -&gt; chop ilk ray
     Cork ilk wad     -&gt; cork ilk wad
     Calm ilk sec     -&gt; calm ilk sec
+    Crop ilk ray     -&gt; crop ilk ray
     Mint gem wad lad -&gt; mint gem wad lad
 </pre>
 <pre>
@@ -1461,7 +1462,7 @@ data Act =
   |  Form     (Id Ilk)  (Id Tag)
   |  Free     (Id Urn)  Wad
   |  Frob     Ray
-  |  Give     (Id Urn)  Actor
+  |  Give     (Id Urn)  Address
   |  Grab     (Id Urn)
   |  Lock     (Id Urn)  Wad
   |  Loot     Wad
@@ -1480,6 +1481,7 @@ data Act =
   |  Chop (Id Ilk) Ray
   |  Cork (Id Ilk) Wad
   |  Calm (Id Ilk) Sec
+  |  Crop (Id Ilk) Ray
   |  Mint Token Wad Actor
   |  Drip (Id Ilk)
  deriving (Eq, Show)
@@ -1545,7 +1547,7 @@ given CDP is owned by the given account.
 
 <pre>
 owns id_urn id_lad =
-  want (look (urns . ix id_urn . lad)) (== id_lad)
+  want (look (urns . ix id_urn . lad)) ((== id_lad) . Account)
 </pre>
 <p>We define <code>auth k</code> as an act modifier that executes
 <code>k</code> only if the sender is authorized.
