@@ -620,7 +620,7 @@ an ilk.
 >   _ <- look (ilks . ix id_ilk)
 >
 >  -- Create a CDP with the sender as owner
->   id_lad <- use sender
+>   Account id_lad <- use sender
 >   initialize (urns . at id_urn) (emptyUrn id_ilk id_lad)
 
 <p>The owner of an urn can transfer its ownership at any time using
@@ -1293,7 +1293,7 @@ is how the stablecoin supply is reduced.
 >   _rho = Sec 0
 > }
 
-> emptyUrn :: Id Ilk -> Actor -> Urn
+> emptyUrn :: Id Ilk -> Address -> Urn
 > emptyUrn id_ilk id_lad = Urn {
 >   _cat = Nothing,
 >   _lad = id_lad,
@@ -1393,7 +1393,7 @@ represent invocations.
 >   |  Form     (Id Ilk)  (Id Tag)
 >   |  Free     (Id Urn)  Wad
 >   |  Frob     Ray
->   |  Give     (Id Urn)  Actor
+>   |  Give     (Id Urn)  Address
 >   |  Grab     (Id Urn)
 >   |  Lock     (Id Urn)  Wad
 >   |  Loot     Wad
@@ -1472,7 +1472,7 @@ condition holds.
 given CDP is owned by the given account.
 
 > owns id_urn id_lad =
->   want (look (urns . ix id_urn . lad)) (== id_lad)
+>   want (look (urns . ix id_urn . lad)) ((== id_lad) . Account)
 
 <p>We define <code>auth k</code> as an act modifier that executes
 <code>k</code> only if the sender is authorized.
