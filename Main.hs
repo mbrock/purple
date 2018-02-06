@@ -89,9 +89,9 @@ main = do
                      exitSuccess
 
                who x =
-                 case view (vat . urns . at (Id x)) sys of
+                 case view (urns . at (Id x)) sys of
                    Nothing -> error "no such urn"
-                   Just y -> view Dai.lad y
+                   Just y -> Account (view Dai.lad y)
                    
            case x of
              Init -> error "not possible"
@@ -99,7 +99,7 @@ main = do
              Open x y z -> run (Account (Address x)) $
                Dai.Open (Id y) (Id z)
              Give x y -> run (who x) $
-               Dai.Give (Id x) (Account (Address y))
+               Dai.Give (Id x) (Address y)
              Lock x y -> run (who x) $
                Dai.Lock (Id x) y
              Free x y -> run (who x) $
@@ -117,9 +117,9 @@ main = do
                Dai.Drip (Id x)
                
              Form x y -> run God $
-               Dai.Form (Id x) (Gem y)
+               Dai.Form (Id x) (Id y)
              Mark x y z -> run God $
-               Dai.Mark (Gem x) y z
+               Dai.Mark (Id x) y z
              Tell x -> run God $
                Dai.Tell x
              Frob x -> run God $
@@ -127,7 +127,7 @@ main = do
              Warp x -> run God $
                Dai.Warp x
              Mint x y z -> run God $
-               Dai.Mint (Gem x) y (Account (Address z))
+               Dai.Mint (Gem (Id x)) y (Account (Address z))
              Cuff x y -> run God $
                Dai.Cuff (Id x) y
              Chop x y -> run God $
