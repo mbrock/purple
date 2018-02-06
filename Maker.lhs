@@ -1366,6 +1366,7 @@ is how the stablecoin supply is reduced.
 >     Chop ilk ray     -> chop ilk ray
 >     Cork ilk wad     -> cork ilk wad
 >     Calm ilk sec     -> calm ilk sec
+>     Crop ilk ray     -> crop ilk ray
 >     Mint gem wad lad -> mint gem wad lad
 
 > being :: Actor -> Action () -> Action ()
@@ -1412,6 +1413,7 @@ represent invocations.
 >   |  Chop (Id Ilk) Ray
 >   |  Cork (Id Ilk) Wad
 >   |  Calm (Id Ilk) Sec
+>   |  Crop (Id Ilk) Ray
 >   |  Mint Token Wad Actor
 >   |  Drip (Id Ilk)
 >  deriving (Eq, Show)

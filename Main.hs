@@ -64,6 +64,7 @@ data Command
   | Chop { ilk :: String, axe :: Ray }
   | Cork { ilk :: String, hat :: Wad }
   | Calm { ilk :: String, lax :: Sec }
+  | Crop { ilk :: String, tax :: Ray }
   deriving (Show, Generic, Eq)
 
 instance ParseRecord Command
@@ -136,3 +137,5 @@ main = do
                Dai.Cork (Id x) y
              Calm x y -> run God $
                Dai.Calm (Id x) y
+             Crop x y -> run God $
+               Dai.Crop (Id x) y

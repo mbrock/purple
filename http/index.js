@@ -3,9 +3,10 @@ let dec = s => new Decimal(s)
 let unray = x => x.toFixed(36)
 let unwad = x => x.toFixed(18)
 
-let yearSecs = dec("3.154e7")
+// let yearSecs = dec("3.154e7")
+let yearSecs = dec("1")
 let wayYearPps = way => way.pow(yearSecs).sub(1).mul(dec(100))
-let showWay = way => `${wayYearPps(way).toFixed(5)} pp/year`
+let showWay = way => `${wayYearPps(way).toFixed(5)} pp/sec`
 let showHow = how => `${showWay(how)}²`
 let showTax = tax => `${showWay(tax)}`
 
@@ -126,7 +127,7 @@ let renderSystem = (previousSystem, {
       $("td", null, showTax(ilk.tax)),
       $("td", null, showPercentage(ilk.axe)),
       $("td", null, `${ilk.lax} sec`),
-      $("td", null, `${ilk.rum} chi`),
+      $("td", null, `${ilk.rum.toFixed(5)} chi`),
       $("td", null, `${ilk.chi} dai`),
       $("td", null, `at ${ilk.rho}s`),
     ]
@@ -136,7 +137,7 @@ let renderSystem = (previousSystem, {
     $("td", null, urn.lad),
     $("td", null, urn.ilk.toString()),
     $("td", null, `${urn.ink} ${renderGemId(urnIlk({ urns, ilks }, id).gem)}`),
-    $("td", null, `${urn.art} chi`),
+    $("td", null, `${urn.art.toFixed(5)} chi`),
     $("td", null, urn.cat || "n/a"),
   ]),
   ...renderTable("tags", tags, ["gem", "tag", "zzz"], ([id, { tag, zzz }]) => [
@@ -264,8 +265,10 @@ saga([
   "mark/--gem/ETH/--tag/20/--zzz/600",
   "mint/--lad/Alice/--gem/ETH/--wad/100",
   "open/--lad/Alice/--ilk/ETH1/--urn/x",
-  // "lock/--urn/x/--wad/50",
-  // "draw/--urn/x/--dai/10",
+  "lock/--urn/x/--wad/50",
+  "crop/--ilk/ETH1/--tax/1.1",
+  "warp/--era/1",
+  "draw/--urn/x/--dai/10",
 ]).then(
   x => {
     ReactDOM.render(realize(x), document.getElementById("app"))
