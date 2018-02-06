@@ -32,7 +32,8 @@ library
     tasty-hunit,
     tasty-quickcheck,
     text,
-    optparse-generic
+    optparse-generic,
+    hevm
   default-language:
     Haskell2010
 

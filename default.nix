@@ -1,6 +1,7 @@
 { mkDerivation, aeson, base, bytestring, containers, ghci-pretty
-, HUnit, lens, mtl, optparse-generic, QuickCheck, random, stdenv
-, tasty, tasty-hunit, tasty-quickcheck, text, wl-pprint-text
+, hevm, HUnit, lens, mtl, optparse-generic, QuickCheck, random
+, stdenv, tasty, tasty-hunit, tasty-quickcheck, text
+, wl-pprint-text
 }:
 mkDerivation {
   pname = "mkrfuzz";
@@ -9,7 +10,7 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson base bytestring containers ghci-pretty HUnit lens mtl
+    aeson base bytestring containers ghci-pretty hevm HUnit lens mtl
     optparse-generic QuickCheck random tasty tasty-hunit
     tasty-quickcheck text wl-pprint-text
   ];
