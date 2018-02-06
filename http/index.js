@@ -35,10 +35,8 @@ let valueExplanations = {
 let transform = ({
   era,
   balances,
-  vat: {
-    vox: { way, par, wut, how, tau },
-    tags, ilks, urns,
-  } 
+  vox: { way, par, wut, how, tau },
+  tags, ilks, urns,
 }) => ({
   era: dec(era),
   balances: balances.map(([[lad, gem], wad]) => [
@@ -73,7 +71,7 @@ let transform = ({
   urns: urns.map(([id, {
     lad, ilk, art, ink, cat
   }]) => [id, {
-    lad: lad.contents,
+    lad: lad,
     ilk,
     art: dec(art),
     ink: dec(ink),
@@ -155,7 +153,7 @@ let renderSystem = (previousSystem, {
   ]),
 ])
 
-let renderGemId = id => id.tag == "Gem" ? id.contents : id.tag
+let renderGemId = id => id
 
 let renderTable = (title, xs, ths, f) => !xs.length ? [] : [
   $("div", { className: "box" }, [
